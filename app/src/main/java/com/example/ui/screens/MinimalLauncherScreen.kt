@@ -106,6 +106,9 @@ fun MinimalLauncherScreen(
     // Custom 5 essential apps state
     var customEssentialPkgs by remember { mutableStateOf(sessionManager.getCustomEssentialApps()) }
     var showConfigureEssentialAppsDialog by remember { mutableStateOf(false) }
+    var isAppDrawerOpen by remember { mutableStateOf(false) }
+    var drawerSearchQuery by remember { mutableStateOf("") }
+    var showAppBlockedDialog by remember { mutableStateOf<String?>(null) }
 
     // Exit lock state during active session
     var showExitLockedDialog by remember { mutableStateOf(false) }
@@ -137,14 +140,18 @@ fun MinimalLauncherScreen(
 
     var installedAppsList by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
-    LaunchedEffect(context) {
+    LaunchedEffect(context, isAppDrawerOpen, showConfigureEssentialAppsDialog) {
         withContext(Dispatchers.IO) {
-            val pm = context.packageManager
-            val intent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-            val list = pm.queryIntentActivities(intent, 0).map {
-                Pair(it.loadLabel(pm).toString(), it.activityInfo.packageName)
-            }.sortedBy { it.first.lowercase() }
-            installedAppsList = list
+            try {
+                val pm = context.packageManager
+                val intent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+                val list = pm.queryIntentActivities(intent, PackageManager.MATCH_ALL).map {
+                    Pair(it.loadLabel(pm).toString(), it.activityInfo.packageName)
+                }.distinctBy { it.second }.sortedBy { it.first.lowercase() }
+                installedAppsList = list
+            } catch (_: Exception) {
+                // Fallback gracefully
+            }
         }
     }
 
@@ -163,10 +170,6 @@ fun MinimalLauncherScreen(
         }
         mapped.take(6)
     }
-
-    var isAppDrawerOpen by remember { mutableStateOf(false) }
-    var drawerSearchQuery by remember { mutableStateOf("") }
-    var showAppBlockedDialog by remember { mutableStateOf<String?>(null) }
 
     val blockedPackages = remember(allTargets, sessionState.isActive) {
         if (!sessionState.isActive) emptySet()
@@ -819,7 +822,7 @@ fun EditEssentialAppsDialog(
 
     val filteredApps = remember(installedApps, searchQuery) {
         if (searchQuery.isBlank()) installedApps
-        else installedApps.filter { it.first.contains(searchQuery, ignoreCase = true) }
+        else installedApps.filter { it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true) }
     }
 
     Box(

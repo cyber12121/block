@@ -137,7 +137,7 @@ fun AppsScreen(
             val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val resolveInfos = pm.queryIntentActivities(launcherIntent, 0)
+            val resolveInfos = pm.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
             val apps = mutableListOf<InstalledAppItem>()
             val seenPackages = mutableSetOf<String>()
 
