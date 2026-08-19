@@ -139,7 +139,9 @@ class FocusSessionManager private constructor(private val context: Context) {
                 repository.plantSeed(plantType, durationMinutes, title)
             }
 
-            // Save to prefs with tamper-evident markers
+            // Save to prefs with tamper-evident markers.
+            // Also resets the per-session emergency-exit counter so the user gets
+            // a fresh quota of 5 exits for every new session (not a permanent lifetime limit).
             prefs.edit()
                 .putBoolean(KEY_IS_ACTIVE, true)
                 .putBoolean(KEY_IS_STRICT, isStrictMode)
@@ -156,6 +158,7 @@ class FocusSessionManager private constructor(private val context: Context) {
                 .putInt(KEY_POMODORO_TOTAL, pomodoroTotalRounds)
                 .putBoolean(KEY_IS_POMODORO_BREAK, isPomodoroBreak)
                 .putString(KEY_PLANT_TYPE, plantType.name)
+                .putInt(KEY_EMERGENCY_EXITS_USED, 0) // reset per-session exit quota
                 .apply()
 
             refreshBlockedTargetsCache(repository)
@@ -641,7 +644,27 @@ class FocusSessionManager private constructor(private val context: Context) {
     fun getCustomEssentialApps(): List<String> {
         val raw = prefs.getString(KEY_CUSTOM_ESSENTIAL_APPS, "") ?: ""
         if (raw.isBlank()) return emptyList()
-        return raw.split(",").map { it.trim() }.filter { it.isNotBlank() }.take(5)
+        val all = raw.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+        // One-time migration: strip packages that were hardcoded as defaults in older
+        // builds (dialer, camera). Users who never explicitly chose these should not
+        // see them in their essential-apps list. If the filtered list differs from the
+        // stored list, persist the clean version immediately so this path only runs once.
+        val legacy = setOf(
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.android.camera",
+            "com.android.camera2",
+            "com.google.android.camera",
+            "org.codeaurora.snapcam",
+            "com.samsung.android.app.camera"
+        )
+        val cleaned = all.filter { it.lowercase() !in legacy }.take(5)
+        if (cleaned.size != all.size) {
+            prefs.edit().putString(KEY_CUSTOM_ESSENTIAL_APPS, cleaned.joinToString(",")).apply()
+        }
+        return cleaned
     }
 
     fun saveCustomEssentialApps(packages: List<String>) {

@@ -144,17 +144,20 @@ class FocusAccessibilityService : AccessibilityService() {
 
             val isLauncherOrHome = targetPkg.contains("launcher") || targetPkg.contains("home")
 
-            // If the Minimal Launcher is acting as the home screen, don't intercept
-            // home/launcher presses — the user is already in our restricted environment.
-            // Only reroute when they press home on a regular device launcher.
             if (!isFgApp && !isEssential) {
                 if (isLauncherOrHome && !isMinimalLauncherHome) {
-                    // User pressed home to a regular launcher during a session — pull them back
-                    val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    // Home/launcher press during session:
+                    // - Strict Mode: pull the user back to FocusGuard (they cannot leave).
+                    // - Normal Mode: allow minimizing — the app-blocking logic below still
+                    //   fires if they open a blocked app from their system launcher.
+                    if (sessionState.isStrictMode) {
+                        val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        }
+                        startActivity(relaunch)
+                        return
                     }
-                    startActivity(relaunch)
-                    return
+                    // Normal mode — let them go home freely.
                 } else if (!isLauncherOrHome && sessionManager.isAppBlocked(targetPkg)) {
                     // Blocked app opened — show the dedicated block shield overlay
                     triggerBlockShield(

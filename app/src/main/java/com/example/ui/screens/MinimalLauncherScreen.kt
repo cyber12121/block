@@ -114,7 +114,12 @@ fun MinimalLauncherScreen(
     // Exit lock state during active session
     var showExitLockedDialog by remember { mutableStateOf(false) }
     var showEmergencyExitDialog by remember { mutableStateOf(false) }
+    // Refresh the counter whenever the active-session state changes (session start, end,
+    // Pomodoro transition) so the display is never stale after a re-composition.
     var remainingExits by remember { mutableStateOf(sessionManager.getRemainingEmergencyExits()) }
+    LaunchedEffect(sessionState.isActive) {
+        remainingExits = sessionManager.getRemainingEmergencyExits()
+    }
 
     val handleExitRequest = {
         if (sessionState.isActive) {

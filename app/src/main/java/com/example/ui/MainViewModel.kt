@@ -13,13 +13,11 @@ import com.example.data.model.Schedule
 import com.example.data.model.TargetType
 import com.example.service.ActiveSessionState
 import com.example.service.FocusSessionManager
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class MainViewModel(
@@ -77,19 +75,11 @@ class MainViewModel(
     val selectedListForAddTarget: StateFlow<BlockList?> = _selectedListForAddTarget.asStateFlow()
 
     init {
-        // Run continuous 1-second countdown ticker & periodic schedule evaluation
-        viewModelScope.launch {
-            var counter = 0
-            while (isActive) {
-                sessionManager.updateTick()
-                counter++
-                if (counter >= 15) { // Check automatic schedules every 15 seconds
-                    counter = 0
-                    sessionManager.checkAutomaticSchedules(repository)
-                }
-                delay(1000)
-            }
-        }
+        // NOTE: The FocusForegroundService owns the 1-second tick loop (updateTick +
+        // checkAutomaticSchedules). Running a second loop here caused double DB reads
+        // every 15 s and double updateTick() calls while the UI was visible.
+        // Removing the duplicate loop here; the service keeps enforcement alive even
+        // when the UI is not in the foreground.
     }
 
     fun openStartSessionDialog() {
