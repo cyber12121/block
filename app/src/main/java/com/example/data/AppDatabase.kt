@@ -16,8 +16,6 @@ import com.example.data.model.BlockedTarget
 import com.example.data.model.DailyStat
 import com.example.data.model.FocusSession
 import com.example.data.model.GardenPlant
-import com.example.data.model.PlantStatus
-import com.example.data.model.PlantType
 import com.example.data.model.Schedule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,40 +65,20 @@ abstract class AppDatabase : RoomDatabase() {
         ) : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                INSTANCE?.let { database ->
-                    scope.launch(Dispatchers.IO) {
-                        populateInitialData(database)
-                    }
+                // onCreate can fire during the first open, which may be before
+                // getDatabase() assigns INSTANCE. Fall back to Application.onCreate
+                // via AppRepository.ensureDefaultData() if we lose that race —
+                // seedInto is idempotent either way.
+                scope.launch(Dispatchers.IO) {
+                    val database = INSTANCE ?: return@launch
+                    DefaultData.seedInto(
+                        listDao = database.blockListDao(),
+                        targetDao = database.blockedTargetDao(),
+                        scheduleDao = database.scheduleDao(),
+                        gardenDao = database.gardenPlantDao()
+                    )
                 }
             }
-        }
-
-        private suspend fun populateInitialData(database: AppDatabase) {
-            val listDao = database.blockListDao()
-            val targetDao = database.blockedTargetDao()
-            val scheduleDao = database.scheduleDao()
-            val gardenDao = database.gardenPlantDao()
-
-            for (list in DefaultData.defaultLists) {
-                listDao.insertList(list)
-            }
-            targetDao.insertTargets(DefaultData.defaultTargets)
-            for (schedule in DefaultData.defaultSchedules) {
-                scheduleDao.insertSchedule(schedule)
-            }
-
-            // Seed initial starter bloomed plant in garden
-            gardenDao.insertPlant(
-                GardenPlant(
-                    plantType = PlantType.SPROUT,
-                    sessionMinutes = 25,
-                    plantedAtMillis = System.currentTimeMillis() - 86400000L,
-                    completedAtMillis = System.currentTimeMillis() - 85000000L,
-                    status = PlantStatus.BLOOMED,
-                    associatedSessionTitle = "Welcome Sprint",
-                    slotIndex = 0
-                )
-            )
         }
     }
 }

@@ -14,6 +14,9 @@ interface BlockListDao {
     @Query("SELECT * FROM block_lists ORDER BY isDefault DESC, name ASC")
     fun getAllLists(): Flow<List<BlockList>>
 
+    @Query("SELECT * FROM block_lists ORDER BY isDefault DESC, name ASC")
+    suspend fun getAllListsOnce(): List<BlockList>
+
     @Query("SELECT * FROM block_lists WHERE id = :id")
     suspend fun getListById(id: Long): BlockList?
 

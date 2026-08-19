@@ -30,10 +30,24 @@ class AppRepository(
     // Block Lists
     val allBlockLists: Flow<List<BlockList>> = blockListDao.getAllLists()
     suspend fun getListById(id: Long) = blockListDao.getListById(id)
+    suspend fun getAllListsOnce(): List<BlockList> = blockListDao.getAllListsOnce()
     suspend fun getActiveLists(): List<BlockList> = blockListDao.getActiveLists()
     suspend fun insertBlockList(list: BlockList) = blockListDao.insertList(list)
     suspend fun updateBlockList(list: BlockList) = blockListDao.updateList(list)
     suspend fun deleteBlockList(list: BlockList) = blockListDao.deleteList(list)
+
+    /**
+     * Seeds built-in lists/targets/schedules (and the welcome plant) if the
+     * database is empty, and backfills the Adult & NSFW list when an older
+     * install is missing it. Safe to call from both the Room onCreate
+     * callback and Application.onCreate — see [DefaultData.seedInto].
+     */
+    suspend fun ensureDefaultData() = DefaultData.seedInto(
+        listDao = blockListDao,
+        targetDao = blockedTargetDao,
+        scheduleDao = scheduleDao,
+        gardenDao = gardenPlantDao
+    )
 
     // Targets
     fun getTargetsForList(listId: Long): Flow<List<BlockedTarget>> = blockedTargetDao.getTargetsForList(listId)
