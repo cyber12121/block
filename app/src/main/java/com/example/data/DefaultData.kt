@@ -1,0 +1,164 @@
+package com.example.data
+
+import com.example.data.model.BlockList
+import com.example.data.model.BlockedTarget
+import com.example.data.model.Schedule
+import com.example.data.model.TargetType
+
+object DefaultData {
+    val defaultLists = listOf(
+        BlockList(
+            id = 1L,
+            name = "Social Media",
+            description = "Block distracting social feeds, reels & shorts",
+            iconName = "Share",
+            colorHex = 0xFFEC4899, // Pink
+            isEnabled = true,
+            isDefault = true
+        ),
+        BlockList(
+            id = 2L,
+            name = "Entertainment & Video",
+            description = "Streaming, video clips, and gaming platforms",
+            iconName = "Play",
+            colorHex = 0xFF8B5CF6, // Purple
+            isEnabled = true,
+            isDefault = true
+        ),
+        BlockList(
+            id = 3L,
+            name = "Gaming & Esports",
+            description = "Mobile games and gaming portals",
+            iconName = "Gamepad",
+            colorHex = 0xFFF59E0B, // Amber
+            isEnabled = true,
+            isDefault = true
+        ),
+        BlockList(
+            id = 4L,
+            name = "News & Feeds",
+            description = "Clickbait, infinite feeds, and forums",
+            iconName = "Feed",
+            colorHex = 0xFF3B82F6, // Blue
+            isEnabled = false,
+            isDefault = true
+        ),
+        BlockList(
+            id = 5L,
+            name = "Custom Sites & Keywords",
+            description = "User-defined blocked domains, URLs, and keywords",
+            iconName = "Block",
+            colorHex = 0xFFEF4444, // Red
+            isEnabled = true,
+            isDefault = false
+        ),
+        BlockList(
+            id = 6L,
+            name = "Adult & NSFW Blocker",
+            description = "Comprehensive 24/7 protection against adult websites, explicit keywords & NSFW content",
+            iconName = "Security",
+            colorHex = 0xFFDC2626, // Crimson Red
+            isEnabled = true,
+            isDefault = true
+        )
+    )
+
+    val defaultTargets = listOf(
+        // List 1: Social Media
+        BlockedTarget(listId = 1L, targetType = TargetType.APP, identifier = "com.instagram.android", displayName = "Instagram", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "instagram.com", displayName = "instagram.com", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.APP, identifier = "com.zhiliaoapp.musically", displayName = "TikTok", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "tiktok.com", displayName = "tiktok.com", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.APP, identifier = "com.twitter.android", displayName = "X (Twitter)", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "twitter.com", displayName = "twitter.com", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "x.com", displayName = "x.com", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.APP, identifier = "com.facebook.katana", displayName = "Facebook", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "facebook.com", displayName = "facebook.com", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.APP, identifier = "com.snapchat.android", displayName = "Snapchat", category = "Social"),
+        BlockedTarget(listId = 1L, targetType = TargetType.WEBSITE, identifier = "snapchat.com", displayName = "snapchat.com", category = "Social"),
+
+        // List 2: Entertainment & Video
+        BlockedTarget(listId = 2L, targetType = TargetType.APP, identifier = "com.google.android.youtube", displayName = "YouTube App", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.WEBSITE, identifier = "youtube.com", displayName = "youtube.com", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.WEBSITE, identifier = "m.youtube.com", displayName = "m.youtube.com", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.WEBSITE, identifier = "youtu.be", displayName = "youtu.be", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.APP, identifier = "com.netflix.mediaclient", displayName = "Netflix", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.WEBSITE, identifier = "netflix.com", displayName = "netflix.com", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.APP, identifier = "tv.twitch.android.app", displayName = "Twitch", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.WEBSITE, identifier = "twitch.tv", displayName = "twitch.tv", category = "Video"),
+        BlockedTarget(listId = 2L, targetType = TargetType.APP, identifier = "com.disney.disneyplus", displayName = "Disney+", category = "Video"),
+
+        // List 3: Gaming
+        BlockedTarget(listId = 3L, targetType = TargetType.APP, identifier = "com.roblox.client", displayName = "Roblox", category = "Gaming"),
+        BlockedTarget(listId = 3L, targetType = TargetType.APP, identifier = "com.dts.freefireth", displayName = "Free Fire", category = "Gaming"),
+        BlockedTarget(listId = 3L, targetType = TargetType.APP, identifier = "com.supercell.clashofclans", displayName = "Clash of Clans", category = "Gaming"),
+        BlockedTarget(listId = 3L, targetType = TargetType.APP, identifier = "com.supercell.brawlstars", displayName = "Brawl Stars", category = "Gaming"),
+        BlockedTarget(listId = 3L, targetType = TargetType.APP, identifier = "com.discord", displayName = "Discord", category = "Gaming"),
+        BlockedTarget(listId = 3L, targetType = TargetType.WEBSITE, identifier = "discord.com", displayName = "discord.com", category = "Gaming"),
+
+        // List 4: News & Feeds
+        BlockedTarget(listId = 4L, targetType = TargetType.APP, identifier = "com.reddit.frontpage", displayName = "Reddit", category = "Forums"),
+        BlockedTarget(listId = 4L, targetType = TargetType.WEBSITE, identifier = "reddit.com", displayName = "reddit.com", category = "Forums"),
+        BlockedTarget(listId = 4L, targetType = TargetType.WEBSITE, identifier = "9gag.com", displayName = "9GAG", category = "Humor"),
+        BlockedTarget(listId = 4L, targetType = TargetType.WEBSITE, identifier = "buzzfeed.com", displayName = "BuzzFeed", category = "News"),
+        BlockedTarget(listId = 4L, targetType = TargetType.KEYWORD, identifier = "celebrity gossip", displayName = "Keyword: celebrity gossip", category = "Keyword"),
+        BlockedTarget(listId = 4L, targetType = TargetType.KEYWORD, identifier = "clickbait", displayName = "Keyword: clickbait", category = "Keyword"),
+
+        // List 6: Adult & NSFW Content Blocker
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "pornhub.com", displayName = "Pornhub", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "xvideos.com", displayName = "XVideos", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "xnxx.com", displayName = "XNXX", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "xhamster.com", displayName = "xHamster", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "onlyfans.com", displayName = "OnlyFans", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "chaturbate.com", displayName = "Chaturbate", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "redtube.com", displayName = "RedTube", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "youporn.com", displayName = "YouPorn", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "spankbang.com", displayName = "SpankBang", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "rule34.xxx", displayName = "Rule34", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "camsoda.com", displayName = "CamSoda", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "beeg.com", displayName = "Beeg", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "eporner.com", displayName = "EPorner", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "brazzers.com", displayName = "Brazzers", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "stripchat.com", displayName = "Stripchat", category = "Adult"),
+        BlockedTarget(listId = 6L, targetType = TargetType.WEBSITE, identifier = "fansly.com", displayName = "Fansly", category = "Adult"),
+
+        // List 6: Explicit Keywords
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "porn", displayName = "Keyword: porn", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "xxx", displayName = "Keyword: xxx", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "nsfw", displayName = "Keyword: nsfw", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "hentai", displayName = "Keyword: hentai", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "erotic", displayName = "Keyword: erotic", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "onlyfans", displayName = "Keyword: onlyfans", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "camgirl", displayName = "Keyword: camgirl", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "webcam sex", displayName = "Keyword: webcam sex", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "escort", displayName = "Keyword: escort", category = "Adult Keyword"),
+        BlockedTarget(listId = 6L, targetType = TargetType.KEYWORD, identifier = "adult video", displayName = "Keyword: adult video", category = "Adult Keyword")
+    )
+
+    val defaultSchedules = listOf(
+        Schedule(
+            id = 1L,
+            name = "Work Hours Sprint",
+            startHour = 9,
+            startMinute = 0,
+            endHour = 17,
+            endMinute = 0,
+            daysOfWeek = "2,3,4,5,6", // Mon-Fri
+            isStrictMode = false,
+            activeListNames = "Social Media, Entertainment & Video, Gaming & Esports, Adult & NSFW Blocker",
+            isEnabled = true
+        ),
+        Schedule(
+            id = 2L,
+            name = "Night Bedtime Guard",
+            startHour = 22,
+            startMinute = 30,
+            endHour = 7,
+            endMinute = 0,
+            daysOfWeek = "1,2,3,4,5,6,7", // All days
+            isStrictMode = true,
+            activeListNames = "Social Media, Entertainment & Video, Adult & NSFW Blocker",
+            isEnabled = false
+        )
+    )
+}

@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">FocusGuard</string>
+    <string name="accessibility_service_description">Enforces active focus sessions and strict mode by detecting distracting apps, websites, and keywords.</string>
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_garden">Garden</string>
+    <string name="tab_block_lists">Block Lists</string>
+    <string name="tab_schedules">Schedules</string>
+    <string name="tab_stats">Insights</string>
+    <string name="tab_settings">Security</string>
+    <string name="strict_mode_active">STRICT MODE ACTIVE</string>
+    <string name="strict_mode_sub">Blocking cannot be disabled until the timer ends</string>
+    <string name="start_focus">Start Focus</string>
+    <string name="start_strict_mode">Start Strict Mode</string>
+    <string name="normal_mode">Normal Mode</string>
+    <string name="strict_mode">Strict Mode</string>
+    <string name="blocked_screen_title">Stay Focused!</string>
+    <string name="blocked_screen_subtitle">This app or website is blocked under your active FocusGuard session.</string>
+    <string name="return_to_focus">Return to Dashboard</string>
+</resources>
