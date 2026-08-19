@@ -140,16 +140,30 @@ class FocusAccessibilityService : AccessibilityService() {
             // "com.android.dialer" marked essential, "com.android.dialer.spam" (or any
             // package embedding that string) was silently treated as essential too.
             val isEssential = essentialApps.contains(targetPkg.lowercase())
-            
-            // If user swiped to system home or opened a blocked non-essential app
-            // during an active session, bring them back to FocusGuard's regular UI
-            // (never auto-open the Minimal Launcher — the user opens that manually).
-            if (!isFgApp && !isEssential && (targetPkg.contains("launcher") || targetPkg.contains("home") || sessionManager.isAppBlocked(targetPkg))) {
-                val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val isMinimalLauncherHome = sessionManager.isMinimalLauncherActive()
+
+            val isLauncherOrHome = targetPkg.contains("launcher") || targetPkg.contains("home")
+
+            // If the Minimal Launcher is acting as the home screen, don't intercept
+            // home/launcher presses — the user is already in our restricted environment.
+            // Only reroute when they press home on a regular device launcher.
+            if (!isFgApp && !isEssential) {
+                if (isLauncherOrHome && !isMinimalLauncherHome) {
+                    // User pressed home to a regular launcher during a session — pull them back
+                    val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    }
+                    startActivity(relaunch)
+                    return
+                } else if (!isLauncherOrHome && sessionManager.isAppBlocked(targetPkg)) {
+                    // Blocked app opened — show the dedicated block shield overlay
+                    triggerBlockShield(
+                        targetName = getReadableAppName(targetPkg),
+                        reason = "App '$targetPkg' is restricted in your active focus shield.",
+                        isWebsite = false
+                    )
+                    return
                 }
-                startActivity(relaunch)
-                return
             }
         }
 

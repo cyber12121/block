@@ -224,7 +224,7 @@ fun BlockedShieldScreen(
             }
 
             Text(
-                text = "Site Restricted!",
+                text = if (isWebsite) "Site Restricted!" else "App Blocked!",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White

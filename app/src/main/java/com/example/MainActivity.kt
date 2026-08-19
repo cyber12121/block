@@ -111,9 +111,10 @@ fun MainAppContent(viewModel: MainViewModel) {
     var isLiveSessionFullscreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
-    // Always start on the regular UI; the Minimal Launcher only appears when the
-    // user opens it manually.
-    var isMinimalLauncherFullscreen by remember { mutableStateOf(false) }
+    // Restore the Minimal Launcher state from SharedPrefs so it survives process death
+    // and accessibility-service-triggered relaunches (the service bounces the user back
+    // to MainActivity, and without this the composable always started with false).
+    var isMinimalLauncherFullscreen by remember { mutableStateOf(sessionManager.isMinimalLauncherActive()) }
 
     androidx.compose.runtime.LaunchedEffect(isMinimalLauncherFullscreen) {
         sessionManager.setMinimalLauncherActive(isMinimalLauncherFullscreen)
