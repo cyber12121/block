@@ -3,7 +3,6 @@ package com.example
 import android.app.Application
 import com.example.data.AppDatabase
 import com.example.data.AppRepository
-import com.example.data.DefaultData
 import com.example.service.FocusForegroundService
 import com.example.service.FocusSessionManager
 import kotlinx.coroutines.CoroutineScope
@@ -42,24 +41,9 @@ class FocusGuardApp : Application() {
 
         applicationScope.launch {
             try {
-                if (repository.getActiveLists().isEmpty()) {
-                    for (list in DefaultData.defaultLists) {
-                        repository.insertBlockList(list)
-                    }
-                    repository.insertTargets(DefaultData.defaultTargets)
-                    for (sched in DefaultData.defaultSchedules) {
-                        repository.insertSchedule(sched)
-                    }
-                } else {
-                    // Ensure list 6 (Adult & NSFW blocker) exists even if user already has other lists
-                    val existing = repository.getActiveLists()
-                    if (existing.none { it.id == 6L || it.name.contains("Adult", ignoreCase = true) }) {
-                        val adultList = DefaultData.defaultLists.first { it.id == 6L }
-                        repository.insertBlockList(adultList)
-                        val adultTargets = DefaultData.defaultTargets.filter { it.listId == 6L }
-                        repository.insertTargets(adultTargets)
-                    }
-                }
+                // Must use getAllListsOnce() (all rows), not getActiveLists()
+                // (enabled only). See AppRepository.ensureDefaultData().
+                repository.ensureDefaultData()
             } catch (_: Exception) {}
             sessionManager.refreshBlockedTargetsCache(repository)
         }
