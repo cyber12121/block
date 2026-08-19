@@ -47,7 +47,6 @@ import com.example.ui.screens.GardenScreen
 import com.example.ui.screens.InsightsScreen
 import com.example.ui.screens.MinimalLauncherScreen
 import com.example.ui.screens.SchedulesScreen
-import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.example.service.FocusSessionManager
 import com.example.ui.screens.SessionScreen
@@ -74,34 +73,16 @@ class MainActivity : ComponentActivity() {
         val factory = MainViewModelFactory(app.repository, app.sessionManager)
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
-        if (intent.getBooleanExtra("LAUNCH_MINIMAL_MODE", false)) {
-            app.sessionManager.setMinimalLauncherActive(true)
-        }
-
+        // NOTE: The Minimal Launcher is intentionally NOT auto-opened here.
+        // It used to relaunch itself on top of FocusGuard whenever the user left
+        // the app (onUserLeaveHint / LAUNCH_MINIMAL_MODE), which immediately
+        // covered any app the user had just launched from it. It is now opened
+        // only manually (Dashboard banner / "All Apps" area), so users decide
+        // when they want it.
         setContent {
             FocusGuardTheme {
                 MainAppContent(viewModel = viewModel)
             }
-        }
-    }
-
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        val sessionManager = FocusSessionManager.getInstance(this)
-        if (sessionManager.isMinimalLauncherActive() || sessionManager.sessionState.value.isActive) {
-            val relaunchIntent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra("LAUNCH_MINIMAL_MODE", true)
-            }
-            startActivity(relaunchIntent)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val sessionManager = FocusSessionManager.getInstance(this)
-        if (intent.getBooleanExtra("LAUNCH_MINIMAL_MODE", false)) {
-            sessionManager.setMinimalLauncherActive(true)
         }
     }
 }
@@ -130,7 +111,9 @@ fun MainAppContent(viewModel: MainViewModel) {
     var isLiveSessionFullscreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
-    var isMinimalLauncherFullscreen by remember { mutableStateOf(sessionManager.isMinimalLauncherActive()) }
+    // Always start on the regular UI; the Minimal Launcher only appears when the
+    // user opens it manually.
+    var isMinimalLauncherFullscreen by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(isMinimalLauncherFullscreen) {
         sessionManager.setMinimalLauncherActive(isMinimalLauncherFullscreen)

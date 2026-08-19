@@ -141,11 +141,12 @@ class FocusAccessibilityService : AccessibilityService() {
             // package embedding that string) was silently treated as essential too.
             val isEssential = essentialApps.contains(targetPkg.lowercase())
             
-            // If user swiped to system home or opened non-essential app while Minimal Launcher is active, bring user back to FocusGuard!
+            // If user swiped to system home or opened a blocked non-essential app
+            // during an active session, bring them back to FocusGuard's regular UI
+            // (never auto-open the Minimal Launcher — the user opens that manually).
             if (!isFgApp && !isEssential && (targetPkg.contains("launcher") || targetPkg.contains("home") || sessionManager.isAppBlocked(targetPkg))) {
                 val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    putExtra("LAUNCH_MINIMAL_MODE", true)
                 }
                 startActivity(relaunch)
                 return

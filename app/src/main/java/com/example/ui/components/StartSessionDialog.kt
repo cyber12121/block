@@ -99,7 +99,8 @@ fun StartSessionDialog(
     var isCustomDuration by remember { mutableStateOf(false) }
     var modeType by remember { mutableStateOf(SessionModeType.NORMAL) }
     var isAcknowledged by remember { mutableStateOf(false) }
-    var autoLaunchMinimal by remember { mutableStateOf(true) }
+    // Off by default: the Minimal Launcher should never pop up on its own.
+    var autoLaunchMinimal by remember { mutableStateOf(false) }
 
     val isStrictMode = modeType == SessionModeType.STRICT
 
@@ -485,13 +486,13 @@ fun StartSessionDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Launch Minimal Launcher during session",
+                            text = "Open Minimal Launcher when session starts",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Restricts home screen to your 5 custom essential apps",
+                            text = "Optional — off by default. Shows only the apps you chose.",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8)
                         )
