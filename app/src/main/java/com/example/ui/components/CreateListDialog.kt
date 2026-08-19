@@ -59,7 +59,7 @@ fun CreateListDialog(
         0xFF06B6D4L, // Cyan
         0xFF10B981L, // Emerald
         0xFFF59E0BL, // Amber
-        0xFFEF4444L  // Red
+        0xFFD9506BL // Raspberry
     )
 
     Dialog(

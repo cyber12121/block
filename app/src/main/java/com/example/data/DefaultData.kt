@@ -122,7 +122,7 @@ object DefaultData {
             name = "Custom Sites & Keywords",
             description = "User-defined blocked domains, URLs, and keywords",
             iconName = "Block",
-            colorHex = 0xFFEF4444, // Red
+            colorHex = 0xFFD9506B, // Raspberry
             isEnabled = true,
             isDefault = false
         ),
@@ -131,7 +131,7 @@ object DefaultData {
             name = "Adult & NSFW Blocker",
             description = "Comprehensive 24/7 protection against adult websites, explicit keywords & NSFW content",
             iconName = "Security",
-            colorHex = 0xFFDC2626, // Crimson Red
+            colorHex = 0xFFB03A52, // Deep Raspberry
             isEnabled = true,
             isDefault = true
         )

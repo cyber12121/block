@@ -152,8 +152,8 @@ fun AddTargetDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0F172A)),
-            color = Color(0xFF0F172A),
+                .background(Color(0xFF111A2E)),
+            color = Color(0xFF111A2E),
             tonalElevation = 6.dp
         ) {
             Column(
@@ -203,7 +203,7 @@ fun AddTargetDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1D2A4A), RoundedCornerShape(12.dp))
                         .padding(4.dp)
                 ) {
                     Box(
@@ -277,7 +277,7 @@ fun AddTargetDialog(
                                 val isSelected = selectedCategoryFilter == cat
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF1E293B),
+                                    color = if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF1D2A4A),
                                     border = BorderStroke(1.dp, if (isSelected) CyanAccent else Color.Transparent),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
@@ -346,10 +346,10 @@ fun AddTargetDialog(
                             val isChecked = selectedPresets.any { it.identifier == item.identifier }
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isChecked) IndigoPrimary.copy(alpha = 0.25f) else Color(0xFF1E293B),
+                                color = if (isChecked) IndigoPrimary.copy(alpha = 0.25f) else Color(0xFF1D2A4A),
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isChecked) IndigoPrimary else Color(0xFF334155)
+                                    if (isChecked) IndigoPrimary else Color(0xFF2A3A5F)
                                 ),
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
@@ -392,7 +392,7 @@ fun AddTargetDialog(
                     // Live Selection Status Bar
                     Card(
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -457,7 +457,7 @@ fun AddTargetDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                            .background(Color(0xFF1D2A4A), RoundedCornerShape(12.dp))
                             .padding(4.dp)
                     ) {
                         TargetType.values().forEach { type ->

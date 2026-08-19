@@ -158,9 +158,9 @@ fun BlockedShieldScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF090D16),
-                        if (isStrictMode) Color(0xFF200A10) else Color(0xFF0F172A),
-                        Color(0xFF090D16)
+                        Color(0xFF0B1120),
+                        if (isStrictMode) Color(0xFF2E1424) else Color(0xFF111A2E),
+                        Color(0xFF0B1120)
                     )
                 )
             )
@@ -245,7 +245,7 @@ fun BlockedShieldScreen(
             if (remainingSeconds > 0) {
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1E293B).copy(alpha = 0.8f)
+                        containerColor = Color(0xFF1D2A4A).copy(alpha = 0.8f)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()

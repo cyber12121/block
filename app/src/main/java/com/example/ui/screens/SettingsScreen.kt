@@ -496,7 +496,7 @@ fun PermissionItemCard(
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isGranted) MaterialTheme.colorScheme.surface else Color(0xFF1F1215)
+            containerColor = if (isGranted) MaterialTheme.colorScheme.surface else Color(0xFF2A1522)
         ),
         border = BorderStroke(
             1.2.dp,

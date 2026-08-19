@@ -273,7 +273,7 @@ fun AppsScreen(
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF261016)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1424)),
                     border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.6f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -534,7 +534,7 @@ fun AppBlockItemRow(
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isBlocked) Color(0xFF1F1215) else MaterialTheme.colorScheme.surface
+            containerColor = if (isBlocked) Color(0xFF2A1522) else MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
             1.dp,

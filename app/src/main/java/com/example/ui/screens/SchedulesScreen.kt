@@ -486,7 +486,7 @@ fun ScheduleCard(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = if (isActiveNow) CyanAccent else IndigoPrimary,
-                            uncheckedTrackColor = Color(0xFF1E293B)
+                            uncheckedTrackColor = Color(0xFF1D2A4A)
                         ),
                         modifier = Modifier.testTag("toggle_schedule_${schedule.id}")
                     )

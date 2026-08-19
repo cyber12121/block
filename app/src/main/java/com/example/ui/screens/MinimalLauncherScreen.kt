@@ -200,7 +200,7 @@ fun MinimalLauncherScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070A10))
+            .background(Color(0xFF0B1120))
             .padding(24.dp)
     ) {
         if (isAppDrawerOpen) {
@@ -212,7 +212,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF131B2E),
+                        color = Color(0xFF16223E),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier.clickable { isAppDrawerOpen = false }
                     ) {
@@ -292,7 +292,7 @@ fun MinimalLauncherScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IndigoPrimary,
-                        unfocusedBorderColor = Color(0xFF1E293B),
+                        unfocusedBorderColor = Color(0xFF1D2A4A),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     ),
@@ -379,7 +379,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF131B2E),
+                        color = Color(0xFF16223E),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier.clickable(onClick = handleExitRequest)
                     ) {
@@ -404,7 +404,7 @@ fun MinimalLauncherScreen(
                     }
 
                     Surface(
-                        color = if (remainingExits > 0) Color(0xFF1E293B) else CrimsonStrict.copy(alpha = 0.2f),
+                        color = if (remainingExits > 0) Color(0xFF1D2A4A) else CrimsonStrict.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier
                             .clickable { showEmergencyExitDialog = true }
@@ -431,7 +431,7 @@ fun MinimalLauncherScreen(
                     }
 
                     Surface(
-                        color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1E293B),
+                        color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1D2A4A),
                         shape = RoundedCornerShape(100.dp)
                     ) {
                         Row(
@@ -506,7 +506,7 @@ fun MinimalLauncherScreen(
 
                         if (!sessionState.isActive) {
                             Surface(
-                                color = Color(0xFF1E293B),
+                                color = Color(0xFF1D2A4A),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .clickable { showConfigureEssentialAppsDialog = true }
@@ -527,7 +527,7 @@ fun MinimalLauncherScreen(
                     if (essentialAppsShortcuts.isEmpty()) {
                         // Empty state: nothing pre-decided — the user chooses their apps
                         Surface(
-                            color = Color(0xFF131B2E),
+                            color = Color(0xFF16223E),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -614,7 +614,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF1E293B),
+                        color = Color(0xFF1D2A4A),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .clickable { isAppDrawerOpen = true }
@@ -693,7 +693,7 @@ fun MinimalLauncherScreen(
                         Text("Stay Focused", fontWeight = FontWeight.Bold)
                     }
                 },
-                containerColor = Color(0xFF0F172A)
+                containerColor = Color(0xFF111A2E)
             )
         }
 
@@ -712,7 +712,7 @@ fun MinimalLauncherScreen(
                         Text("Stay Focused")
                     }
                 },
-                containerColor = Color(0xFF0F172A)
+                containerColor = Color(0xFF111A2E)
             )
         }
 
@@ -762,7 +762,7 @@ fun EmergencyExitDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF0F172A),
+            color = Color(0xFF111A2E),
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .clickable(enabled = false) {}
@@ -790,7 +790,7 @@ fun EmergencyExitDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -880,7 +880,7 @@ fun EditEssentialAppsDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF0F172A),
+            color = Color(0xFF111A2E),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clickable(enabled = false) {}
@@ -924,7 +924,7 @@ fun EditEssentialAppsDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IndigoPrimary,
-                        unfocusedBorderColor = Color(0xFF1E293B),
+                        unfocusedBorderColor = Color(0xFF1D2A4A),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     ),
@@ -945,7 +945,7 @@ fun EditEssentialAppsDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isChecked) IndigoPrimary.copy(alpha = 0.15f) else Color(0xFF1E293B))
+                                .background(if (isChecked) IndigoPrimary.copy(alpha = 0.15f) else Color(0xFF1D2A4A))
                                 .clickable {
                                     if (isChecked) {
                                         selectedPkgs = selectedPkgs - app.second

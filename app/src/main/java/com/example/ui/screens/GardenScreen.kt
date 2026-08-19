@@ -162,7 +162,7 @@ fun GardenScreen(
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF064E3B), Color(0xFF0F172A))
+                                    colors = listOf(Color(0xFF064E3B), Color(0xFF111A2E))
                                 )
                             )
                             .padding(20.dp)
@@ -225,7 +225,7 @@ fun GardenScreen(
                                     .fillMaxWidth()
                                     .height(10.dp)
                                     .clip(RoundedCornerShape(5.dp))
-                                    .background(Color(0xFF1E293B))
+                                    .background(Color(0xFF1D2A4A))
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -253,8 +253,8 @@ fun GardenScreen(
                 // Empty or Idle Banner
                 Card(
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
-                    border = BorderStroke(1.dp, Color(0xFF23304A)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
+                    border = BorderStroke(1.dp, Color(0xFF26355C)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -352,7 +352,7 @@ fun GardenScreen(
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -418,7 +418,7 @@ fun GardenScreen(
                     witheredPlants.forEach { plant ->
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF1E293B).copy(alpha = 0.5f),
+                            color = Color(0xFF1D2A4A).copy(alpha = 0.5f),
                             modifier = Modifier.clip(RoundedCornerShape(10.dp))
                         ) {
                             Row(
@@ -522,8 +522,8 @@ fun GardenScreen(
 fun PlantBadgeCard(plant: GardenPlant, onClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
-        border = BorderStroke(1.dp, Color(0xFF23304A)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
+        border = BorderStroke(1.dp, Color(0xFF26355C)),
         modifier = Modifier
             .width(105.dp)
             .clip(RoundedCornerShape(14.dp))
@@ -563,7 +563,7 @@ fun StatPill(
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
         border = BorderStroke(1.dp, color.copy(alpha = 0.3f)),
         modifier = modifier
     ) {
