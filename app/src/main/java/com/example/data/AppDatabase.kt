@@ -53,7 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "focus_guard_master_db"
                 )
                 .addCallback(DatabaseCallback(scope))
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance

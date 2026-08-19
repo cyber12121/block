@@ -311,7 +311,6 @@ class FocusAccessibilityService : AccessibilityService() {
             var found = ""
             for (n in nodes) {
                 val text = try { n.text?.toString() ?: "" } catch (_: Throwable) { "" }
-                try { n.recycle() } catch (_: Throwable) {}
                 if (found.isBlank() && text.isNotBlank()) found = text
             }
             if (found.isNotBlank()) return found
@@ -359,13 +358,10 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         }
 
-        for (i in 0 until node.childCount) {
+        val childCount = try { node.childCount } catch (_: Throwable) { 0 }
+        for (i in 0 until childCount) {
             val child = try { node.getChild(i) } catch (_: Throwable) { null } ?: continue
-            try {
-                sb.append(extractAllText(child, maxDepth - 1, visitedCount))
-            } finally {
-                try { child.recycle() } catch (_: Throwable) {}
-            }
+            sb.append(extractAllText(child, maxDepth - 1, visitedCount))
         }
         return sb.toString()
     }
