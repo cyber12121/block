@@ -1,3 +1,5 @@
+#
+
 *.iml
 .gradle
 .kotlin
@@ -16,3 +18,51 @@
 local.properties
 .env
 debug.keystore
+
+# Build outputs
+build/
+out/
+release/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+gen/
+bin/
+
+# Signing material — never commit these
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+!debug.keystore.example
+
+# Heap dumps / profiling
+*.hprof
+*.trace
+heapdump*
+
+# NDK / native build artifacts
+obj/
+.externalNativeBuild/
+.cxx/
+
+# Lint / test reports
+lint-results*.html
+lint-results*.xml
+/app/release/
+reports/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Editors / misc
+*.log
+*.swp
+*~
