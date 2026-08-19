@@ -140,29 +140,12 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(
-                                brush = Brush.linearGradient(listOf(IndigoPrimary, CyanAccent)),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "FocusGuard Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "FocusGuard",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.2).sp
                         )
                         Text(
                             text = if (sessionState.isActive) "Enforcing Focus Rules" else "Protection Ready",
@@ -230,9 +213,9 @@ fun DashboardScreen(
         if (hasMissingPermissions) {
             item {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1F1215)),
-                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(onClick = onNavigateToSettings)
@@ -340,9 +323,9 @@ fun DashboardScreen(
         // Minimalist Olauncher Mode Launcher Banner
         item {
             Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onOpenMinimalLauncher)
@@ -358,48 +341,34 @@ fun DashboardScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .background(IndigoPrimary.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhoneAndroid,
-                                contentDescription = null,
-                                tint = IndigoPrimary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.PhoneAndroid,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Minimalist Focus Launcher",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = Color.White
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
                             )
                             Text(
-                                text = "Text-based home screen (Olauncher style) to eliminate dopamine app icons",
+                                text = "Text-based home screen without app icons",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp
                             )
                         }
                     }
 
-                    Surface(
-                        color = IndigoPrimary,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Launch",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        )
-                    }
+                    Text(
+                        text = "Open",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
@@ -505,13 +474,13 @@ fun ActiveSessionBanner(
     } else ""
 
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (sessionState.isStrictMode) Color(0xFF1E1015) else Color(0xFF131B2E)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
-            1.5.dp,
-            if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = pulseAlpha) else IndigoPrimary.copy(alpha = 0.6f)
+            1.dp,
+            if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -559,10 +528,10 @@ fun ActiveSessionBanner(
                 Column {
                     Text(
                         text = timeFormatted,
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp,
-                        color = Color.White
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = (-0.5).sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (sessionState.isStrictMode) "Locked until $endFormatted" else "Scheduled end: $endFormatted",
@@ -640,9 +609,9 @@ fun QuickStartHeroCard(
     onQuickStart: (minutes: Int, isStrict: Boolean) -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -717,7 +686,7 @@ fun QuickStartHeroCard(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        text = "🍅 25m Sprint",
+                        text = "25m Sprint",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFCA5A5),
@@ -735,7 +704,7 @@ fun QuickStartHeroCard(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        text = "⚡ 30m Normal",
+                        text = "30m Normal",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
@@ -753,7 +722,7 @@ fun QuickStartHeroCard(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        text = "🔒 1h Strict",
+                        text = "1h Strict",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = CrimsonStrict,
@@ -776,9 +745,9 @@ fun StatMetricCard(
     subtitle: String
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

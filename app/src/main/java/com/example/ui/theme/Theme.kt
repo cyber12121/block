@@ -12,18 +12,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = IndigoPrimary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF312E81),
-    onPrimaryContainer = Color(0xFFE0E7FF),
-    secondary = CyanAccent,
-    onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF164E63),
-    onSecondaryContainer = Color(0xFFCFFAFE),
-    tertiary = AmberFocus,
-    onTertiary = Color.Black,
-    tertiaryContainer = Color(0xFF78350F),
-    onTertiaryContainer = Color(0xFFFEF3C7),
+    primary = Color(0xFFF5F5F5),
+    onPrimary = Color(0xFF111111),
+    primaryContainer = Color(0xFF262626),
+    onPrimaryContainer = Color(0xFFF5F5F5),
+    secondary = Color(0xFFA3A3A3),
+    onSecondary = Color(0xFF111111),
+    secondaryContainer = Color(0xFF262626),
+    onSecondaryContainer = Color(0xFFE5E5E5),
+    tertiary = Color(0xFFD4D4D4),
+    onTertiary = Color(0xFF111111),
+    tertiaryContainer = Color(0xFF262626),
+    onTertiaryContainer = Color(0xFFE5E5E5),
     error = CrimsonStrict,
     onError = Color.White,
     background = DarkBackground,
@@ -35,18 +35,18 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = IndigoPrimary,
+    primary = Color(0xFF171717),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFEEF2FF),
-    onPrimaryContainer = Color(0xFF312E81),
-    secondary = CyanAccent,
+    primaryContainer = Color(0xFFF4F4F5),
+    onPrimaryContainer = Color(0xFF171717),
+    secondary = Color(0xFF525252),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE0F2FE),
-    onSecondaryContainer = Color(0xFF0369A1),
-    tertiary = AmberFocus,
+    secondaryContainer = Color(0xFFF4F4F5),
+    onSecondaryContainer = Color(0xFF171717),
+    tertiary = Color(0xFF404040),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFFEF3C7),
-    onTertiaryContainer = Color(0xFF92400E),
+    tertiaryContainer = Color(0xFFF4F4F5),
+    onTertiaryContainer = Color(0xFF171717),
     error = CrimsonStrict,
     onError = Color.White,
     background = LightBackground,
@@ -60,7 +60,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun FocusGuardTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set to false to preserve our custom focus brand styling
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
