@@ -145,19 +145,21 @@ class FocusAccessibilityService : AccessibilityService() {
             val isLauncherOrHome = targetPkg.contains("launcher") || targetPkg.contains("home")
 
             if (!isFgApp && !isEssential) {
-                if (isLauncherOrHome && !isMinimalLauncherHome) {
-                    // Home/launcher press during session:
-                    // - Strict Mode: pull the user back to FocusGuard (they cannot leave).
-                    // - Normal Mode: allow minimizing — the app-blocking logic below still
-                    //   fires if they open a blocked app from their system launcher.
-                    if (sessionState.isStrictMode) {
+                if (isLauncherOrHome) {
+                    // Home/launcher press during a session:
+                    // - Strict Mode AND Minimal Launcher is the active screen:
+                    //   bounce back — the user must stay inside the Minimal Launcher.
+                    // - Every other case (Normal mode, or Strict mode but NOT in Minimal
+                    //   Launcher): allow going home freely. App-blocking still fires
+                    //   when the user opens a blocked app from their system launcher.
+                    if (sessionState.isStrictMode && isMinimalLauncherHome) {
                         val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                         }
                         startActivity(relaunch)
                         return
                     }
-                    // Normal mode — let them go home freely.
+                    // All other cases — let them go home freely.
                 } else if (!isLauncherOrHome && sessionManager.isAppBlocked(targetPkg)) {
                     // Blocked app opened — show the dedicated block shield overlay
                     triggerBlockShield(
