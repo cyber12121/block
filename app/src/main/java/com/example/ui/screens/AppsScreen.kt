@@ -31,26 +31,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,11 +50,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,14 +71,18 @@ import com.example.data.model.BlockList
 import com.example.data.model.BlockedTarget
 import com.example.data.model.TargetType
 import com.example.service.ActiveSessionState
-import com.example.ui.theme.AmberFocus
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
+import com.example.ui.theme.DarkCardBorder
+import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class InstalledAppItem(
     val appName: String,
@@ -99,6 +91,19 @@ data class InstalledAppItem(
     val category: String,
     val isSystemApp: Boolean
 )
+
+fun drawableToBitmap(drawable: Drawable): Bitmap {
+    if (drawable is BitmapDrawable && drawable.bitmap != null) {
+        return drawable.bitmap
+    }
+    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
+    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, canvas.width, canvas.height)
+    drawable.draw(canvas)
+    return bitmap
+}
 
 @Composable
 fun AppsScreen(
@@ -110,25 +115,22 @@ fun AppsScreen(
     onDeleteTarget: (BlockedTarget) -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
-    var selectedListId by remember(blockLists) {
-        mutableStateOf(blockLists.firstOrNull()?.id ?: 1L)
-    }
-
     var installedApps by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var isLoadingApps by remember { mutableStateOf(true) }
 
     val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
 
-    // Set of currently blocked package names
-    val blockedAppTargets = remember(allTargets) {
-        allTargets.filter { it.targetType == TargetType.APP && it.isEnabled }
-    }
-    val blockedPackagesMap = remember(allTargets) {
+    val blockedTargetsMap = remember(allTargets) {
         allTargets.filter { it.targetType == TargetType.APP }.associateBy { it.identifier.lowercase() }
+    }
+    val blockedAppCount = remember(allTargets) {
+        allTargets.count { it.targetType == TargetType.APP && it.isEnabled }
+    }
+
+    val defaultListId = remember(blockLists) {
+        blockLists.firstOrNull()?.id ?: 1L
     }
 
     LaunchedEffect(Unit) {
@@ -168,7 +170,7 @@ fun AppsScreen(
                     pkgLower.contains("twitch") || pkgLower.contains("disney") || pkgLower.contains("hulu") ||
                     pkgLower.contains("primevideo") || nameLower.contains("stream") || nameLower.contains("video")
                 ) {
-                    category = "Streaming"
+                    category = "Video"
                 } else if (pkgLower.contains("game") || nameLower.contains("game") ||
                     info.activityInfo.applicationInfo.category == ApplicationInfo.CATEGORY_GAME
                 ) {
@@ -187,22 +189,22 @@ fun AppsScreen(
                 apps.add(InstalledAppItem(name, pkg, bitmap, category, isSys))
             }
 
-            // Sort: Blocked first, then alphabetical
             apps.sortBy { it.appName.lowercase() }
             installedApps = apps
             isLoadingApps = false
         }
     }
 
-    val filteredApps = remember(installedApps, searchQuery, selectedCategory, blockedPackagesMap) {
+    val filteredApps = remember(installedApps, searchQuery, selectedCategory, blockedTargetsMap) {
         installedApps.filter { app ->
             val matchesSearch = searchQuery.isBlank() ||
                 app.appName.contains(searchQuery, ignoreCase = true) ||
                 app.packageName.contains(searchQuery, ignoreCase = true)
 
+            val isBlocked = blockedTargetsMap[app.packageName.lowercase()]?.isEnabled == true
             val matchesCategory = when (selectedCategory) {
                 "All" -> true
-                "Blocked" -> blockedPackagesMap.containsKey(app.packageName.lowercase())
+                "Blocked" -> isBlocked
                 else -> app.category.equals(selectedCategory, ignoreCase = true)
             }
 
@@ -210,403 +212,405 @@ fun AppsScreen(
         }
     }
 
-    val categories = listOf("All", "Blocked", "Social", "Streaming", "Games", "Shopping", "Browsers", "Other")
+    val socialCount = remember(installedApps) { installedApps.count { it.category == "Social" } }
+    val videoCount = remember(installedApps) { installedApps.count { it.category == "Video" } }
+    val gamesCount = remember(installedApps) { installedApps.count { it.category == "Games" } }
+
+    val endFormatted = if (sessionState.endTimeMillis > 0) {
+        SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
+    } else ""
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Header
+        // 1. Header Card
         item {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Installed Apps Blocker",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Toggle distraction barriers for installed apps in real-time",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Surface(
-                        color = if (blockedAppTargets.isNotEmpty()) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(1.dp, if (blockedAppTargets.isNotEmpty()) CrimsonStrict.copy(alpha = 0.5f) else EmeraldSuccess.copy(alpha = 0.5f))
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = BorderStroke(1.dp, DarkCardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Text(
+                            text = "App Blocker",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+
+                        Surface(
+                            color = if (blockedAppCount > 0) CrimsonStrict.copy(alpha = 0.2f) else EmeraldSuccess.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, if (blockedAppCount > 0) CrimsonStrict.copy(alpha = 0.5f) else EmeraldSuccess.copy(alpha = 0.4f))
                         ) {
-                            Icon(
-                                imageVector = if (blockedAppTargets.isNotEmpty()) Icons.Default.Block else Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = if (blockedAppTargets.isNotEmpty()) CrimsonStrict else EmeraldSuccess,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${blockedAppTargets.size} Apps Blocked",
-                                fontSize = 11.sp,
+                                text = "$blockedAppCount blocked",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (blockedAppTargets.isNotEmpty()) CrimsonStrict else EmeraldSuccess
+                                color = if (blockedAppCount > 0) Color(0xFFF87171) else EmeraldSuccess,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Choose which apps FocusGuard should block",
+                        fontSize = 13.sp,
+                        color = Color(0xFF94A3B8)
+                    )
                 }
             }
         }
 
-        // 2. Strict Mode Warning if active
+        // 2. Strict Session Active Banner
         if (isSessionStrict) {
             item {
                 Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1424)),
-                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF221118)),
+                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = CrimsonStrict,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Strict Mode Active: App blocking rules are locked to prevent bypassing.",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CrimsonStrict
-                        )
-                    }
-                }
-            }
-        }
-
-        // 3. Quick Batch Actions Card
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(
-                        text = "1-Tap Category Blocker",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                val socialPackages = installedApps
-                                    .filter { it.category == "Social" }
-                                    .map { it.packageName }
-                                if (socialPackages.isNotEmpty()) {
-                                    onAddBulkTargets(selectedListId, TargetType.APP, socialPackages, "Social")
-                                }
-                            },
-                            enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(38.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(CrimsonStrict.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Block Social", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = CrimsonStrict,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
-
-                        Button(
-                            onClick = {
-                                val streamingPackages = installedApps
-                                    .filter { it.category == "Streaming" }
-                                    .map { it.packageName }
-                                if (streamingPackages.isNotEmpty()) {
-                                    onAddBulkTargets(selectedListId, TargetType.APP, streamingPackages, "Streaming")
-                                }
-                            },
-                            enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(38.dp)
-                        ) {
-                            Text("Block Streaming", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-
-                        Button(
-                            onClick = {
-                                val gamePackages = installedApps
-                                    .filter { it.category == "Games" }
-                                    .map { it.packageName }
-                                if (gamePackages.isNotEmpty()) {
-                                    onAddBulkTargets(selectedListId, TargetType.APP, gamePackages, "Games")
-                                }
-                            },
-                            enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(38.dp)
-                        ) {
-                            Text("Block Games", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Strict session active",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color(0xFFF87171)
+                            )
+                            Text(
+                                text = "App rules can't be changed until $endFormatted",
+                                fontSize = 12.sp,
+                                color = Color(0xFFCBD5E1)
+                            )
                         }
                     }
                 }
             }
         }
 
-        // 4. Search Bar
+        // 3. Search Bar
         item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search installed apps or packages...", fontSize = 13.sp) },
+                placeholder = {
+                    Text(
+                        text = "Search installed apps",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 14.sp
+                    )
+                },
                 leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = IndigoPrimary)
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(20.dp)
+                    )
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear",
+                                tint = Color(0xFF94A3B8),
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = DarkSurface,
+                    unfocusedContainerColor = DarkSurface,
                     focusedBorderColor = IndigoPrimary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                    unfocusedBorderColor = DarkCardBorder,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
                 ),
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("app_search_input")
+                    .testTag("search_installed_apps")
             )
         }
 
-        // 5. Category Filter Chips
+        // 4. Filter Chips Row
         item {
+            val filterOptions = listOf(
+                "All" to installedApps.size,
+                "Blocked" to blockedAppCount,
+                "Social" to socialCount,
+                "Video" to videoCount,
+                "Games" to gamesCount
+            )
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(categories) { cat ->
-                    val isSelected = selectedCategory == cat
-                    val count = when (cat) {
-                        "All" -> installedApps.size
-                        "Blocked" -> blockedPackagesMap.size
-                        else -> installedApps.count { it.category.equals(cat, ignoreCase = true) }
+                items(filterOptions) { (label, count) ->
+                    val isSelected = selectedCategory.equals(label, ignoreCase = true)
+                    Surface(
+                        color = if (isSelected) {
+                            if (label == "Blocked") CrimsonStrict.copy(alpha = 0.25f) else IndigoPrimary.copy(alpha = 0.25f)
+                        } else DarkSurface,
+                        shape = RoundedCornerShape(100.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) {
+                                if (label == "Blocked") CrimsonStrict else IndigoPrimary
+                            } else DarkCardBorder
+                        ),
+                        modifier = Modifier.clickable { selectedCategory = label }
+                    ) {
+                        Text(
+                            text = "$label $count",
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) {
+                                if (label == "Blocked") Color(0xFFF87171) else Color.White
+                            } else Color(0xFF94A3B8),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        )
                     }
+                }
+            }
+        }
 
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { selectedCategory = cat },
-                        label = {
-                            Text(
-                                text = "$cat ($count)",
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = IndigoPrimary.copy(alpha = 0.2f),
-                            selectedLabelColor = IndigoPrimary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = if (isSelected) IndigoPrimary else MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(8.dp)
+        // 5. Quick Block Section
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Quick block",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickCategoryTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.People,
+                        label = "Social",
+                        isStrictLocked = isSessionStrict,
+                        onClick = {
+                            if (!isSessionStrict) {
+                                val pkgs = installedApps.filter { it.category == "Social" }.map { it.packageName }
+                                if (pkgs.isNotEmpty()) {
+                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Social")
+                                }
+                            }
+                        }
+                    )
+                    QuickCategoryTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.PlayCircle,
+                        label = "Video",
+                        isStrictLocked = isSessionStrict,
+                        onClick = {
+                            if (!isSessionStrict) {
+                                val pkgs = installedApps.filter { it.category == "Video" }.map { it.packageName }
+                                if (pkgs.isNotEmpty()) {
+                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Video")
+                                }
+                            }
+                        }
+                    )
+                    QuickCategoryTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.SportsEsports,
+                        label = "Games",
+                        isStrictLocked = isSessionStrict,
+                        onClick = {
+                            if (!isSessionStrict) {
+                                val pkgs = installedApps.filter { it.category == "Games" }.map { it.packageName }
+                                if (pkgs.isNotEmpty()) {
+                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Games")
+                                }
+                            }
+                        }
                     )
                 }
             }
         }
 
-        // 6. Loading or Empty State
+        // 6. Loading state
         if (isLoadingApps) {
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(40.dp),
+                        .padding(vertical = 40.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = IndigoPrimary)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Scanning installed applications...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    CircularProgressIndicator(color = IndigoPrimary)
                 }
             }
-        } else if (filteredApps.isEmpty()) {
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Apps,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "No apps found matching '$searchQuery'",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            text = "Try a different search term or category filter",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        } else {
-            // 7. Installed App Rows
-            items(filteredApps, key = { it.packageName }) { app ->
-                val existingTarget = blockedPackagesMap[app.packageName.lowercase()]
-                val isBlocked = existingTarget != null && existingTarget.isEnabled
+        }
 
-                AppBlockItemRow(
-                    app = app,
-                    isBlocked = isBlocked,
-                    isStrictActive = isSessionStrict,
-                    onToggle = { enable ->
-                        if (isSessionStrict) return@AppBlockItemRow
+        // 7. Installed Apps Items
+        items(filteredApps, key = { it.packageName }) { app ->
+            val existingTarget = blockedTargetsMap[app.packageName.lowercase()]
+            val isBlocked = existingTarget?.isEnabled == true
+
+            AppBlockerRowCard(
+                app = app,
+                isBlocked = isBlocked,
+                isSessionStrict = isSessionStrict,
+                onToggle = {
+                    if (!isSessionStrict) {
                         if (existingTarget != null) {
                             onToggleTarget(existingTarget)
-                        } else if (enable) {
-                            onAddBulkTargets(selectedListId, TargetType.APP, listOf(app.packageName), app.category)
+                        } else {
+                            onAddBulkTargets(defaultListId, TargetType.APP, listOf(app.packageName), app.category)
                         }
                     }
-                )
-            }
+                }
+            )
         }
     }
 }
 
 @Composable
-fun AppBlockItemRow(
-    app: InstalledAppItem,
-    isBlocked: Boolean,
-    isStrictActive: Boolean,
-    onToggle: (Boolean) -> Unit
+fun QuickCategoryTile(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isStrictLocked: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isBlocked) Color(0xFF2A1522) else MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, DarkCardBorder),
+        modifier = modifier.clickable(enabled = !isStrictLocked, onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isStrictLocked) Color(0xFF64748B) else IndigoPrimary,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (isStrictLocked) Color(0xFF64748B) else Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun AppBlockerRowCard(
+    app: InstalledAppItem,
+    isBlocked: Boolean,
+    isSessionStrict: Boolean,
+    onToggle: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(
             1.dp,
-            if (isBlocked) CrimsonStrict.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant
+            if (isBlocked && isSessionStrict) CrimsonStrict.copy(alpha = 0.3f) else DarkCardBorder
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Real App Icon or Fallback
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (app.iconBitmap != null) {
-                        Image(
-                            bitmap = app.iconBitmap.asImageBitmap(),
-                            contentDescription = app.appName,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.PhoneAndroid,
-                            contentDescription = app.appName,
-                            tint = IndigoPrimary,
-                            modifier = Modifier.size(24.dp)
+                // App Icon
+                if (app.iconBitmap != null) {
+                    Image(
+                        bitmap = app.iconBitmap.asImageBitmap(),
+                        contentDescription = app.appName,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(DarkSurfaceVariant, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = app.appName.take(1).uppercase(),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = IndigoPrimary
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = app.appName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            maxLines = 1
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = app.category,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
                     Text(
-                        text = app.packageName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp,
+                        text = app.appName,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "${app.category} • ${app.packageName}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8),
                         maxLines = 1
                     )
                 }
@@ -614,40 +618,34 @@ fun AppBlockItemRow(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Switch to Block / Unblock
-            Switch(
-                checked = isBlocked,
-                onCheckedChange = { onToggle(it) },
-                enabled = !isStrictActive,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = CrimsonStrict,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                modifier = Modifier.testTag("toggle_app_${app.packageName}")
-            )
-        }
-    }
-}
+            // Right lock / switch
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isSessionStrict && isBlocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Strictly Locked",
+                        tint = CrimsonStrict,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
 
-private fun drawableToBitmap(drawable: Drawable): Bitmap? {
-    return try {
-        // Only hand back the BitmapDrawable's own bitmap if it is still usable.
-        // A recycled bitmap throws "Canvas: trying to use a recycled bitmap" when
-        // Compose later draws it, so fall through and rasterise a fresh copy instead.
-        val existing = (drawable as? BitmapDrawable)?.bitmap
-        if (existing != null && !existing.isRecycled) {
-            return existing
+                Switch(
+                    checked = isBlocked,
+                    onCheckedChange = { if (!isSessionStrict) onToggle() },
+                    enabled = !isSessionStrict,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = CyanAccent,
+                        uncheckedThumbColor = Color(0xFF94A3B8),
+                        uncheckedTrackColor = DarkSurfaceVariant,
+                        disabledCheckedThumbColor = Color.White,
+                        disabledCheckedTrackColor = CrimsonStrict.copy(alpha = 0.6f),
+                        disabledUncheckedThumbColor = Color(0xFF64748B),
+                        disabledUncheckedTrackColor = DarkSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                )
+            }
         }
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth.coerceAtMost(96) else 64
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight.coerceAtMost(96) else 64
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        bitmap
-    } catch (_: Exception) {
-        null
     }
 }

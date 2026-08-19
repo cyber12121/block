@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -23,21 +22,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.AppBlocking
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Fireplace
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
@@ -51,8 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -63,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -80,6 +78,9 @@ import com.example.service.ActiveSessionState
 import com.example.ui.theme.AmberFocus
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
+import com.example.ui.theme.DarkCardBorder
+import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 import com.example.util.PermissionUtils
@@ -100,6 +101,8 @@ fun DashboardScreen(
     onEndNormalSession: () -> Unit,
     onToggleList: (BlockList) -> Unit,
     onNavigateToLists: () -> Unit,
+    onNavigateToApps: () -> Unit = {},
+    onNavigateToSchedules: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
     onOpenMinimalLauncher: () -> Unit = {}
 ) {
@@ -129,8 +132,8 @@ fun DashboardScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // 1. Top Bar / App Title
         item {
@@ -139,175 +142,135 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(DarkSurfaceVariant, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = CyanAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
                     Column {
                         Text(
                             text = "FocusGuard",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = (-0.2).sp
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                         Text(
-                            text = if (sessionState.isActive) "Enforcing Focus Rules" else "Protection Ready",
+                            text = if (sessionState.isActive) "Protection is active" else "Protection ready",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (sessionState.isActive) {
-                                if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            fontWeight = FontWeight.Medium
+                            color = Color(0xFF94A3B8),
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
 
-                // Shield Status Pill
+                // Strict / Active Status Badge
                 Surface(
                     color = if (sessionState.isActive) {
-                        if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f)
+                        if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant
+                        DarkSurfaceVariant
                     },
                     shape = RoundedCornerShape(100.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (sessionState.isActive) {
-                            if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.5f) else EmeraldSuccess.copy(alpha = 0.5f)
-                        } else {
-                            Color.Transparent
-                        }
-                    )
+                    border = if (!sessionState.isActive) BorderStroke(1.dp, DarkCardBorder) else null
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    if (sessionState.isActive) {
-                                        if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (sessionState.isActive) {
-                                if (sessionState.isStrictMode) "STRICT" else "ACTIVE"
-                            } else "STANDBY",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (sessionState.isActive) {
-                                if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess
-                            } else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = if (sessionState.isActive) {
+                            if (sessionState.isStrictMode) "STRICT" else "ACTIVE"
+                        } else "STANDBY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (sessionState.isActive) Color.White else Color(0xFF94A3B8),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
                 }
             }
         }
 
-        // Permission Alert Banner if any permission missing
+        // 2. Permission Banner if missing
         if (hasMissingPermissions) {
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onNavigateToSettings)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(CrimsonStrict.copy(alpha = 0.15f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = null,
-                                        tint = CrimsonStrict,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "${missingPermissions.size} Permission${if (missingPermissions.size > 1) "s" else ""} Missing",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = CrimsonStrict
-                                    )
-                                    Text(
-                                        text = "Enable required permissions for full shielding",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 11.sp
-                                    )
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(CrimsonStrict.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = CrimsonStrict,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
-
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Open Settings",
-                                tint = CrimsonStrict
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "${missingPermissions.size} permission${if (missingPermissions.size > 1) "s" else ""} needed",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = missingPermissions.firstOrNull()?.title ?: "Device admin",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Mini chips showing Green Tick vs Red Cross for all permissions
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Button(
+                            onClick = onNavigateToSettings,
+                            colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                            shape = RoundedCornerShape(100.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
-                            permissions.forEach { perm ->
-                                val isGranted = perm.isGranted
-                                Surface(
-                                    color = if (isGranted) EmeraldSuccess.copy(alpha = 0.15f) else CrimsonStrict.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(6.dp),
-                                    border = BorderStroke(1.dp, if (isGranted) EmeraldSuccess.copy(alpha = 0.4f) else CrimsonStrict.copy(alpha = 0.4f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isGranted) Icons.Default.Check else Icons.Default.Close,
-                                            contentDescription = null,
-                                            tint = if (isGranted) EmeraldSuccess else CrimsonStrict,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(
-                                            text = perm.title.split(" ").first(),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isGranted) EmeraldSuccess else CrimsonStrict
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = "Fix now",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
                         }
                     }
                 }
             }
         }
 
-        // 2. Active Session Card or Quick Start Hero
+        // 3. Active Session Card or Quick Start Hero
         item {
             if (sessionState.isActive) {
-                ActiveSessionBanner(
+                ActiveSessionDashboardCard(
                     sessionState = sessionState,
                     onOpenSessionView = onOpenSessionView,
                     onEndNormalSession = onEndNormalSession
@@ -320,15 +283,80 @@ fun DashboardScreen(
             }
         }
 
-        // Minimalist Olauncher Mode Launcher Banner
+        // 4. Two-Column Stats Row
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Focus today
+                StatMetricCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Timer,
+                    iconTint = IndigoPrimary,
+                    title = "Focus today",
+                    value = "${totalMinutesToday} min",
+                    subtitle = "Completed session time"
+                )
+
+                // Distractions blocked
+                StatMetricCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Shield,
+                    iconTint = CyanAccent,
+                    title = "Distractions blocked",
+                    value = "$blockedAttemptsCount",
+                    subtitle = "Shield interceptions"
+                )
+            }
+        }
+
+        // 5. Quick Actions Section
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Quick actions",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickActionTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.AppBlocking,
+                        iconTint = IndigoPrimary,
+                        label = "App Blocking",
+                        onClick = onNavigateToApps
+                    )
+                    QuickActionTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Language,
+                        iconTint = CyanAccent,
+                        label = "Site Blocking",
+                        onClick = onNavigateToLists
+                    )
+                    QuickActionTile(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.CalendarMonth,
+                        iconTint = AmberFocus,
+                        label = "Schedule",
+                        onClick = onNavigateToSchedules
+                    )
+                }
+            }
+        }
+
+        // 6. Minimalist Focus Launcher Card
         item {
             Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenMinimalLauncher)
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = BorderStroke(1.dp, DarkCardBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
@@ -341,121 +369,95 @@ fun DashboardScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PhoneAndroid,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .background(DarkSurfaceVariant, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Smartphone,
+                                contentDescription = null,
+                                tint = Color(0xFFCBD5E1),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Minimalist Focus Launcher",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
                             )
                             Text(
-                                text = "Text-based home screen without app icons",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
+                                text = "Eliminate dopamine apps with this minimal text-based launcher.",
+                                fontSize = 12.sp,
+                                color = Color(0xFF94A3B8)
                             )
                         }
                     }
 
-                    Text(
-                        text = "Open",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = onOpenMinimalLauncher,
+                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                        shape = RoundedCornerShape(100.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text(
+                            text = "Open",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
 
-        // 3. Today's Metrics / Stats Row
+        // 7. Active Protections Section
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Focus Minutes
-                StatMetricCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Timer,
-                    iconTint = IndigoPrimary,
-                    title = "Focus Time",
-                    value = "${totalMinutesToday}m",
-                    subtitle = "Completed today"
-                )
-
-                // Blocks Prevented
-                StatMetricCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Security,
-                    iconTint = CyanAccent,
-                    title = "Shield Blocks",
-                    value = "$blockedAttemptsCount",
-                    subtitle = "Distractions intercepted"
-                )
-            }
-        }
-
-        // 4. Quick Block Lists Section
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Active Protection Lists",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = "Active protections",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
-                Text(
-                    text = "Manage All",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = IndigoPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clickable(onClick = onNavigateToLists)
-                        .padding(4.dp)
-                )
-            }
-        }
 
-        // Block list items
-        items(blockLists) { list ->
-            val targetCount = allTargets.count { it.listId == list.id }
-            BlockListRowCard(
-                blockList = list,
-                targetCount = targetCount,
-                isSessionStrict = sessionState.isActive && sessionState.isStrictMode,
-                onToggle = { onToggleList(list) },
-                onClick = onNavigateToLists
-            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ActiveProtectionBadgeCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.People,
+                        title = "Social Media",
+                        isActive = true,
+                        onClick = onNavigateToLists
+                    )
+                    ActiveProtectionBadgeCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.PlayCircle,
+                        title = "Entertainment & Video",
+                        isActive = true,
+                        onClick = onNavigateToLists
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ActiveSessionBanner(
+fun ActiveSessionDashboardCard(
     sessionState: ActiveSessionState,
     onOpenSessionView: () -> Unit,
     onEndNormalSession: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
-    )
-
     val hours = sessionState.remainingSeconds / 3600
     val minutes = (sessionState.remainingSeconds % 3600) / 60
     val seconds = sessionState.remainingSeconds % 60
@@ -470,24 +472,36 @@ fun ActiveSessionBanner(
     val progress = (elapsedSeconds.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
 
     val endFormatted = if (sessionState.endTimeMillis > 0) {
-        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
+        SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
     } else ""
 
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(
-            1.dp,
-            if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+            1.5.dp,
+            if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
         ),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpenSessionView)
             .testTag("active_session_card")
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(
+            modifier = Modifier
+                .background(
+                    if (sessionState.isStrictMode) {
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF221118), DarkSurface)
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF161E38), DarkSurface)
+                        )
+                    }
+                )
+                .padding(20.dp)
+        ) {
             // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -499,104 +513,79 @@ fun ActiveSessionBanner(
                         imageVector = if (sessionState.isStrictMode) Icons.Default.Lock else Icons.Default.Shield,
                         contentDescription = null,
                         tint = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (sessionState.isStrictMode) "STRICT MODE ACTIVE" else "FOCUS SESSION IN PROGRESS",
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
+                        text = if (sessionState.isStrictMode) "STRICT SESSION" else "FOCUS SESSION",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
                         fontSize = 12.sp,
                         letterSpacing = 1.sp
                     )
                 }
+
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Expand",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentDescription = "Open Session",
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Timer & End Time
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column {
-                    Text(
-                        text = timeFormatted,
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.Light,
-                        letterSpacing = (-0.5).sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (sessionState.isStrictMode) "Locked until $endFormatted" else "Scheduled end: $endFormatted",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // Giant Countdown & End Time
+            Text(
+                text = timeFormatted,
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp,
+                color = Color.White
+            )
 
-                if (!sessionState.isStrictMode) {
-                    Button(
-                        onClick = onEndNormalSession,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.height(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = "End",
-                            tint = CrimsonStrict,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "End", color = CrimsonStrict, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            Text(
+                text = "Ends at $endFormatted",
+                fontSize = 13.sp,
+                color = Color(0xFF94A3B8)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = if (sessionState.isStrictMode) {
+                    "Changes are locked until the session ends."
+                } else {
+                    "Stay in the flow until the timer expires."
+                },
+                fontSize = 13.sp,
+                color = Color(0xFFCBD5E1)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Progress bar
+            // Sleek Progress Bar
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(4.dp)
                     .clip(CircleShape),
-                color = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                color = if (sessionState.isStrictMode) CrimsonStrict else CyanAccent,
+                trackColor = DarkSurfaceVariant
             )
 
-            if (sessionState.isStrictMode) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    color = CrimsonStrict.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+            if (!sessionState.isStrictMode) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(
+                    onClick = onEndNormalSession,
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(40.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = CrimsonStrict,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Blocking cannot be disabled until $endFormatted",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = CrimsonStrict
-                        )
-                    }
+                    Icon(imageVector = Icons.Default.Stop, contentDescription = null, tint = CrimsonStrict, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "End Session", color = CrimsonStrict, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -609,9 +598,9 @@ fun QuickStartHeroCard(
     onQuickStart: (minutes: Int, isStrict: Boolean) -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, DarkCardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -624,12 +613,13 @@ fun QuickStartHeroCard(
                     Text(
                         text = "Ready to Focus?",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                     Text(
                         text = "Block distractions & get into the flow",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF94A3B8)
                     )
                 }
 
@@ -657,21 +647,22 @@ fun QuickStartHeroCard(
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(50.dp)
                     .testTag("dashboard_start_session_button")
             ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Configure Focus Session",
+                    text = "Start Focus Session",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    color = Color.White
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Quick launch pills: 25m Pomodoro, 30m Normal, 1h Strict
+            // Quick launch pills
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -700,13 +691,14 @@ fun QuickStartHeroCard(
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onQuickStart(30, false) },
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = DarkSurfaceVariant,
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
                         text = "30m Normal",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
                         modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -745,50 +737,89 @@ fun StatMetricCard(
     subtitle: String
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, DarkCardBorder),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(iconTint.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                    .background(iconTint.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-            Text(text = title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+            Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
         }
     }
 }
 
 @Composable
-fun BlockListRowCard(
-    blockList: BlockList,
-    targetCount: Int,
-    isSessionStrict: Boolean,
-    onToggle: () -> Unit,
+fun QuickActionTile(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    label: String,
     onClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, DarkCardBorder),
+        modifier = modifier.clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(iconTint.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+fun ActiveProtectionBadgeCard(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, DarkCardBorder),
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -796,40 +827,27 @@ fun BlockListRowCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .background(Color(blockList.colorHex).copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                        .size(32.dp)
+                        .background(IndigoPrimary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = Color(blockList.colorHex),
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Icon(imageVector = icon, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(18.dp))
                 }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
-                    Text(
-                        text = blockList.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "$targetCount rules active",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1
+                )
             }
 
-            Switch(
-                checked = blockList.isEnabled,
-                onCheckedChange = { if (!isSessionStrict) onToggle() },
-                enabled = !isSessionStrict,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(blockList.colorHex)
-                )
+            Text(
+                text = if (isActive) "Active" else "Off",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isActive) EmeraldSuccess else Color(0xFF94A3B8)
             )
         }
     }

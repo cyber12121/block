@@ -10,12 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Insights
-import androidx.compose.material.icons.filled.Park
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -55,12 +54,12 @@ import com.example.ui.theme.FocusGuardTheme
 import com.example.ui.theme.IndigoPrimary
 
 enum class AppTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    DASHBOARD("Dashboard", Icons.Default.Dashboard),
+    DASHBOARD("Home", Icons.Default.Home),
     APPS("Apps", Icons.Default.Apps),
-    BLOCK_LISTS("Rules", Icons.Default.Block),
-    SCHEDULES("Schedules", Icons.Default.Schedule),
-    INSIGHTS("Insights", Icons.Default.Insights),
-    SETTINGS("Security", Icons.Default.Security)
+    BLOCK_LISTS("Lists", Icons.Default.Language),
+    SCHEDULES("Schedules", Icons.Default.CalendarMonth),
+    INSIGHTS("Insights", Icons.Default.BarChart),
+    SETTINGS("Security", Icons.Default.Shield)
 }
 
 class MainActivity : ComponentActivity() {
@@ -132,7 +131,7 @@ fun MainAppContent(viewModel: MainViewModel) {
             bottomBar = {
                 if (!isLiveSessionFullscreen && !isMinimalLauncherFullscreen) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.background,
+                        containerColor = androidx.compose.ui.graphics.Color(0xFF0B101B),
                         tonalElevation = 0.dp
                     ) {
                         AppTab.values().forEach { tab ->
@@ -149,9 +148,9 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 },
                                 alwaysShowLabel = false,
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.onBackground,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    indicatorColor = MaterialTheme.colorScheme.surfaceVariant
+                                    selectedIconColor = androidx.compose.ui.graphics.Color.White,
+                                    unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF64748B),
+                                    indicatorColor = androidx.compose.ui.graphics.Color(0xFF5B61F4)
                                 ),
                                 modifier = Modifier.testTag("tab_${tab.name.lowercase()}")
                             )
@@ -224,6 +223,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 onEndNormalSession = { viewModel.endCurrentSession(earlyUnlocked = false) },
                                 onToggleList = { viewModel.toggleBlockList(it) },
                                 onNavigateToLists = { currentTab = AppTab.BLOCK_LISTS },
+                                onNavigateToApps = { currentTab = AppTab.APPS },
+                                onNavigateToSchedules = { currentTab = AppTab.SCHEDULES },
                                 onNavigateToSettings = { currentTab = AppTab.SETTINGS },
                                 onOpenMinimalLauncher = { isMinimalLauncherFullscreen = true }
                             )
@@ -274,7 +275,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.SETTINGS -> {
                             SettingsScreen(
                                 sessionState = sessionState,
-                                onEmergencyUnlock = { viewModel.forceEmergencyUnlock() }
+                                onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
+                                onOpenSessionView = { isLiveSessionFullscreen = true }
                             )
                         }
                     }
