@@ -20,6 +20,10 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastInspectedPackage: String = ""
     private var lastInspectedTime: Long = 0L
 
+    // Throttle database reads: refresh the block cache on app switches,
+    // otherwise at most once every few seconds.
+    private var lastCacheRefreshTime: Long = 0L
+
     // Comprehensive list of all popular, privacy, and alternative Android browsers
     private val knownBrowserPackages = setOf(
         "com.android.chrome",
@@ -107,10 +111,18 @@ class FocusAccessibilityService : AccessibilityService() {
         val sessionManager = FocusSessionManager.getInstance(this)
         val sessionState = sessionManager.sessionState.value
 
-        val app = application as? FocusGuardApp
-        if (app != null) {
-            scope.launch {
-                sessionManager.refreshBlockedTargetsCache(app.repository)
+        // Keep the block cache warm WITHOUT hammering the database on every event:
+        // refresh immediately when the foreground window changes (app switch),
+        // otherwise at most once every 3 seconds.
+        val nowForCache = System.currentTimeMillis()
+        val isWindowSwitch = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (isWindowSwitch || (nowForCache - lastCacheRefreshTime) > CACHE_REFRESH_INTERVAL_MS) {
+            lastCacheRefreshTime = nowForCache
+            val app = application as? FocusGuardApp
+            if (app != null) {
+                scope.launch {
+                    sessionManager.refreshBlockedTargetsCache(app.repository)
+                }
             }
         }
 
@@ -178,9 +190,9 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 2. Check if the entire app is in a blocked list (Fast O(1) hash lookup)
-        val isBrowser = isBrowserApp(targetPkg)
-        if (!isBrowser && sessionManager.isAppBlocked(targetPkg)) {
+        // 2. Check if the app is in a blocked list (browsers included —
+        //    a blocked browser must be blocked like any other app)
+        if (sessionManager.isAppBlocked(targetPkg)) {
             triggerBlockShield(
                 targetName = getReadableAppName(targetPkg),
                 reason = "App '$targetPkg' is restricted in your active focus shield.",
@@ -190,33 +202,40 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         // 3. Inspect Browsers (Chrome, Brave, Firefox, Edge, Opera, Samsung, DuckDuckGo, etc.)
-        if (isBrowser) {
-            val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
-            if (rootNode != null) {
-                val urlOrText = extractTextOrUrl(rootNode, maxDepth = 8, visitedCount = intArrayOf(0))
-                if (urlOrText.isNotBlank()) {
-                    val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlOrText)
-                    if (isBlocked) {
-                        triggerBlockShield(
-                            targetName = matchedRule,
-                            reason = "Website '$matchedRule' is restricted.",
-                            isWebsite = true
-                        )
-                        return
-                    }
-                }
-            }
-
-            // Also check event text if available
-            val eventTexts = event.text.joinToString(" ")
-            if (eventTexts.isNotBlank()) {
-                val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(eventTexts)
+        //    Blocking triggers on the actual URL and on search queries typed in the
+        //    address bar — NOT on arbitrary page text (avoids false positives).
+        if (isBrowserApp(targetPkg)) {
+            val urlText = findUrlBarText(targetPkg)
+            if (urlText.isNotBlank()) {
+                val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
                 if (isBlocked) {
                     triggerBlockShield(
                         targetName = matchedRule,
                         reason = "Website '$matchedRule' is restricted.",
                         isWebsite = true
                     )
+                    return
+                }
+            }
+
+            // Also catch text being typed into the address/search bar in real time
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED
+            ) {
+                val source = try { event.source } catch (_: Throwable) { null }
+                val sourceId = try { source?.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
+                if (looksLikeUrlField(sourceId)) {
+                    val eventTexts = event.text.joinToString(" ")
+                    if (eventTexts.isNotBlank()) {
+                        val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(eventTexts)
+                        if (isBlocked) {
+                            triggerBlockShield(
+                                targetName = matchedRule,
+                                reason = "Website '$matchedRule' is restricted.",
+                                isWebsite = true
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -245,48 +264,75 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun extractTextOrUrl(node: AccessibilityNodeInfo, maxDepth: Int, visitedCount: IntArray): String {
-        if (maxDepth <= 0 || visitedCount[0] > 120) return ""
-        visitedCount[0]++
+    // Well-known address-bar view id suffixes across popular browsers
+    private val urlBarIdSuffixes = listOf(
+        "url_bar",                          // Chrome, Brave, Edge, Kiwi, Vivaldi (Chromium)
+        "mozac_browser_toolbar_url_view",   // Firefox (Fenix)
+        "url_bar_title",                    // Firefox (legacy)
+        "location_bar_edit_text",           // Samsung Internet
+        "url_field",                        // Opera
+        "url_edit",                         // Opera variants
+        "omnibarTextInput",                 // DuckDuckGo
+        "search_box_text",                  // misc
+        "addressbarEdit",                   // UC / misc
+        "url"                               // generic fallback id
+    )
 
-        val sb = StringBuilder()
+    private fun looksLikeUrlField(viewId: String): Boolean {
+        if (viewId.isBlank()) return false
+        val lower = viewId.lowercase()
+        return lower.contains("url") ||
+               lower.contains("omnibox") ||
+               lower.contains("omnibar") ||
+               lower.contains("address") ||
+               lower.contains("location") ||
+               lower.contains("search")
+    }
 
-        val viewId = try { node.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
-        val isEditable = try { node.isEditable } catch (_: Throwable) { false }
+    /**
+     * Reliably grabs the address-bar text of the active browser window.
+     * 1. Fast path: query well-known URL-bar view ids directly (O(1), no tree walk).
+     * 2. Fallback: capped breadth-first scan for any view whose id looks like a URL/search field.
+     */
+    private fun findUrlBarText(browserPkg: String): String {
+        val root = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root ?: return ""
 
-        val isUrlField = viewId.contains("url", ignoreCase = true) ||
-                viewId.contains("location", ignoreCase = true) ||
-                viewId.contains("search", ignoreCase = true) ||
-                viewId.contains("address", ignoreCase = true) ||
-                viewId.contains("omnibox", ignoreCase = true) ||
-                viewId.contains("awesome_bar", ignoreCase = true) ||
-                viewId.contains("toolbar", ignoreCase = true)
+        for (suffix in urlBarIdSuffixes) {
+            val nodes = try {
+                root.findAccessibilityNodeInfosByViewId("$browserPkg:id/$suffix")
+            } catch (_: Throwable) { null }
+            if (nodes.isNullOrEmpty()) continue
+            var found = ""
+            for (n in nodes) {
+                val text = try { n.text?.toString() ?: "" } catch (_: Throwable) { "" }
+                try { n.recycle() } catch (_: Throwable) {}
+                if (found.isBlank() && text.isNotBlank()) found = text
+            }
+            if (found.isNotBlank()) return found
+        }
 
-        if (isUrlField || !isEditable) {
-            val text = try { node.text?.toString() ?: "" } catch (_: Throwable) { "" }
-            if (text.isNotBlank()) {
-                sb.append(" ").append(text)
+        return scanForUrlField(root, maxNodes = 250)
+    }
+
+    private fun scanForUrlField(root: AccessibilityNodeInfo, maxNodes: Int): String {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        var visited = 0
+        while (queue.isNotEmpty() && visited < maxNodes) {
+            val node = queue.removeFirst()
+            visited++
+            val viewId = try { node.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
+            if (looksLikeUrlField(viewId)) {
+                val text = try { node.text?.toString() ?: "" } catch (_: Throwable) { "" }
+                if (text.isNotBlank()) return text
+            }
+            val childCount = try { node.childCount } catch (_: Throwable) { 0 }
+            for (i in 0 until childCount) {
+                val child = try { node.getChild(i) } catch (_: Throwable) { null } ?: continue
+                queue.add(child)
             }
         }
-
-        val desc = try { node.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
-        if (desc.isNotBlank()) {
-            sb.append(" ").append(desc)
-        }
-
-        val childCount = try { node.childCount } catch (_: Throwable) { 0 }
-        for (i in 0 until childCount) {
-            val child = try { node.getChild(i) } catch (_: Throwable) { null } ?: continue
-            try {
-                val childText = extractTextOrUrl(child, maxDepth - 1, visitedCount)
-                if (childText.isNotBlank()) {
-                    sb.append(" ").append(childText)
-                }
-            } finally {
-                try { child.recycle() } catch (_: Throwable) {}
-            }
-        }
-        return sb.toString()
+        return ""
     }
 
     private fun extractAllText(node: AccessibilityNodeInfo, maxDepth: Int, visitedCount: IntArray): String {
@@ -320,13 +366,13 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun triggerBlockShield(targetName: String, reason: String, isWebsite: Boolean) {
         val now = System.currentTimeMillis()
-        // Prevent flood within 1000ms for same target
-        if (targetName == lastBlockedTarget && (now - lastBlockedTimestamp) < 1000) {
-            return
-        }
+        val isRepeatTrigger = targetName == lastBlockedTarget && (now - lastBlockedTimestamp) < 1500
         lastBlockedTimestamp = now
         lastBlockedTarget = targetName
 
+        // ALWAYS push the user away from the blocked content — even on rapid
+        // repeat triggers. (Previously the flood guard returned early, letting a
+        // re-opened blocked app stay on screen for up to a second.)
         if (isWebsite) {
             try {
                 performGlobalAction(GLOBAL_ACTION_BACK)
@@ -336,6 +382,9 @@ class FocusAccessibilityService : AccessibilityService() {
                 performGlobalAction(GLOBAL_ACTION_HOME)
             } catch (_: Exception) {}
         }
+
+        // Only skip the overlay + stat recording on rapid repeats, to avoid spam
+        if (isRepeatTrigger) return
 
         // Record stat in database
         val app = application as? FocusGuardApp
@@ -357,5 +406,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         // Accessibility service interrupted
+    }
+
+    companion object {
+        private const val CACHE_REFRESH_INTERVAL_MS = 3000L
     }
 }

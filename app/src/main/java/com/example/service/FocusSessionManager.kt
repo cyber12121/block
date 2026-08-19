@@ -361,10 +361,15 @@ class FocusSessionManager private constructor(private val context: Context) {
         }
 
         val allLists = repository.getActiveLists()
+        val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
         val validListIds = if (activeListNamesSet.isNotEmpty()) {
-            allLists.filter { it.name in activeListNamesSet && it.isEnabled }.map { it.id }.toSet()
+            val matched = allLists.filter { it.name in activeListNamesSet && it.isEnabled }.map { it.id }.toSet()
+            // If the stored session list names no longer match any enabled list,
+            // fall back to ALL enabled lists instead of accidentally blocking nothing
+            // (or, worse, everything including disabled lists).
+            if (matched.isNotEmpty()) matched else enabledListIds
         } else {
-            allLists.filter { it.isEnabled }.map { it.id }.toSet()
+            enabledListIds
         }
 
         val targets = repository.getAllEnabledTargets()
@@ -373,7 +378,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         val keywordSet = mutableSetOf<String>()
 
         for (t in targets) {
-            if (validListIds.isEmpty() || validListIds.contains(t.listId)) {
+            if (validListIds.contains(t.listId)) {
                 when (t.targetType) {
                     TargetType.APP -> {
                         val cleanPkg = t.identifier.lowercase().trim()
@@ -409,7 +414,18 @@ class FocusSessionManager private constructor(private val context: Context) {
     fun isAppBlocked(packageName: String): Boolean {
         val pkgLower = packageName.lowercase().trim()
         if (pkgLower.isBlank()) return false
-        return cachedBlockedPackages.contains(pkgLower) || cachedBlockedPackages.any { pkgLower.contains(it) || it.contains(pkgLower) }
+        if (cachedBlockedPackages.contains(pkgLower)) return true
+        return cachedBlockedPackages.any { blocked ->
+            if (blocked.contains('.')) {
+                // Real package name: exact match or sub-package match only
+                // (e.g. "com.google.android.youtube" also matches "com.google.android.youtube.tv")
+                pkgLower == blocked || pkgLower.startsWith("$blocked.")
+            } else {
+                // Free-text entry like "instagram": substring match, but ignore tiny
+                // fragments that would match half the phone.
+                blocked.length >= 4 && pkgLower.contains(blocked)
+            }
+        }
     }
 
     fun isUrlOrKeywordBlocked(urlOrTitle: String): Pair<Boolean, String> {
@@ -421,7 +437,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             .removePrefix("http://")
             .removePrefix("www.")
 
-        // 1. Check blocked website domains
+        // 1. Check blocked website domains against the URL / search query text
         for (domain in cachedBlockedDomains) {
             if (domain.isNotBlank()) {
                 val cleanDomain = domain.lowercase().trim()
@@ -429,16 +445,19 @@ class FocusSessionManager private constructor(private val context: Context) {
                     .removePrefix("http://")
                     .removePrefix("www.")
 
+                // Full domain appears in the URL (e.g. "youtube.com/watch?v=...")
                 if (lower.contains(cleanDomain) || cleanInput.contains(cleanDomain)) {
                     return Pair(true, domain)
                 }
 
+                // Site name typed as a search query (e.g. "youtube cat videos").
+                // Match as a whole word so "mytube.org" doesn't trigger "tube".
                 val rootName = cleanDomain.substringBeforeLast(".")
-                if (rootName.length >= 3 && (
-                        lower.contains(rootName) ||
-                        cleanInput.contains(rootName)
-                    )) {
-                    return Pair(true, domain)
+                if (rootName.length >= 4) {
+                    val wordRegex = Regex("(^|[^a-z0-9])${Regex.escape(rootName)}([^a-z0-9]|$)")
+                    if (wordRegex.containsMatchIn(cleanInput)) {
+                        return Pair(true, domain)
+                    }
                 }
             }
         }
