@@ -627,8 +627,12 @@ fun AppBlockItemRow(
 
 private fun drawableToBitmap(drawable: Drawable): Bitmap? {
     return try {
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            return drawable.bitmap
+        // Only hand back the BitmapDrawable's own bitmap if it is still usable.
+        // A recycled bitmap throws "Canvas: trying to use a recycled bitmap" when
+        // Compose later draws it, so fall through and rasterise a fresh copy instead.
+        val existing = (drawable as? BitmapDrawable)?.bitmap
+        if (existing != null && !existing.isRecycled) {
+            return existing
         }
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth.coerceAtMost(96) else 64
         val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight.coerceAtMost(96) else 64

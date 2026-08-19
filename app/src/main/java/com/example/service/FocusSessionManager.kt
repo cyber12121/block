@@ -47,6 +47,11 @@ class FocusSessionManager private constructor(private val context: Context) {
     val sessionStateFlow: StateFlow<ActiveSessionState> = _sessionState.asStateFlow()
     val sessionState: StateFlow<ActiveSessionState> = sessionStateFlow
 
+    // Guards against the expiry path running more than once. updateTick() is driven by
+    // both FocusForegroundService and MainViewModel (once per second each), so without
+    // this the session would be "completed" repeatedly, double-recording stats.
+    @Volatile private var isCompletingSession = false
+
     // Cached fast-lookup sets for the Accessibility / Monitoring Service
     @Volatile private var cachedBlockedPackages: Set<String> = emptySet()
     @Volatile private var cachedBlockedDomains: Set<String> = emptySet()
@@ -115,6 +120,9 @@ class FocusSessionManager private constructor(private val context: Context) {
         val now = System.currentTimeMillis()
         val endTime = now + (durationMinutes * 60 * 1000L)
         val elapsedRealtime = SystemClock.elapsedRealtime()
+
+        // A new session supersedes any in-flight expiry teardown.
+        isCompletingSession = false
 
         scope.launch {
             val session = FocusSession(
@@ -225,13 +233,14 @@ class FocusSessionManager private constructor(private val context: Context) {
             }
 
             // Clear prefs
-            prefs.edit().clear().apply()
+            clearSessionPrefs()
 
             _sessionState.value = ActiveSessionState()
 
             // Re-populate cache based on currently enabled block lists
             refreshBlockedTargetsCache(repository)
             FocusTileService.requestTileUpdate(context)
+            isCompletingSession = false
         }
     }
 
@@ -241,21 +250,27 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         val remaining = getRemainingSeconds()
         if (remaining <= 0) {
-            // Auto complete session
-            val app = context.applicationContext as? FocusGuardApp
-            app?.let {
-                scope.launch {
-                    val growingPlant = it.repository.getCurrentGrowingPlant()
-                    if (growingPlant != null) {
-                        it.repository.markPlantBloomed(growingPlant)
-                    }
-                    if (currentState.durationMinutes > 0) {
-                        it.repository.recordCompletedSession(currentState.durationMinutes)
-                    }
-                }
+            // Timer expired: run the full end-of-session teardown exactly once.
+            //
+            // Previously this branch only bloomed the plant and recorded stats inline; it
+            // never marked the FocusSession row completed, never cleared the persisted
+            // prefs and never reset _sessionState.isActive. The session therefore stayed
+            // "active" forever (surviving restarts via restoreSessionFromPrefs) and, since
+            // two callers tick every second, the plant/stats writes were repeated endlessly.
+            if (isCompletingSession) return
+
+            val repository = (context.applicationContext as? FocusGuardApp)?.repository
+            if (repository == null) {
+                _sessionState.value = currentState.copy(remainingSeconds = 0)
+                return
             }
+
+            isCompletingSession = true
             _sessionState.value = currentState.copy(remainingSeconds = 0)
-            FocusTileService.requestTileUpdate(context)
+
+            // earlyUnlocked = false -> marks the session completed, blooms the plant,
+            // records the stats, clears prefs and refreshes the blocked-target cache.
+            forceUnlockSession(repository, earlyUnlocked = false)
         } else {
             // Check for clock tampering:
             val elapsedSinceStart = (SystemClock.elapsedRealtime() - prefs.getLong(KEY_ELAPSED_BASELINE, 0L)) / 1000
@@ -503,7 +518,7 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         // If not strict and expired, clean up
         if (remaining <= 0 && !isStrict) {
-            prefs.edit().clear().apply()
+            clearSessionPrefs()
             val app = context.applicationContext as? FocusGuardApp
             app?.let {
                 scope.launch {
@@ -572,6 +587,34 @@ class FocusSessionManager private constructor(private val context: Context) {
             isPomodoroBreak = isPomodoroBreak,
             plantType = plantType
         )
+    }
+
+    /**
+     * Removes only the keys that describe the *current session*.
+     *
+     * Deliberately not `prefs.edit().clear()`: that also wiped the user's configured
+     * essential apps (silently reverting them to the hardcoded defaults) and reset
+     * KEY_EMERGENCY_EXITS_USED, handing back the full emergency-exit quota every time
+     * a session ended.
+     */
+    private fun clearSessionPrefs() {
+        prefs.edit()
+            .remove(KEY_IS_ACTIVE)
+            .remove(KEY_IS_STRICT)
+            .remove(KEY_SESSION_ID)
+            .remove(KEY_TITLE)
+            .remove(KEY_START_TIME)
+            .remove(KEY_END_TIME)
+            .remove(KEY_DURATION_MINUTES)
+            .remove(KEY_ELAPSED_BASELINE)
+            .remove(KEY_ACTIVE_LISTS)
+            .remove(KEY_IS_AUTO_SCHEDULED)
+            .remove(KEY_IS_POMODORO)
+            .remove(KEY_POMODORO_ROUND)
+            .remove(KEY_POMODORO_TOTAL)
+            .remove(KEY_IS_POMODORO_BREAK)
+            .remove(KEY_PLANT_TYPE)
+            .apply()
     }
 
     fun getCustomEssentialApps(): List<String> {

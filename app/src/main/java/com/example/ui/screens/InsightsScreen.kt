@@ -245,16 +245,27 @@ fun WeeklyBarChart(recentStats: List<DailyStat>) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Bar
+                // Bar track: claims whatever vertical space is left after the value
+                // label, the day label and the spacers. The bar's fillMaxHeight then
+                // resolves against this track instead of the Row's full 140.dp, which
+                // is what used to push the labels out of the chart on tall bars.
                 Box(
                     modifier = Modifier
-                        .width(22.dp)
-                        .fillMaxHeight(barFraction)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                        .background(
-                            if (mins > 0) IndigoPrimary else MaterialTheme.colorScheme.surfaceVariant
-                        )
-                )
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    // Bar
+                    Box(
+                        modifier = Modifier
+                            .width(22.dp)
+                            .fillMaxHeight(barFraction)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(
+                                if (mins > 0) IndigoPrimary else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

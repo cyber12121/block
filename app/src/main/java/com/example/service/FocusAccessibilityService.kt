@@ -126,14 +126,20 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Check if Minimal Launcher or Active Focus Session is active
-        val isMinimalActive = sessionManager.isMinimalLauncherActive()
-        
-        // If Minimal Launcher or active session is running, prevent unauthorized launcher/app switches
-        if (isMinimalActive || sessionState.isActive) {
+        // Only enforce the "pull the user back into FocusGuard" behaviour during a real
+        // focus session. Minimal Launcher can be switched on from the dashboard with no
+        // session running so the user can lay it out and pick essential apps; enforcing
+        // here as well meant every tap on home or another app bounced them back into the
+        // app mid-configuration, with no way to escape short of disabling the service.
+        if (sessionState.isActive) {
             val isFgApp = targetPkg == applicationContext.packageName
             val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
-            val isEssential = essentialApps.contains(targetPkg.lowercase()) || essentialApps.any { targetPkg.lowercase().contains(it) }
+
+            // Exact package match only. The previous `targetPkg.contains(essential)`
+            // fallback let anything sharing a prefix through the shield — with
+            // "com.android.dialer" marked essential, "com.android.dialer.spam" (or any
+            // package embedding that string) was silently treated as essential too.
+            val isEssential = essentialApps.contains(targetPkg.lowercase())
             
             // If user swiped to system home or opened non-essential app while Minimal Launcher is active, bring user back to FocusGuard!
             if (!isFgApp && !isEssential && (targetPkg.contains("launcher") || targetPkg.contains("home") || sessionManager.isAppBlocked(targetPkg))) {
