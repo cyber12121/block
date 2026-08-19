@@ -658,16 +658,10 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun getRemainingEmergencyExits(): Int {
-        val used = prefs.getInt(KEY_EMERGENCY_EXITS_USED, 0)
-        return (MAX_EMERGENCY_EXITS - used).coerceAtLeast(0)
+        return Int.MAX_VALUE
     }
 
     fun useEmergencyExit(): Boolean {
-        val remaining = getRemainingEmergencyExits()
-        if (remaining <= 0) return false
-
-        val used = prefs.getInt(KEY_EMERGENCY_EXITS_USED, 0)
-        prefs.edit().putInt(KEY_EMERGENCY_EXITS_USED, used + 1).apply()
         stopSession(earlyUnlocked = true)
         setMinimalLauncherActive(false)
         return true
