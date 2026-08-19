@@ -372,21 +372,23 @@ class FocusSessionManager private constructor(private val context: Context) {
     suspend fun refreshBlockedTargetsCache(repository: AppRepository) {
         val isSessionActive = prefs.getBoolean(KEY_IS_ACTIVE, false)
         val activeListNamesRaw = prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
-        val activeListNamesSet = if (isSessionActive && activeListNamesRaw.isNotBlank()) {
-            activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-        } else {
-            emptySet()
-        }
 
+        // Build the set of list IDs whose targets should be enforced.
+        // During a session: use the session's selected lists (by name). If none match
+        // (e.g. names changed), fall back to all enabled lists so blocking never silently
+        // goes dark. Outside a session: always use all enabled lists so passive blocking
+        // (website/keyword rules on always-on lists) still fires.
         val allLists = repository.getActiveLists()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
-        val validListIds = if (activeListNamesSet.isNotEmpty()) {
-            val matched = allLists.filter { it.name in activeListNamesSet && it.isEnabled }.map { it.id }.toSet()
-            // If the stored session list names no longer match any enabled list,
-            // fall back to ALL enabled lists instead of accidentally blocking nothing
-            // (or, worse, everything including disabled lists).
+
+        val validListIds = if (isSessionActive && activeListNamesRaw.isNotBlank()) {
+            val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+            val matched = allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
+            // Fall back to all enabled lists if session list names no longer match anything.
             if (matched.isNotEmpty()) matched else enabledListIds
         } else {
+            // No session OR session started with no explicit list selection:
+            // load all enabled lists so passive blocking is always warm.
             enabledListIds
         }
 

@@ -24,6 +24,14 @@ class FocusAccessibilityService : AccessibilityService() {
     // otherwise at most once every few seconds.
     private var lastCacheRefreshTime: Long = 0L
 
+    // Throttle the accessibility-tree URL scan inside browsers.
+    // TYPE_WINDOW_CONTENT_CHANGED fires on every DOM mutation — running a full
+    // tree walk on every event would hammer CPU. We allow an immediate scan on
+    // real page navigations (STATE_CHANGED) and typing (TEXT_CHANGED), and
+    // throttle CONTENT_CHANGED to at most once every 500 ms.
+    private var lastBrowserUrlScanTime: Long = 0L
+    private val BROWSER_SCAN_THROTTLE_MS = 500L
+
     // Comprehensive list of all popular, privacy, and alternative Android browsers
     private val knownBrowserPackages = setOf(
         "com.android.chrome",
@@ -231,40 +239,57 @@ class FocusAccessibilityService : AccessibilityService() {
         //    Blocking triggers on the actual URL and on search queries typed in the
         //    address bar — NOT on arbitrary page text (avoids false positives).
         if (isBrowserApp(targetPkg)) {
-            val urlText = findUrlBarText(targetPkg)
-            if (urlText.isNotBlank()) {
-                val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
-                if (isBlocked) {
-                    triggerBlockShield(
-                        targetName = matchedRule,
-                        reason = "Website '$matchedRule' is restricted.",
-                        isWebsite = true
-                    )
-                    return
-                }
-            }
+            // Fire URL scan on any window or content change — Chrome often fires only
+            // TYPE_WINDOW_CONTENT_CHANGED when navigating to a new URL without a new
+            // window, so limiting to TYPE_WINDOW_STATE_CHANGED missed most navigations.
+            val isRelevantBrowserEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                    event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
+                    event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED
 
-            // Also catch text being typed into the address/search bar in real time
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
-                event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED
-            ) {
-                val source = try { event.source } catch (_: Throwable) { null }
-                val sourceId = try { source?.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
-                if (looksLikeUrlField(sourceId)) {
-                    val eventTexts = event.text.joinToString(" ")
-                    if (eventTexts.isNotBlank()) {
-                        val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(eventTexts)
+            if (isRelevantBrowserEvent) {
+                // For CONTENT_CHANGED, throttle the tree walk to avoid CPU hammering.
+                // For STATE_CHANGED / TEXT_CHANGED fire immediately (real navigation or typing).
+                val isContentChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                val shouldScan = !isContentChanged ||
+                        (now - lastBrowserUrlScanTime) > BROWSER_SCAN_THROTTLE_MS
+
+                if (shouldScan) {
+                    lastBrowserUrlScanTime = now
+                    val urlText = findUrlBarText(targetPkg)
+                    if (urlText.isNotBlank()) {
+                        val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
                         if (isBlocked) {
                             triggerBlockShield(
                                 targetName = matchedRule,
                                 reason = "Website '$matchedRule' is restricted.",
                                 isWebsite = true
                             )
+                            return
                         }
                     }
                 }
             }
+
+            // Also catch text being typed into the address/search bar in real time.
+            // Check event text directly (without requiring the view ID to look like a
+            // URL field — that ID-based gate was too strict and missed many browsers).
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+                val eventTexts = event.text.joinToString(" ").trim()
+                if (eventTexts.isNotBlank()) {
+                    val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(eventTexts)
+                    if (isBlocked) {
+                        triggerBlockShield(
+                            targetName = matchedRule,
+                            reason = "Website '$matchedRule' is restricted.",
+                            isWebsite = true
+                        )
+                        return
+                    }
+                }
+            }
         }
+
     }
 
     private fun getReadableAppName(packageName: String): String {
