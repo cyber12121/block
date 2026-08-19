@@ -681,15 +681,15 @@ fun QuickStartHeroCard(
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onQuickStart(25, false) },
-                    color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f)),
+                    color = AmberFocus.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, AmberFocus.copy(alpha = 0.4f)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
                         text = "25m Sprint",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFCA5A5),
+                        color = AmberFocus,
                         modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )

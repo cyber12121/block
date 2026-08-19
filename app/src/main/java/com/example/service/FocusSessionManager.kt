@@ -615,9 +615,8 @@ class FocusSessionManager private constructor(private val context: Context) {
      * Removes only the keys that describe the *current session*.
      *
      * Deliberately not `prefs.edit().clear()`: that also wiped the user's configured
-     * essential apps (silently reverting them to the hardcoded defaults) and reset
-     * KEY_EMERGENCY_EXITS_USED, handing back the full emergency-exit quota every time
-     * a session ended.
+     * essential apps and reset KEY_EMERGENCY_EXITS_USED, handing back the full
+     * emergency-exit quota every time a session ended.
      */
     private fun clearSessionPrefs() {
         prefs.edit()
@@ -641,15 +640,7 @@ class FocusSessionManager private constructor(private val context: Context) {
 
     fun getCustomEssentialApps(): List<String> {
         val raw = prefs.getString(KEY_CUSTOM_ESSENTIAL_APPS, "") ?: ""
-        if (raw.isBlank()) {
-            return listOf(
-                "com.android.dialer",
-                "com.google.android.apps.messaging",
-                "com.android.camera",
-                "com.google.android.deskclock",
-                "com.android.settings"
-            )
-        }
+        if (raw.isBlank()) return emptyList()
         return raw.split(",").map { it.trim() }.filter { it.isNotBlank() }.take(5)
     }
 

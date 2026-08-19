@@ -82,7 +82,7 @@ fun ClockTimePickerDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = Color(0xFF131B2E),
+            color = Color(0xFF16223E),
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth(0.92f)
@@ -145,18 +145,18 @@ fun ClockTimePickerDialog(
                         TimeInput(
                             state = timePickerState,
                             colors = TimePickerDefaults.colors(
-                                clockDialColor = Color(0xFF1E293B),
+                                clockDialColor = Color(0xFF1D2A4A),
                                 clockDialSelectedContentColor = Color.White,
                                 clockDialUnselectedContentColor = Color(0xFF94A3B8),
                                 selectorColor = IndigoPrimary,
-                                containerColor = Color(0xFF1E293B),
+                                containerColor = Color(0xFF1D2A4A),
                                 periodSelectorBorderColor = IndigoPrimary,
                                 periodSelectorSelectedContainerColor = IndigoPrimary,
-                                periodSelectorUnselectedContainerColor = Color(0xFF1E293B),
+                                periodSelectorUnselectedContainerColor = Color(0xFF1D2A4A),
                                 periodSelectorSelectedContentColor = Color.White,
                                 periodSelectorUnselectedContentColor = Color(0xFF94A3B8),
                                 timeSelectorSelectedContainerColor = IndigoPrimary,
-                                timeSelectorUnselectedContainerColor = Color(0xFF1E293B),
+                                timeSelectorUnselectedContainerColor = Color(0xFF1D2A4A),
                                 timeSelectorSelectedContentColor = Color.White,
                                 timeSelectorUnselectedContentColor = Color(0xFF94A3B8)
                             )
@@ -165,18 +165,18 @@ fun ClockTimePickerDialog(
                         TimePicker(
                             state = timePickerState,
                             colors = TimePickerDefaults.colors(
-                                clockDialColor = Color(0xFF1E293B),
+                                clockDialColor = Color(0xFF1D2A4A),
                                 clockDialSelectedContentColor = Color.White,
                                 clockDialUnselectedContentColor = Color(0xFFCBD5E1),
                                 selectorColor = IndigoPrimary,
-                                containerColor = Color(0xFF1E293B),
+                                containerColor = Color(0xFF1D2A4A),
                                 periodSelectorBorderColor = IndigoPrimary,
                                 periodSelectorSelectedContainerColor = IndigoPrimary,
-                                periodSelectorUnselectedContainerColor = Color(0xFF1E293B),
+                                periodSelectorUnselectedContainerColor = Color(0xFF1D2A4A),
                                 periodSelectorSelectedContentColor = Color.White,
                                 periodSelectorUnselectedContentColor = Color(0xFF94A3B8),
                                 timeSelectorSelectedContainerColor = IndigoPrimary,
-                                timeSelectorUnselectedContainerColor = Color(0xFF1E293B),
+                                timeSelectorUnselectedContainerColor = Color(0xFF1D2A4A),
                                 timeSelectorSelectedContentColor = Color.White,
                                 timeSelectorUnselectedContentColor = Color(0xFFCBD5E1)
                             )
@@ -203,7 +203,7 @@ fun ClockTimePickerDialog(
                     presets.forEach { (label, hourMin) ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF1E293B),
+                            color = Color(0xFF1D2A4A),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {

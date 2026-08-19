@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -103,7 +104,7 @@ fun MinimalLauncherScreen(
     val context = LocalContext.current
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
 
-    // Custom 5 essential apps state
+    // User-chosen essential apps state (starts empty — nothing is pre-decided)
     var customEssentialPkgs by remember { mutableStateOf(sessionManager.getCustomEssentialApps()) }
     var showConfigureEssentialAppsDialog by remember { mutableStateOf(false) }
     var isAppDrawerOpen by remember { mutableStateOf(false) }
@@ -155,20 +156,14 @@ fun MinimalLauncherScreen(
         }
     }
 
-    // Derived 5 essential shortcuts mapped to installed app labels
+    // Essential shortcuts — ONLY the apps the user chose. No pre-decided apps,
+    // and FocusGuard itself is no longer force-injected into the list.
     val essentialAppsShortcuts = remember(customEssentialPkgs, installedAppsList) {
-        val mapped = customEssentialPkgs.map { pkg ->
+        customEssentialPkgs.map { pkg ->
             val label = installedAppsList.firstOrNull { it.second == pkg }?.first
                 ?: pkg.substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
             EssentialAppShortcut(label = label, packageName = pkg)
-        }.toMutableList()
-
-        // Ensure FocusGuard app itself is always available in essential list if not already present
-        val fgPkg = context.packageName
-        if (mapped.none { it.packageName == fgPkg }) {
-            mapped.add(0, EssentialAppShortcut("FocusGuard", fgPkg))
-        }
-        mapped.take(6)
+        }.take(5)
     }
 
     val blockedPackages = remember(allTargets, sessionState.isActive) {
@@ -205,7 +200,7 @@ fun MinimalLauncherScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070A10))
+            .background(Color(0xFF0B1120))
             .padding(24.dp)
     ) {
         if (isAppDrawerOpen) {
@@ -217,7 +212,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF131B2E),
+                        color = Color(0xFF16223E),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier.clickable { isAppDrawerOpen = false }
                     ) {
@@ -274,7 +269,7 @@ fun MinimalLauncherScreen(
                             Icon(Icons.Default.Lock, contentDescription = null, tint = CrimsonStrict, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Focus Session Active: Only your 5 essential apps + FocusGuard are accessible.",
+                                text = "Focus Session Active: Only your chosen essential apps + FocusGuard are accessible.",
                                 fontSize = 12.sp,
                                 color = Color.White,
                                 lineHeight = 16.sp
@@ -297,7 +292,7 @@ fun MinimalLauncherScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IndigoPrimary,
-                        unfocusedBorderColor = Color(0xFF1E293B),
+                        unfocusedBorderColor = Color(0xFF1D2A4A),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     ),
@@ -384,7 +379,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF131B2E),
+                        color = Color(0xFF16223E),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier.clickable(onClick = handleExitRequest)
                     ) {
@@ -409,7 +404,7 @@ fun MinimalLauncherScreen(
                     }
 
                     Surface(
-                        color = if (remainingExits > 0) Color(0xFF1E293B) else CrimsonStrict.copy(alpha = 0.2f),
+                        color = if (remainingExits > 0) Color(0xFF1D2A4A) else CrimsonStrict.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(100.dp),
                         modifier = Modifier
                             .clickable { showEmergencyExitDialog = true }
@@ -436,7 +431,7 @@ fun MinimalLauncherScreen(
                     }
 
                     Surface(
-                        color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1E293B),
+                        color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1D2A4A),
                         shape = RoundedCornerShape(100.dp)
                     ) {
                         Row(
@@ -491,7 +486,7 @@ fun MinimalLauncherScreen(
                     )
                 }
 
-                // Essential App Text Shortcuts List (Up to 5 custom apps + FocusGuard)
+                // Essential App Shortcuts — only the apps the user picked
                 Column(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.padding(vertical = 12.dp)
@@ -502,7 +497,7 @@ fun MinimalLauncherScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "MY 5 ESSENTIAL APPS",
+                            text = "MY ESSENTIAL APPS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp,
@@ -511,9 +506,11 @@ fun MinimalLauncherScreen(
 
                         if (!sessionState.isActive) {
                             Surface(
-                                color = Color(0xFF1E293B),
+                                color = Color(0xFF1D2A4A),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.clickable { showConfigureEssentialAppsDialog = true }
+                                modifier = Modifier
+                                    .clickable { showConfigureEssentialAppsDialog = true }
+                                    .testTag("edit_essential_apps")
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -521,7 +518,56 @@ fun MinimalLauncherScreen(
                                 ) {
                                     Icon(Icons.Default.Edit, contentDescription = "Edit", tint = IndigoPrimary, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Edit 5 Apps", fontSize = 11.sp, color = IndigoPrimary, fontWeight = FontWeight.Bold)
+                                    Text("Edit Apps", fontSize = 11.sp, color = IndigoPrimary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    if (essentialAppsShortcuts.isEmpty()) {
+                        // Empty state: nothing pre-decided — the user chooses their apps
+                        Surface(
+                            color = Color(0xFF16223E),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(22.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "No essential apps yet",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (sessionState.isActive) {
+                                        "You haven't picked any apps to keep within reach during focus sessions."
+                                    } else {
+                                        "Choose the apps you want to keep here — nothing is pre-decided."
+                                    },
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF94A3B8),
+                                    lineHeight = 16.sp
+                                )
+                                if (!sessionState.isActive) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Button(
+                                        onClick = { showConfigureEssentialAppsDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.testTag("choose_essential_apps")
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Choose your apps", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
                                 }
                             }
                         }
@@ -568,7 +614,7 @@ fun MinimalLauncherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = Color(0xFF1E293B),
+                        color = Color(0xFF1D2A4A),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .clickable { isAppDrawerOpen = true }
@@ -647,7 +693,7 @@ fun MinimalLauncherScreen(
                         Text("Stay Focused", fontWeight = FontWeight.Bold)
                     }
                 },
-                containerColor = Color(0xFF0F172A)
+                containerColor = Color(0xFF111A2E)
             )
         }
 
@@ -666,11 +712,11 @@ fun MinimalLauncherScreen(
                         Text("Stay Focused")
                     }
                 },
-                containerColor = Color(0xFF0F172A)
+                containerColor = Color(0xFF111A2E)
             )
         }
 
-        // Edit 5 Essential Apps Dialog
+        // Edit Essential Apps Dialog
         if (showConfigureEssentialAppsDialog) {
             EditEssentialAppsDialog(
                 installedApps = installedAppsList,
@@ -716,7 +762,7 @@ fun EmergencyExitDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF0F172A),
+            color = Color(0xFF111A2E),
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .clickable(enabled = false) {}
@@ -744,7 +790,7 @@ fun EmergencyExitDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -834,7 +880,7 @@ fun EditEssentialAppsDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF0F172A),
+            color = Color(0xFF111A2E),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clickable(enabled = false) {}
@@ -850,8 +896,13 @@ fun EditEssentialAppsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Select 5 Essential Apps", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
-                        Text("${selectedPkgs.size} / 5 selected", fontSize = 12.sp, color = IndigoPrimary, fontWeight = FontWeight.Bold)
+                        Text("Choose your Essential Apps", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                        Text(
+                            text = if (selectedPkgs.isEmpty()) "0 selected (up to 5)" else "${selectedPkgs.size} selected (up to 5)",
+                            fontSize = 12.sp,
+                            color = IndigoPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
@@ -873,7 +924,7 @@ fun EditEssentialAppsDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IndigoPrimary,
-                        unfocusedBorderColor = Color(0xFF1E293B),
+                        unfocusedBorderColor = Color(0xFF1D2A4A),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     ),
@@ -894,7 +945,7 @@ fun EditEssentialAppsDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isChecked) IndigoPrimary.copy(alpha = 0.15f) else Color(0xFF1E293B))
+                                .background(if (isChecked) IndigoPrimary.copy(alpha = 0.15f) else Color(0xFF1D2A4A))
                                 .clickable {
                                     if (isChecked) {
                                         selectedPkgs = selectedPkgs - app.second
@@ -925,17 +976,19 @@ fun EditEssentialAppsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
+                    // Saving with 0 apps is allowed: the user decides which apps
+                    // (if any) stay in the launcher.
                     onClick = { onSave(selectedPkgs.toList()) },
-                    enabled = selectedPkgs.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
+                        .testTag("save_essential_apps")
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save 5 Essential Apps", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Save My Apps", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }
@@ -945,9 +998,30 @@ fun EditEssentialAppsDialog(
 private fun launchApp(context: Context, packageName: String) {
     try {
         val pm = context.packageManager
-        val intent = pm.getLaunchIntentForPackage(packageName)
+        var intent = pm.getLaunchIntentForPackage(packageName)
+        if (intent == null) {
+            // Fallback: resolve the app's launcher activity directly.
+            // getLaunchIntentForPackage can come up empty for some apps;
+            // querying the MAIN/LAUNCHER component catches those cases too.
+            val resolveInfo = pm.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(packageName)
+                },
+                PackageManager.MATCH_ALL
+            ).firstOrNull()
+            if (resolveInfo != null) {
+                intent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    component = ComponentName(
+                        resolveInfo.activityInfo.packageName,
+                        resolveInfo.activityInfo.name
+                    )
+                }
+            }
+        }
         if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
             context.startActivity(intent)
         }
     } catch (e: Exception) {

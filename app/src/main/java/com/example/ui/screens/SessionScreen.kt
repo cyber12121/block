@@ -141,7 +141,7 @@ fun SessionScreen(
                 brush = Brush.verticalGradient(
                     listOf(
                         Color(0xFF0B1120),
-                        if (sessionState.isStrictMode) Color(0xFF1C0E14) else if (sessionState.isPomodoroBreak) Color(0xFF064E3B) else Color(0xFF0F172A),
+                        if (sessionState.isStrictMode) Color(0xFF1C0E14) else if (sessionState.isPomodoroBreak) Color(0xFF064E3B) else Color(0xFF111A2E),
                         Color(0xFF0B1120)
                     )
                 )
@@ -175,9 +175,9 @@ fun SessionScreen(
         // Pomodoro Cycle Status Pill
         if (sessionState.isPomodoro) {
             Surface(
-                color = if (sessionState.isPomodoroBreak) EmeraldSuccess.copy(alpha = 0.2f) else Color(0xFFEF4444).copy(alpha = 0.2f),
+                color = if (sessionState.isPomodoroBreak) EmeraldSuccess.copy(alpha = 0.2f) else CrimsonStrict.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(100.dp),
-                border = BorderStroke(1.dp, if (sessionState.isPomodoroBreak) EmeraldSuccess else Color(0xFFEF4444))
+                border = BorderStroke(1.dp, if (sessionState.isPomodoroBreak) EmeraldSuccess else CrimsonStrict)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -186,7 +186,7 @@ fun SessionScreen(
                     Text(
                         text = if (sessionState.isPomodoroBreak) "☕ RECOVERY BREAK (Round ${sessionState.pomodoroRound}/${sessionState.pomodoroTotalRounds})"
                         else "🍅 FOCUS SPRINT (Round ${sessionState.pomodoroRound}/${sessionState.pomodoroTotalRounds})",
-                        color = if (sessionState.isPomodoroBreak) EmeraldSuccess else Color(0xFFFCA5A5),
+                        color = if (sessionState.isPomodoroBreak) EmeraldSuccess else Color(0xFFE98BA0),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -244,7 +244,7 @@ fun SessionScreen(
             CircularProgressIndicator(
                 progress = { 1f },
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF1E293B),
+                color = Color(0xFF1D2A4A),
                 strokeWidth = 14.dp
             )
             CircularProgressIndicator(
@@ -306,8 +306,8 @@ fun SessionScreen(
         if (sessionState.isPomodoro) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
-                border = BorderStroke(1.dp, Color(0xFF23304A)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
+                border = BorderStroke(1.dp, Color(0xFF26355C)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -347,7 +347,8 @@ fun SessionScreen(
                         Text(
                             text = if (sessionState.isPomodoroBreak) "Focus Sprint 🛡️" else "Take Break ☕",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            color = if (sessionState.isPomodoroBreak) Color.White else Color(0xFF052E21)
                         )
                     }
                 }
@@ -359,8 +360,8 @@ fun SessionScreen(
         // Ambient Focus Soundscapes Control Card (Feature 4)
         Card(
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
-            border = BorderStroke(1.dp, if (isSoundPlaying) CyanAccent.copy(alpha = 0.5f) else Color(0xFF23304A)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF16223E)),
+            border = BorderStroke(1.dp, if (isSoundPlaying) CyanAccent.copy(alpha = 0.5f) else Color(0xFF26355C)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -413,7 +414,7 @@ fun SessionScreen(
                         val isSelected = selectedSound == preset && isSoundPlaying
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF1E293B),
+                            color = if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF1D2A4A),
                             border = BorderStroke(
                                 1.dp,
                                 if (isSelected) CyanAccent else Color.Transparent
@@ -471,7 +472,7 @@ fun SessionScreen(
                             colors = SliderDefaults.colors(
                                 thumbColor = CyanAccent,
                                 activeTrackColor = CyanAccent,
-                                inactiveTrackColor = Color(0xFF1E293B)
+                                inactiveTrackColor = Color(0xFF1D2A4A)
                             ),
                             modifier = Modifier.weight(1f)
                         )

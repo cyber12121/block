@@ -127,7 +127,7 @@ fun CreateScheduleDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clip(RoundedCornerShape(26.dp)),
-            color = Color(0xFF131B2E),
+            color = Color(0xFF16223E),
             tonalElevation = 8.dp
         ) {
             Column(
@@ -194,7 +194,7 @@ fun CreateScheduleDialog(
                     templates.forEach { tmpl ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF1E293B),
+                            color = Color(0xFF1D2A4A),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
@@ -249,7 +249,7 @@ fun CreateScheduleDialog(
                     // Start Time Box (Interactive Clock Card)
                     Card(
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
                         border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .weight(1f)
@@ -301,7 +301,7 @@ fun CreateScheduleDialog(
                     // End Time Box (Interactive Clock Card)
                     Card(
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
                         border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .weight(1f)
@@ -365,7 +365,7 @@ fun CreateScheduleDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(if (isSelected) IndigoPrimary else Color(0xFF1E293B))
+                                .background(if (isSelected) IndigoPrimary else Color(0xFF1D2A4A))
                                 .clickable {
                                     val current = selectedDays.value.toMutableSet()
                                     if (isSelected) {
@@ -393,7 +393,7 @@ fun CreateScheduleDialog(
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1E293B)
+                        containerColor = if (isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1D2A4A)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -437,7 +437,7 @@ fun CreateScheduleDialog(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = CrimsonStrict,
-                                uncheckedTrackColor = Color(0xFF0F172A)
+                                uncheckedTrackColor = Color(0xFF111A2E)
                             )
                         )
                     }
@@ -463,7 +463,7 @@ fun CreateScheduleDialog(
                         val isChecked = selectedListIds.value.contains(list.id)
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF1E293B),
+                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF1D2A4A),
                             border = BorderStroke(
                                 1.dp,
                                 if (isChecked) Color(list.colorHex) else Color.Transparent
@@ -524,7 +524,7 @@ fun CreateScheduleDialog(
                     enabled = isFormValid,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = IndigoPrimary,
-                        disabledContainerColor = Color(0xFF1E293B)
+                        disabledContainerColor = Color(0xFF1D2A4A)
                     ),
                     shape = RoundedCornerShape(14.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),

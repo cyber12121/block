@@ -99,7 +99,8 @@ fun StartSessionDialog(
     var isCustomDuration by remember { mutableStateOf(false) }
     var modeType by remember { mutableStateOf(SessionModeType.NORMAL) }
     var isAcknowledged by remember { mutableStateOf(false) }
-    var autoLaunchMinimal by remember { mutableStateOf(true) }
+    // Off by default: the Minimal Launcher should never pop up on its own.
+    var autoLaunchMinimal by remember { mutableStateOf(false) }
 
     val isStrictMode = modeType == SessionModeType.STRICT
 
@@ -158,8 +159,8 @@ fun StartSessionDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0F172A)),
-            color = Color(0xFF0F172A),
+                .background(Color(0xFF111A2E)),
+            color = Color(0xFF111A2E),
             tonalElevation = 6.dp
         ) {
             Column(
@@ -213,7 +214,7 @@ fun StartSessionDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1D2A4A), RoundedCornerShape(12.dp))
                         .padding(4.dp)
                 ) {
                     Box(
@@ -288,7 +289,7 @@ fun StartSessionDialog(
                             color = if (isSelected) {
                                 if (isStrictMode) CrimsonStrict else IndigoPrimary
                             } else {
-                                Color(0xFF1E293B)
+                                Color(0xFF1D2A4A)
                             },
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
@@ -312,7 +313,7 @@ fun StartSessionDialog(
                         color = if (isCustomDuration) {
                             if (isStrictMode) CrimsonStrict else IndigoPrimary
                         } else {
-                            Color(0xFF1E293B)
+                            Color(0xFF1D2A4A)
                         },
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
@@ -360,7 +361,7 @@ fun StartSessionDialog(
                         val isChecked = selectedListIds.value.contains(list.id)
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF1E293B),
+                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF1D2A4A),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
                                 if (isChecked) Color(list.colorHex) else Color.Transparent
@@ -472,7 +473,7 @@ fun StartSessionDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E293B))
+                        .background(Color(0xFF1D2A4A))
                         .clickable { autoLaunchMinimal = !autoLaunchMinimal }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -485,13 +486,13 @@ fun StartSessionDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Launch Minimal Launcher during session",
+                            text = "Open Minimal Launcher when session starts",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Restricts home screen to your 5 custom essential apps",
+                            text = "Optional — off by default. Shows only the apps you chose.",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -512,7 +513,7 @@ fun StartSessionDialog(
                                 .height(54.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
-                                    if (isAcknowledged) CrimsonStrict.copy(alpha = 0.2f) else Color(0xFF1E293B)
+                                    if (isAcknowledged) CrimsonStrict.copy(alpha = 0.2f) else Color(0xFF1D2A4A)
                                 )
                                 .border(
                                     1.dp,
