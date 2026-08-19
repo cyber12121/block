@@ -516,14 +516,36 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         val remaining = ((end - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
 
-        // If not strict and expired, clean up
-        if (remaining <= 0 && !isStrict) {
-            clearSessionPrefs()
+        // Timer already elapsed while the process was dead. The previous path
+        // only cleared prefs for non-strict sessions and left the FocusSession
+        // row active, the growing plant stuck on GROWING, and stats unrecorded.
+        // Strict expired sessions were restored as still-active with 0s left
+        // and waited for a tick that might never come. Run the same teardown
+        // updateTick() uses for a live expiry.
+        if (remaining <= 0) {
+            updateStateFromValues(
+                isActive = true,
+                isStrictMode = isStrict,
+                sessionId = id,
+                title = title,
+                startTime = start,
+                endTime = end,
+                durationMinutes = duration,
+                activeLists = activeLists,
+                isAutoScheduled = isAutoScheduled,
+                isPomodoro = isPomodoro,
+                pomodoroRound = pomodoroRound,
+                pomodoroTotalRounds = pomodoroTotal,
+                isPomodoroBreak = isPomodoroBreak,
+                plantType = plantType
+            )
             val app = context.applicationContext as? FocusGuardApp
-            app?.let {
-                scope.launch {
-                    refreshBlockedTargetsCache(it.repository)
-                }
+            if (app != null) {
+                isCompletingSession = true
+                forceUnlockSession(app.repository, earlyUnlocked = false)
+            } else {
+                clearSessionPrefs()
+                _sessionState.value = ActiveSessionState()
             }
             return
         }
