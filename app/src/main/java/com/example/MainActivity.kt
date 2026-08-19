@@ -148,8 +148,8 @@ fun MainAppContent(viewModel: MainViewModel) {
             bottomBar = {
                 if (!isLiveSessionFullscreen && !isMinimalLauncherFullscreen) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp
+                        containerColor = MaterialTheme.colorScheme.background,
+                        tonalElevation = 0.dp
                     ) {
                         AppTab.values().forEach { tab ->
                             val isSelected = currentTab == tab
@@ -160,13 +160,14 @@ fun MainAppContent(viewModel: MainViewModel) {
                                     Icon(
                                         imageVector = tab.icon,
                                         contentDescription = tab.title,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 },
                                 alwaysShowLabel = false,
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = IndigoPrimary,
-                                    indicatorColor = IndigoPrimary.copy(alpha = 0.15f)
+                                    selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 modifier = Modifier.testTag("tab_${tab.name.lowercase()}")
                             )

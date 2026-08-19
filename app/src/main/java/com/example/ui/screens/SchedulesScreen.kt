@@ -150,14 +150,13 @@ fun SchedulesScreen(
                     Text(
                         text = "Automated Schedules",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Auto-start focus shields on recurring clock hours & days",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -166,90 +165,49 @@ fun SchedulesScreen(
             if (!isSessionStrict) {
                 item {
                     Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
                             .clickable { onOpenCreateSchedule() }
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFF3730A3),
-                                            Color(0xFF4338CA),
-                                            Color(0xFF0E7490)
-                                        )
-                                    )
-                                )
-                                .padding(18.dp)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.MoreTime,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column {
-                                        Text(
-                                            text = "Set Up New Schedule",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = "Tap to pick clock times & recurring days",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFFE0E7FF)
-                                        )
-                                    }
-                                }
-
-                                Surface(
-                                    color = Color.White,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = null,
-                                            tint = IndigoPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "Add",
-                                            color = IndigoPrimary,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 13.sp
-                                        )
-                                    }
+                                Icon(
+                                    imageVector = Icons.Default.MoreTime,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Set Up New Schedule",
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = "Pick clock times and recurring days",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
+
+                            Text(
+                                text = "Add",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -270,13 +228,13 @@ fun SchedulesScreen(
                 )
 
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isAutoActive) Color(0xFF0F2338) else Color(0xFF131B2E)
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     border = BorderStroke(
-                        1.5.dp,
-                        if (isAutoActive) CyanAccent.copy(alpha = pulseAlpha) else Color(0xFF23304A)
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -307,7 +265,7 @@ fun SchedulesScreen(
                                     text = if (isAutoActive) "Scheduled Block Active Now" else "24/7 Clock Guard Armed",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = if (isAutoActive) CyanAccent else Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (isAutoActive) {
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -331,7 +289,7 @@ fun SchedulesScreen(
                                 else
                                     "Schedules engage automatically when their clock time window arrives.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF94A3B8)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -342,8 +300,9 @@ fun SchedulesScreen(
             if (schedules.isEmpty()) {
                 item {
                     Card(
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2E)),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -361,13 +320,12 @@ fun SchedulesScreen(
                                 text = "No Schedules Created Yet",
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Tap 'Set Up New Schedule' above to configure recurring focus blocks for work sprint, deep study, or sleep bedtime.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF94A3B8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
@@ -457,11 +415,11 @@ fun ScheduleCard(
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActiveNow) Color(0xFF14243B) else if (schedule.isEnabled) Color(0xFF131B2E) else Color(0xFF0D1322)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
-            1.5.dp,
-            if (isActiveNow) CyanAccent else if (schedule.isEnabled) IndigoPrimary.copy(alpha = 0.5f) else Color(0xFF1E293B)
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -496,7 +454,6 @@ fun ScheduleCard(
                                 text = schedule.name,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = Color.White
                             )
                             if (isActiveNow) {
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -548,9 +505,8 @@ fun ScheduleCard(
 
             // Time Window Clock Banner
             Surface(
-                color = Color(0xFF1E293B).copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color(0xFF334155).copy(alpha = 0.5f))
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -571,7 +527,7 @@ fun ScheduleCard(
                             text = "${formatHour(schedule.startHour, schedule.startMinute)}  ➔  ${formatHour(schedule.endHour, schedule.endMinute)}",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActiveNow) CyanAccent else Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -606,7 +562,7 @@ fun ScheduleCard(
                         modifier = Modifier
                             .size(28.dp)
                             .background(
-                                color = if (isDayActive) (if (isActiveNow) CyanAccent.copy(alpha = 0.3f) else IndigoPrimary.copy(alpha = 0.3f)) else Color(0xFF1E293B),
+                                color = if (isDayActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -615,7 +571,7 @@ fun ScheduleCard(
                             text = initial,
                             fontSize = 11.sp,
                             fontWeight = if (isDayActive) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isDayActive) Color.White else Color(0xFF64748B)
+                            color = if (isDayActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

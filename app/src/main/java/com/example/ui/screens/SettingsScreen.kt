@@ -145,11 +145,11 @@ fun SettingsScreen(
                 Card(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (sessionState.isStrictMode) Color(0xFF261016) else Color(0xFF1E293B)
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     border = BorderStroke(
-                        1.5.dp,
-                        if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
+                        1.dp,
+                        if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -165,7 +165,6 @@ fun SettingsScreen(
                             Text(
                                 text = if (sessionState.isStrictMode) "Strict Mode Active (${sessionState.remainingSeconds / 60}m remaining)" else "Active Focus Session",
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
                                 fontSize = 15.sp
                             )
                         }
@@ -175,7 +174,7 @@ fun SettingsScreen(
                         Text(
                             text = "Need to test other features or end early? Use the developer emergency unlock below.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFCBD5E1)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))

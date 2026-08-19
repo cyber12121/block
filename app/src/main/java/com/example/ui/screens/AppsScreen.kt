@@ -329,11 +329,13 @@ fun AppsScreen(
                                 }
                             },
                             enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(38.dp)
                         ) {
-                            Text("Block Social", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Block Social", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
 
                         Button(
@@ -346,11 +348,13 @@ fun AppsScreen(
                                 }
                             },
                             enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
-                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(38.dp)
                         ) {
-                            Text("Block Streaming", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text("Block Streaming", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
 
                         Button(
@@ -363,11 +367,13 @@ fun AppsScreen(
                                 }
                             },
                             enabled = !isSessionStrict,
-                            colors = ButtonDefaults.buttonColors(containerColor = AmberFocus),
-                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(38.dp)
                         ) {
-                            Text("Block Games", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text("Block Games", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
