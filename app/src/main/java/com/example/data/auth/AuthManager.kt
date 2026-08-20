@@ -13,7 +13,6 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,10 +48,6 @@ class AuthManager private constructor(private val context: Context) {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // Flag for displaying optional password setup dialog right after Google Sign In
-    private val _promptOptionalPasswordUser = MutableStateFlow<AuthUser?>(null)
-    val promptOptionalPasswordUser: StateFlow<AuthUser?> = _promptOptionalPasswordUser.asStateFlow()
-
     init {
         loadSavedState()
     }
@@ -75,7 +69,6 @@ class AuthManager private constructor(private val context: Context) {
         val timestamp = prefs.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
 
         if (uid != null && email != null) {
-            val hasPass = isPasswordSetForEmail(email)
             _currentUser.value = AuthUser(
                 uid = uid,
                 displayName = name ?: email.substringBefore("@"),
@@ -84,8 +77,7 @@ class AuthManager private constructor(private val context: Context) {
                 isGuest = false,
                 isDeveloper = false,
                 provider = provider,
-                signInTimestamp = timestamp,
-                hasPassword = hasPass
+                signInTimestamp = timestamp
             )
         } else {
             _currentUser.value = null
@@ -119,7 +111,7 @@ class AuthManager private constructor(private val context: Context) {
 
     /**
      * Check if user is currently authorized to use the app.
-     * App requires either a signed-in account (Google / Email & Password) OR Developer Mode.
+     * App requires either a signed-in account (Google) OR Developer Mode.
      */
     fun isAuthorized(): Boolean {
         return _isDeveloperMode.value || _currentUser.value != null
@@ -136,7 +128,6 @@ class AuthManager private constructor(private val context: Context) {
             .apply()
 
         _isDeveloperMode.value = true
-        _promptOptionalPasswordUser.value = null
         refreshDailyExits()
         _errorMessage.value = null
     }
@@ -203,60 +194,6 @@ class AuthManager private constructor(private val context: Context) {
         return true
     }
 
-    fun dismissOptionalPasswordPrompt() {
-        _promptOptionalPasswordUser.value = null
-    }
-
-    fun isPasswordSetForEmail(email: String): Boolean {
-        val acc = getLocalRegisteredAccount(email) ?: return false
-        val pass = acc.optString("password", "")
-        return pass.isNotBlank()
-    }
-
-    /**
-     * Set or update password for any account (including Google accounts).
-     * This allows the user to log in directly using Email & Password.
-     */
-    fun setOptionalPasswordForCurrentAccount(
-        newPass: String,
-        onResult: (Boolean, String?) -> Unit = { _, _ -> }
-    ) {
-        val user = _currentUser.value
-        if (user == null) {
-            onResult(false, "No active user logged in.")
-            return
-        }
-
-        val trimmedPass = newPass.trim()
-        if (trimmedPass.length < 6) {
-            val err = "Password must be at least 6 characters long."
-            _errorMessage.value = err
-            onResult(false, err)
-            return
-        }
-
-        scope.launch {
-            try {
-                // Save locally
-                saveLocalRegisteredAccount(user.email, trimmedPass, user.displayName)
-
-                // Update currentUser hasPassword flag
-                val updatedUser = user.copy(hasPassword = true)
-                _currentUser.value = updatedUser
-                _promptOptionalPasswordUser.value = null
-
-                launch(Dispatchers.Main) {
-                    onResult(true, null)
-                }
-            } catch (e: Exception) {
-                val err = e.message ?: "Failed to save password."
-                launch(Dispatchers.Main) {
-                    onResult(false, err)
-                }
-            }
-        }
-    }
-
     /**
      * Sign in using Google Credential Manager
      */
@@ -295,7 +232,6 @@ class AuthManager private constructor(private val context: Context) {
                     val photoUrl = googleIdToken.profilePictureUri?.toString()
                     val idToken = googleIdToken.idToken
 
-                    val alreadyHasPass = isPasswordSetForEmail(email)
                     var savedAuthUser: AuthUser
 
                     try {
@@ -311,8 +247,7 @@ class AuthManager private constructor(private val context: Context) {
                                 photoUrl = fbUser.photoUrl?.toString() ?: photoUrl,
                                 isGuest = false,
                                 isDeveloper = false,
-                                provider = "google.com",
-                                hasPassword = alreadyHasPass
+                                provider = "google.com"
                             )
                         } else {
                             savedAuthUser = AuthUser(
@@ -322,8 +257,7 @@ class AuthManager private constructor(private val context: Context) {
                                 photoUrl = photoUrl,
                                 isGuest = false,
                                 isDeveloper = false,
-                                provider = "google.com",
-                                hasPassword = alreadyHasPass
+                                provider = "google.com"
                             )
                         }
                     } catch (e: Exception) {
@@ -335,8 +269,7 @@ class AuthManager private constructor(private val context: Context) {
                             photoUrl = photoUrl,
                             isGuest = false,
                             isDeveloper = false,
-                            provider = "google.com",
-                            hasPassword = alreadyHasPass
+                            provider = "google.com"
                         )
                     }
 
@@ -360,8 +293,6 @@ class AuthManager private constructor(private val context: Context) {
                 _isLoading.value = false
                 val msg = e.message ?: "Google Sign-In credential exception"
                 Log.w("AuthManager", "Credential error: $msg - using Google Account pandagre.vinay@gmail.com")
-                // In emulator or environments without Play Services OAuth client,
-                // seamlessly sign in the verified Google account pandagre.vinay@gmail.com
                 val fallbackUser = AuthUser(
                     uid = "google_pandagre_vinay_gmail_com",
                     displayName = "Vinay Pandagre",
@@ -369,8 +300,7 @@ class AuthManager private constructor(private val context: Context) {
                     photoUrl = null,
                     isGuest = false,
                     isDeveloper = false,
-                    provider = "google.com",
-                    hasPassword = false
+                    provider = "google.com"
                 )
                 saveUser(fallbackUser)
                 _errorMessage.value = null
@@ -386,8 +316,7 @@ class AuthManager private constructor(private val context: Context) {
                     photoUrl = null,
                     isGuest = false,
                     isDeveloper = false,
-                    provider = "google.com",
-                    hasPassword = false
+                    provider = "google.com"
                 )
                 saveUser(fallbackUser)
                 _errorMessage.value = null
@@ -396,248 +325,11 @@ class AuthManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Sign Up with Email and Password
-     */
-    fun signUpWithEmailPassword(
-        email: String,
-        pass: String,
-        displayName: String = "",
-        onResult: (Boolean, String?) -> Unit = { _, _ -> }
-    ) {
-        val trimmedEmail = email.trim()
-        val trimmedPass = pass.trim()
-        val finalName = displayName.trim().ifEmpty { trimmedEmail.substringBefore("@") }
-
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            val err = "Please enter a valid email address."
-            _errorMessage.value = err
-            onResult(false, err)
-            return
-        }
-
-        if (trimmedPass.length < 6) {
-            val err = "Password must be at least 6 characters long."
-            _errorMessage.value = err
-            onResult(false, err)
-            return
-        }
-
-        scope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-
-            try {
-                // Try Firebase Auth
-                try {
-                    val auth = FirebaseAuth.getInstance()
-                    val authResult = auth.createUserWithEmailAndPassword(trimmedEmail, trimmedPass).await()
-                    val fbUser = authResult.user
-                    if (fbUser != null) {
-                        try {
-                            val profileUpdates = UserProfileChangeRequest.Builder()
-                                .setDisplayName(finalName)
-                                .build()
-                            fbUser.updateProfile(profileUpdates).await()
-                        } catch (_: Exception) {}
-
-                        // Also save locally registered account
-                        saveLocalRegisteredAccount(trimmedEmail, trimmedPass, finalName)
-
-                        saveUser(
-                            AuthUser(
-                                uid = fbUser.uid,
-                                displayName = finalName,
-                                email = trimmedEmail,
-                                isGuest = false,
-                                isDeveloper = false,
-                                provider = "password",
-                                hasPassword = true
-                            )
-                        )
-                        _isLoading.value = false
-                        launch(Dispatchers.Main) { onResult(true, null) }
-                        return@launch
-                    }
-                } catch (fbEx: Exception) {
-                    Log.w("AuthManager", "Firebase createUser failed (${fbEx.message}), proceeding with local account registry.")
-                }
-
-                // Fallback to local account registration
-                saveLocalRegisteredAccount(trimmedEmail, trimmedPass, finalName)
-                saveUser(
-                    AuthUser(
-                        uid = "email_${trimmedEmail.hashCode()}",
-                        displayName = finalName,
-                        email = trimmedEmail,
-                        isGuest = false,
-                        isDeveloper = false,
-                        provider = "password",
-                        hasPassword = true
-                    )
-                )
-
-                _isLoading.value = false
-                launch(Dispatchers.Main) {
-                    onResult(true, null)
-                }
-            } catch (e: Exception) {
-                _isLoading.value = false
-                val msg = e.message ?: "Sign up failed. Please try again."
-                _errorMessage.value = msg
-                launch(Dispatchers.Main) { onResult(false, msg) }
-            }
-        }
-    }
-
-    /**
-     * Sign In with Email and Password
-     */
-    fun signInWithEmailPassword(
-        email: String,
-        pass: String,
-        onResult: (Boolean, String?) -> Unit = { _, _ -> }
-    ) {
-        val trimmedEmail = email.trim()
-        val trimmedPass = pass.trim()
-
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            val err = "Please enter a valid email address."
-            _errorMessage.value = err
-            onResult(false, err)
-            return
-        }
-
-        if (trimmedPass.isEmpty()) {
-            val err = "Please enter your password."
-            _errorMessage.value = err
-            onResult(false, err)
-            return
-        }
-
-        scope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-
-            try {
-                // Check Firebase Auth first
-                var firebaseSuccess = false
-                try {
-                    val auth = FirebaseAuth.getInstance()
-                    val authResult = auth.signInWithEmailAndPassword(trimmedEmail, trimmedPass).await()
-                    val fbUser = authResult.user
-                    if (fbUser != null) {
-                        saveLocalRegisteredAccount(trimmedEmail, trimmedPass, fbUser.displayName ?: trimmedEmail.substringBefore("@"))
-                        saveUser(
-                            AuthUser(
-                                uid = fbUser.uid,
-                                displayName = fbUser.displayName ?: trimmedEmail.substringBefore("@"),
-                                email = trimmedEmail,
-                                isGuest = false,
-                                isDeveloper = false,
-                                provider = "password",
-                                hasPassword = true
-                            )
-                        )
-                        firebaseSuccess = true
-                    }
-                } catch (fbEx: Exception) {
-                    Log.w("AuthManager", "Firebase signIn error (${fbEx.message}), trying local account validation.")
-                }
-
-                if (firebaseSuccess) {
-                    _isLoading.value = false
-                    launch(Dispatchers.Main) { onResult(true, null) }
-                    return@launch
-                }
-
-                // Check local registered accounts
-                val localAcc = getLocalRegisteredAccount(trimmedEmail)
-                if (localAcc != null) {
-                    val savedPass = localAcc.optString("password", "")
-                    val name = localAcc.optString("name", trimmedEmail.substringBefore("@"))
-                    if (savedPass == trimmedPass) {
-                        saveUser(
-                            AuthUser(
-                                uid = "email_${trimmedEmail.hashCode()}",
-                                displayName = name,
-                                email = trimmedEmail,
-                                isGuest = false,
-                                isDeveloper = false,
-                                provider = "password",
-                                hasPassword = true
-                            )
-                        )
-                        _isLoading.value = false
-                        launch(Dispatchers.Main) { onResult(true, null) }
-                        return@launch
-                    } else {
-                        _isLoading.value = false
-                        val err = "Incorrect password. Please try again."
-                        _errorMessage.value = err
-                        launch(Dispatchers.Main) { onResult(false, err) }
-                        return@launch
-                    }
-                }
-
-                // If not found in local registry, allow creating account on the fly or authenticating
-                saveLocalRegisteredAccount(trimmedEmail, trimmedPass, trimmedEmail.substringBefore("@"))
-                saveUser(
-                    AuthUser(
-                        uid = "email_${trimmedEmail.hashCode()}",
-                        displayName = trimmedEmail.substringBefore("@"),
-                        email = trimmedEmail,
-                        isGuest = false,
-                        isDeveloper = false,
-                        provider = "password",
-                        hasPassword = true
-                    )
-                )
-                _isLoading.value = false
-                launch(Dispatchers.Main) { onResult(true, null) }
-
-            } catch (e: Exception) {
-                _isLoading.value = false
-                val msg = e.message ?: "Sign in failed"
-                _errorMessage.value = msg
-                launch(Dispatchers.Main) { onResult(false, msg) }
-            }
-        }
-    }
-
-    private fun saveLocalRegisteredAccount(email: String, pass: String, name: String) {
-        val existingJson = prefs.getString(KEY_ACCOUNTS_JSON, "{}") ?: "{}"
-        try {
-            val root = JSONObject(existingJson)
-            val acc = JSONObject().apply {
-                put("email", email)
-                put("password", pass)
-                put("name", name)
-                put("updatedAt", System.currentTimeMillis())
-            }
-            root.put(email.lowercase(), acc)
-            prefs.edit().putString(KEY_ACCOUNTS_JSON, root.toString()).apply()
-        } catch (e: Exception) {
-            Log.e("AuthManager", "Failed to save local account", e)
-        }
-    }
-
-    private fun getLocalRegisteredAccount(email: String): JSONObject? {
-        val existingJson = prefs.getString(KEY_ACCOUNTS_JSON, "{}") ?: "{}"
-        return try {
-            val root = JSONObject(existingJson)
-            if (root.has(email.lowercase())) root.getJSONObject(email.lowercase()) else null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     fun quickSignIn(
         name: String,
         email: String,
         photoUrl: String? = null
     ) {
-        val hasPass = isPasswordSetForEmail(email)
         val user = AuthUser(
             uid = "user_${email.replace("@", "_").replace(".", "_")}",
             displayName = name,
@@ -645,8 +337,7 @@ class AuthManager private constructor(private val context: Context) {
             photoUrl = photoUrl,
             isGuest = false,
             isDeveloper = false,
-            provider = "google.com",
-            hasPassword = hasPass
+            provider = "google.com"
         )
         saveUser(user)
     }
@@ -684,7 +375,6 @@ class AuthManager private constructor(private val context: Context) {
 
             _currentUser.value = null
             _isDeveloperMode.value = false
-            _promptOptionalPasswordUser.value = null
             refreshDailyExits()
             _errorMessage.value = null
 
@@ -709,7 +399,6 @@ class AuthManager private constructor(private val context: Context) {
         private const val KEY_TIMESTAMP = "auth_timestamp"
         private const val KEY_EXIT_DATE_KEY = "auth_exit_date_key"
         private const val KEY_DAILY_EXITS_COUNT = "auth_daily_exits_count"
-        private const val KEY_ACCOUNTS_JSON = "auth_accounts_registry_json"
 
         @Volatile
         private var INSTANCE: AuthManager? = null
