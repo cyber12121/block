@@ -516,12 +516,12 @@ fun SessionScreen(
                 ) {
                     Icon(imageVector = Icons.Default.LockOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Developer Unlock (End Strict Mode)", fontWeight = FontWeight.Bold)
+                    Text(text = "Emergency Unlock", fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Tap to cancel active strict mode during app testing.",
+                    text = "Uses one of your 5 emergency exits. This cannot be undone.",
                     fontSize = 11.sp,
                     color = Color(0xFF94A3B8),
                     textAlign = TextAlign.Center,

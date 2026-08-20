@@ -418,34 +418,40 @@ fun DashboardScreen(
             }
         }
 
-        // 7. Active Protections Section
+        // 7. Active Protections Section — driven by real BlockList state
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Active protections",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            val displayedProtections = blockLists
+                .filter { it.isDefault }
+                .take(2)
+            if (displayedProtections.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Active protections",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ActiveProtectionBadgeCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.People,
-                        title = "Social Media",
-                        isActive = true,
-                        onClick = onNavigateToLists
-                    )
-                    ActiveProtectionBadgeCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.PlayCircle,
-                        title = "Entertainment & Video",
-                        isActive = true,
-                        onClick = onNavigateToLists
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        displayedProtections.forEach { list ->
+                            val icon = when {
+                                list.name.contains("Social", ignoreCase = true) -> Icons.Default.People
+                                list.name.contains("Entertainment", ignoreCase = true) ||
+                                list.name.contains("Video", ignoreCase = true) -> Icons.Default.PlayCircle
+                                else -> Icons.Default.Shield
+                            }
+                            ActiveProtectionBadgeCard(
+                                modifier = Modifier.weight(1f),
+                                icon = icon,
+                                title = list.name,
+                                isActive = list.isEnabled,
+                                onClick = onNavigateToLists
+                            )
+                        }
+                    }
                 }
             }
         }
