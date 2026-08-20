@@ -519,11 +519,14 @@ class FocusSessionManager private constructor(private val context: Context) {
             }
         }
 
-        // 2. Check blocked keywords
+        // 2. Check blocked keywords (use word boundary regex to avoid partial substring false triggers)
         for (kw in cachedBlockedKeywords) {
             val cleanKw = kw.lowercase().trim()
-            if (cleanKw.isNotBlank() && lower.contains(cleanKw)) {
-                return Pair(true, kw)
+            if (cleanKw.length >= 2) {
+                val kwRegex = Regex("(^|[^a-z0-9])${Regex.escape(cleanKw)}([^a-z0-9]|$)")
+                if (kwRegex.containsMatchIn(lower) || kwRegex.containsMatchIn(cleanInput)) {
+                    return Pair(true, kw)
+                }
             }
         }
         return Pair(false, "")

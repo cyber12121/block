@@ -168,10 +168,15 @@ class FocusAccessibilityService : AccessibilityService() {
                     //   Launcher): allow going home freely. App-blocking still fires
                     //   when the user opens a blocked app from their system launcher.
                     if (sessionState.isStrictMode && isMinimalLauncherHome) {
-                        val relaunch = Intent(this, com.example.MainActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        scope.launch {
+                            kotlinx.coroutines.delay(250)
+                            val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            }
+                            try {
+                                startActivity(relaunch)
+                            } catch (_: Exception) {}
                         }
-                        startActivity(relaunch)
                         return
                     }
                     // All other cases — let them go home freely.
@@ -253,17 +258,15 @@ class FocusAccessibilityService : AccessibilityService() {
                 return
             }
 
-            // Fire URL scan on any window or content change — Chrome often fires only
-            // TYPE_WINDOW_CONTENT_CHANGED when navigating to a new URL without a new
-            // window, so limiting to TYPE_WINDOW_STATE_CHANGED missed most navigations.
+            // Fire URL scan on window state or content changes — when page navigates.
+            // Do NOT scan on TYPE_VIEW_TEXT_CHANGED, which fires on every keystroke
+            // and catches inline autocomplete suggestions while typing.
             val isRelevantBrowserEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
-                    event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
-                    event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED
+                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
 
             if (isRelevantBrowserEvent) {
                 // For CONTENT_CHANGED, throttle the tree walk to avoid CPU hammering.
-                // For STATE_CHANGED / TEXT_CHANGED fire immediately (real navigation or typing).
+                // For STATE_CHANGED fire immediately on page navigation.
                 val isContentChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                 val shouldScan = !isContentChanged ||
                         (now - lastBrowserUrlScanTime) > BROWSER_SCAN_THROTTLE_MS
@@ -282,25 +285,6 @@ class FocusAccessibilityService : AccessibilityService() {
                             )
                             return
                         }
-                    }
-                }
-            }
-
-            // Also catch text being typed into the address/search bar in real time.
-            // Check event text directly (without requiring the view ID to look like a
-            // URL field — that ID-based gate was too strict and missed many browsers).
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
-                val eventTexts = event.text.joinToString(" ").trim()
-                if (eventTexts.isNotBlank()) {
-                    val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(eventTexts)
-                    if (isBlocked) {
-                        triggerBlockShield(
-                            targetName = matchedRule,
-                            reason = "Website '$matchedRule' is restricted.",
-                            isWebsite = true,
-                            browserPkg = targetPkg
-                        )
-                        return
                     }
                 }
             }
@@ -371,6 +355,11 @@ class FocusAccessibilityService : AccessibilityService() {
             if (nodes.isNullOrEmpty()) continue
             var found = ""
             for (n in nodes) {
+                // If the user is actively typing in the address bar (field is focused),
+                // skip reading inline autocomplete text to avoid false redirects while typing.
+                val isFocused = try { n.isFocused || n.isAccessibilityFocused } catch (_: Throwable) { false }
+                if (isFocused) return ""
+
                 val text = try { n.text?.toString() ?: "" } catch (_: Throwable) { "" }
                 if (found.isBlank() && text.isNotBlank()) found = text
             }
