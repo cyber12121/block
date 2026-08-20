@@ -436,7 +436,7 @@ fun SessionScreen(
                                         isSoundPlaying = false
                                     } else {
                                         selectedSound = preset
-                                        FocusSoundEngine.play(preset)
+                                        FocusSoundEngine.play(preset, context)
                                         isSoundPlaying = true
                                     }
                                 }

@@ -291,36 +291,16 @@ class AuthManager private constructor(private val context: Context) {
                 launch(Dispatchers.Main) { onResult(false, "Sign-in cancelled") }
             } catch (e: GetCredentialException) {
                 _isLoading.value = false
-                val msg = e.message ?: "Google Sign-In credential exception"
-                Log.w("AuthManager", "Credential error: $msg - using Google Account pandagre.vinay@gmail.com")
-                val fallbackUser = AuthUser(
-                    uid = "google_pandagre_vinay_gmail_com",
-                    displayName = "Vinay Pandagre",
-                    email = "pandagre.vinay@gmail.com",
-                    photoUrl = null,
-                    isGuest = false,
-                    isDeveloper = false,
-                    provider = "google.com"
-                )
-                saveUser(fallbackUser)
-                _errorMessage.value = null
-                launch(Dispatchers.Main) { onResult(true, null) }
+                val msg = "Google Sign-In failed. Please check your internet connection and try again."
+                Log.w("AuthManager", "Credential error: ${e.message}")
+                _errorMessage.value = msg
+                launch(Dispatchers.Main) { onResult(false, msg) }
             } catch (e: Exception) {
                 _isLoading.value = false
-                val msg = e.message ?: "Google sign-in error"
-                Log.w("AuthManager", "Sign-in error: $msg - fallback to pandagre.vinay@gmail.com")
-                val fallbackUser = AuthUser(
-                    uid = "google_pandagre_vinay_gmail_com",
-                    displayName = "Vinay Pandagre",
-                    email = "pandagre.vinay@gmail.com",
-                    photoUrl = null,
-                    isGuest = false,
-                    isDeveloper = false,
-                    provider = "google.com"
-                )
-                saveUser(fallbackUser)
-                _errorMessage.value = null
-                launch(Dispatchers.Main) { onResult(true, null) }
+                val msg = "Sign-in error: ${e.message ?: "Unknown error"}. Please try again."
+                Log.w("AuthManager", "Sign-in exception: ${e.message}")
+                _errorMessage.value = msg
+                launch(Dispatchers.Main) { onResult(false, msg) }
             }
         }
     }

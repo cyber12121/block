@@ -409,6 +409,9 @@ fun SettingsScreen(
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
                                     context.startActivity(intent)
+                                } else if (perm.id == "battery") {
+                                    val intent = com.example.util.PermissionUtils.getBatteryOptimizationIntent(context)
+                                    context.startActivity(intent)
                                 } else {
                                     val intent = Intent(perm.intentAction).apply {
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

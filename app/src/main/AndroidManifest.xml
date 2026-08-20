@@ -12,12 +12,9 @@
          scheduled second. ScheduleAlarmManager falls back to setAndAllowWhileIdle()
          (~1 min accuracy) if the user has not granted this in Settings. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission
-        android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
+    <!-- USE_EXACT_ALARM is auto-granted on API 33+ for focus/timer apps without user action -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
 
     <queries>
         <intent>

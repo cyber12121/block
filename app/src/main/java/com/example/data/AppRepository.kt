@@ -116,32 +116,13 @@ class AppRepository(
 
     suspend fun recordBlockedAttempt() {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val existing = dailyStatDao.getStatForDate(today)
-        if (existing == null) {
-            dailyStatDao.insertOrUpdate(DailyStat(dateString = today, blocksPreventedCount = 1))
-        } else {
-            dailyStatDao.incrementBlockedCount(today)
-        }
+        // Atomic: INSERT OR IGNORE ensures row exists, then increments — no race condition
+        dailyStatDao.atomicIncrementBlockedCount(today)
     }
 
     suspend fun recordCompletedSession(minutes: Int) {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val existing = dailyStatDao.getStatForDate(today)
-        if (existing == null) {
-            dailyStatDao.insertOrUpdate(
-                DailyStat(
-                    dateString = today,
-                    totalFocusMinutes = minutes,
-                    completedSessionsCount = 1
-                )
-            )
-        } else {
-            dailyStatDao.insertOrUpdate(
-                existing.copy(
-                    totalFocusMinutes = existing.totalFocusMinutes + minutes,
-                    completedSessionsCount = existing.completedSessionsCount + 1
-                )
-            )
-        }
+        // Atomic: INSERT OR IGNORE ensures row exists, then updates both columns
+        dailyStatDao.atomicRecordCompletedSession(today, minutes)
     }
 }

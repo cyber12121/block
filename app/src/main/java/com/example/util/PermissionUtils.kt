@@ -4,11 +4,15 @@ import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityServiceInfo
 import androidx.core.app.NotificationManagerCompat
 import com.example.receiver.FocusDeviceAdminReceiver
 import com.example.service.FocusAccessibilityService
@@ -25,14 +29,25 @@ data class PermissionStatus(
 object PermissionUtils {
 
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        // Primary check: AccessibilityManager service list (works on all OEMs including Samsung OneUI)
         return try {
-            val enabledServices = Settings.Secure.getString(
+            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+            val enabledServices = am?.getEnabledAccessibilityServiceList(
+                AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+            ) ?: emptyList()
+            val isRunningViaManager = enabledServices.any {
+                it.resolveInfo.serviceInfo.packageName == context.packageName
+            }
+            if (isRunningViaManager) return true
+
+            // Fallback: parse Settings.Secure string (stock Android / AOSP)
+            val enabledString = Settings.Secure.getString(
                 context.contentResolver,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
 
             val colonSplitter = TextUtils.SimpleStringSplitter(':')
-            colonSplitter.setString(enabledServices)
+            colonSplitter.setString(enabledString)
             val myService = ComponentName(context, FocusAccessibilityService::class.java).flattenToString()
             val shortService = "${context.packageName}/.service.FocusAccessibilityService"
 
@@ -40,7 +55,7 @@ object PermissionUtils {
                 val service = colonSplitter.next()
                 if (service.equals(myService, ignoreCase = true) ||
                     service.equals(shortService, ignoreCase = true) ||
-                    service.contains(context.packageName) && service.contains("FocusAccessibilityService")
+                    (service.contains(context.packageName) && service.contains("FocusAccessibilityService"))
                 ) {
                     return true
                 }
@@ -56,29 +71,6 @@ object PermissionUtils {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
             val adminComponent = ComponentName(context, FocusDeviceAdminReceiver::class.java)
             dpm?.isAdminActive(adminComponent) == true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    fun isUsageAccessGranted(context: Context): Boolean {
-        return try {
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                appOps.unsafeCheckOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    context.packageName
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                appOps.checkOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    context.packageName
-                )
-            }
-            mode == AppOpsManager.MODE_ALLOWED
         } catch (_: Exception) {
             false
         }
@@ -100,12 +92,29 @@ object PermissionUtils {
         }
     }
 
+    fun isBatteryOptimizationExempt(context: Context): Boolean {
+        return try {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                ?: return false
+            pm.isIgnoringBatteryOptimizations(context.packageName)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun getBatteryOptimizationIntent(context: Context): Intent {
+        return Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
     fun getAllPermissions(context: Context): List<PermissionStatus> {
         val isA11y = isAccessibilityServiceEnabled(context)
         val isAdmin = isDeviceAdminActive(context)
-        val isUsage = isUsageAccessGranted(context)
         val isNotif = isNotificationGranted(context)
         val isOverlay = isOverlayGranted(context)
+        val isBatteryExempt = isBatteryOptimizationExempt(context)
 
         return listOf(
             PermissionStatus(
@@ -125,14 +134,6 @@ object PermissionUtils {
                 intentAction = DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN
             ),
             PermissionStatus(
-                id = "usage",
-                title = "Usage Access Telemetry",
-                description = "Enables real-time foreground application tracking and session analytics",
-                isGranted = isUsage,
-                actionLabel = if (isUsage) "Granted" else "Grant Access",
-                intentAction = Settings.ACTION_USAGE_ACCESS_SETTINGS
-            ),
-            PermissionStatus(
                 id = "overlay",
                 title = "Draw Over Other Apps",
                 description = "Displays the focus shield barrier when restricted content is accessed",
@@ -147,6 +148,14 @@ object PermissionUtils {
                 isGranted = isNotif,
                 actionLabel = if (isNotif) "Enabled" else "Allow Alerts",
                 intentAction = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+            ),
+            PermissionStatus(
+                id = "battery",
+                title = "Battery Optimization Exempt",
+                description = "Keeps FocusGuard alive on Xiaomi, Samsung & Realme when screen is off",
+                isGranted = isBatteryExempt,
+                actionLabel = if (isBatteryExempt) "Exempt" else "Exempt App",
+                intentAction = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
             )
         )
     }
