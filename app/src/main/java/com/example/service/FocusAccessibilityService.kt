@@ -2,6 +2,8 @@ package com.example.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.example.FocusGuardApp
@@ -31,6 +33,11 @@ class FocusAccessibilityService : AccessibilityService() {
     // throttle CONTENT_CHANGED to at most once every 500 ms.
     private var lastBrowserUrlScanTime: Long = 0L
     private val BROWSER_SCAN_THROTTLE_MS = 500L
+
+    // Cooldown after redirecting a browser to clean state to prevent loop
+    private var lastCleanBrowserRedirectTime: Long = 0L
+    private var lastCleanBrowserPkg: String = ""
+    private val CLEAN_STATE_GRACE_PERIOD_MS = 2500L
 
     // Comprehensive list of all popular, privacy, and alternative Android browsers
     private val knownBrowserPackages = setOf(
@@ -239,6 +246,13 @@ class FocusAccessibilityService : AccessibilityService() {
         //    Blocking triggers on the actual URL and on search queries typed in the
         //    address bar — NOT on arbitrary page text (avoids false positives).
         if (isBrowserApp(targetPkg)) {
+            // Grace period: when returning to the browser right after a block, do not re-scan
+            // immediately for 2.5s so the browser finishes navigating to the clean state (about:blank)
+            // and the user has time to start their new search without getting stuck in a redirect loop.
+            if (targetPkg == lastCleanBrowserPkg && (now - lastCleanBrowserRedirectTime) < CLEAN_STATE_GRACE_PERIOD_MS) {
+                return
+            }
+
             // Fire URL scan on any window or content change — Chrome often fires only
             // TYPE_WINDOW_CONTENT_CHANGED when navigating to a new URL without a new
             // window, so limiting to TYPE_WINDOW_STATE_CHANGED missed most navigations.
@@ -263,7 +277,8 @@ class FocusAccessibilityService : AccessibilityService() {
                             triggerBlockShield(
                                 targetName = matchedRule,
                                 reason = "Website '$matchedRule' is restricted.",
-                                isWebsite = true
+                                isWebsite = true,
+                                browserPkg = targetPkg
                             )
                             return
                         }
@@ -282,7 +297,8 @@ class FocusAccessibilityService : AccessibilityService() {
                         triggerBlockShield(
                             targetName = matchedRule,
                             reason = "Website '$matchedRule' is restricted.",
-                            isWebsite = true
+                            isWebsite = true,
+                            browserPkg = targetPkg
                         )
                         return
                     }
@@ -411,19 +427,38 @@ class FocusAccessibilityService : AccessibilityService() {
         return sb.toString()
     }
 
-    private fun triggerBlockShield(targetName: String, reason: String, isWebsite: Boolean) {
+    private fun triggerBlockShield(targetName: String, reason: String, isWebsite: Boolean, browserPkg: String? = null) {
         val now = System.currentTimeMillis()
         val isRepeatTrigger = targetName == lastBlockedTarget && (now - lastBlockedTimestamp) < 1500
         lastBlockedTimestamp = now
         lastBlockedTarget = targetName
 
         // ALWAYS push the user away from the blocked content — even on rapid
-        // repeat triggers. (Previously the flood guard returned early, letting a
-        // re-opened blocked app stay on screen for up to a second.)
+        // repeat triggers.
         if (isWebsite) {
-            try {
-                performGlobalAction(GLOBAL_ACTION_BACK)
-            } catch (_: Exception) {}
+            if (!browserPkg.isNullOrBlank()) {
+                lastCleanBrowserRedirectTime = now
+                lastCleanBrowserPkg = browserPkg
+
+                // 1. Auto-navigate the browser to a clean neutral state (about:blank)
+                // This clears the blocked website/query from the browser URL bar so when
+                // the user opens the browser again, it won't repeatedly trigger the block.
+                try {
+                    val cleanIntent = Intent(Intent.ACTION_VIEW, Uri.parse("about:blank")).apply {
+                        setPackage(browserPkg)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    startActivity(cleanIntent)
+                } catch (_: Exception) {
+                    try {
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    } catch (_: Exception) {}
+                }
+            } else {
+                try {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                } catch (_: Exception) {}
+            }
         } else {
             try {
                 performGlobalAction(GLOBAL_ACTION_HOME)
@@ -447,6 +482,7 @@ class FocusAccessibilityService : AccessibilityService() {
             putExtra(BlockedOverlayActivity.EXTRA_TARGET, targetName)
             putExtra(BlockedOverlayActivity.EXTRA_REASON, reason)
             putExtra(BlockedOverlayActivity.EXTRA_IS_WEBSITE, isWebsite)
+            putExtra(BlockedOverlayActivity.EXTRA_BROWSER_PKG, browserPkg)
         }
         startActivity(intent)
     }

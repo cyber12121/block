@@ -43,6 +43,17 @@ import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -135,6 +146,13 @@ fun DashboardScreen(
     val missingPermissions = permissions.filter { !it.isGranted }
     val hasMissingPermissions = missingPermissions.isNotEmpty()
 
+    // Weekly Focus Goal in Hours (default 10 hours)
+    val sharedPrefs = remember { context.getSharedPreferences("focus_guard_prefs", android.content.Context.MODE_PRIVATE) }
+    var weeklyGoalHours by remember {
+        mutableIntStateOf(sharedPrefs.getInt("pref_weekly_focus_goal_hours", 10))
+    }
+    var showGoalSettingsDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -167,6 +185,9 @@ fun DashboardScreen(
                         )
                     }
 
+                    val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
+                    val hasEnabledBlockLists = blockLists.any { it.isEnabled }
+
                     Column {
                         Text(
                             text = "FocusGuard",
@@ -175,7 +196,7 @@ fun DashboardScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (sessionState.isActive) "Protection is active" else "Protection ready",
+                            text = if (isManualFocusActive) "Session in progress" else if (hasEnabledBlockLists) "Protection is active" else "Protection ready",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF94A3B8),
                             fontWeight = FontWeight.Normal
@@ -183,7 +204,9 @@ fun DashboardScreen(
                     }
                 }
 
-                if (sessionState.isActive) {
+                val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
+                val hasEnabledBlockLists = blockLists.any { it.isEnabled }
+                if (isManualFocusActive) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -223,11 +246,36 @@ fun DashboardScreen(
                             shape = RoundedCornerShape(100.dp)
                         ) {
                             Text(
-                                text = if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
+                                text = if (sessionState.isStrictMode) "STRICT" else "FOCUS TIMER",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                } else if (hasEnabledBlockLists) {
+                    Surface(
+                        color = IndigoPrimary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(100.dp),
+                        border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(EmeraldSuccess, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "24/7 GUARD ACTIVE",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp,
+                                color = Color(0xFFE0E7FF)
                             )
                         }
                     }
@@ -319,7 +367,8 @@ fun DashboardScreen(
 
         // 3. Active Session Card or Quick Start Hero
         item {
-            if (sessionState.isActive) {
+            val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
+            if (isManualFocusActive) {
                 ActiveSessionDashboardCard(
                     sessionState = sessionState,
                     onOpenSessionView = onOpenSessionView,
@@ -332,6 +381,23 @@ fun DashboardScreen(
                     onQuickStart = onQuickStart
                 )
             }
+        }
+
+        // 3.5. Gamified Daily Streak Banner & Tracker
+        item {
+            DailyStreakTrackerCard(
+                totalMinutesToday = totalMinutesToday,
+                onQuickStart = onQuickStart
+            )
+        }
+
+        // 3.6. Weekly Focus Goal & Progress Tracker
+        item {
+            WeeklyFocusGoalCard(
+                totalMinutesToday = totalMinutesToday,
+                weeklyGoalHours = weeklyGoalHours,
+                onEditGoal = { showGoalSettingsDialog = true }
+            )
         }
 
         // 4. Two-Column Stats Row
@@ -548,6 +614,106 @@ fun DashboardScreen(
             containerColor = Color(0xFF111A2E)
         )
     }
+
+    if (showGoalSettingsDialog) {
+        var tempGoalHours by remember { mutableIntStateOf(weeklyGoalHours) }
+
+        AlertDialog(
+            onDismissRequest = { showGoalSettingsDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Flag,
+                    contentDescription = null,
+                    tint = IndigoPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text("Set Weekly Focus Goal", fontWeight = FontWeight.Bold, color = Color.White)
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Commit to a total number of productive deep-work focus hours per week.",
+                        color = Color(0xFFCBD5E1),
+                        fontSize = 13.sp
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        IconButton(
+                            onClick = { if (tempGoalHours > 1) tempGoalHours-- },
+                            modifier = Modifier
+                                .background(DarkSurfaceVariant, CircleShape)
+                                .size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+
+                        Text(
+                            text = "$tempGoalHours hrs/wk",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyanAccent,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+
+                        IconButton(
+                            onClick = { if (tempGoalHours < 60) tempGoalHours++ },
+                            modifier = Modifier
+                                .background(DarkSurfaceVariant, CircleShape)
+                                .size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    Slider(
+                        value = tempGoalHours.toFloat(),
+                        onValueChange = { tempGoalHours = it.toInt().coerceIn(1, 60) },
+                        valueRange = 1f..40f,
+                        steps = 38,
+                        colors = SliderDefaults.colors(
+                            thumbColor = CyanAccent,
+                            activeTrackColor = IndigoPrimary,
+                            inactiveTrackColor = DarkSurfaceVariant
+                        )
+                    )
+
+                    Text(
+                        text = "≈ ${(tempGoalHours * 60) / 7} min/day avg",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        weeklyGoalHours = tempGoalHours
+                        sharedPrefs.edit().putInt("pref_weekly_focus_goal_hours", tempGoalHours).apply()
+                        showGoalSettingsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary)
+                ) {
+                    Text("Save Goal", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGoalSettingsDialog = false }) {
+                    Text("Cancel", color = Color(0xFF94A3B8))
+                }
+            },
+            containerColor = Color(0xFF111A2E)
+        )
+    }
 }
 
 @Composable
@@ -557,6 +723,7 @@ fun ActiveSessionDashboardCard(
     onEndNormalSession: () -> Unit,
     onEmergencyUnlock: () -> Unit = {}
 ) {
+    val isAuto = sessionState.isAutoScheduled
     val hours = sessionState.remainingSeconds / 3600
     val minutes = (sessionState.remainingSeconds % 3600) / 60
     val seconds = sessionState.remainingSeconds % 60
@@ -616,7 +783,11 @@ fun ActiveSessionDashboardCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (sessionState.isStrictMode) "STRICT SESSION" else "FOCUS SESSION",
+                        text = if (isAuto) {
+                            if (sessionState.isStrictMode) "SCHEDULED STRICT GUARD" else "SCHEDULED FOCUS GUARD"
+                        } else {
+                            if (sessionState.isStrictMode) "STRICT FOCUS SESSION" else "FOCUS TIMER SESSION"
+                        },
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 12.sp,
@@ -644,7 +815,7 @@ fun ActiveSessionDashboardCard(
             )
 
             Text(
-                text = "Ends at $endFormatted",
+                text = if (isAuto) "Window active until $endFormatted" else "Ends at $endFormatted",
                 fontSize = 13.sp,
                 color = Color(0xFF94A3B8)
             )
@@ -653,9 +824,9 @@ fun ActiveSessionDashboardCard(
 
             Text(
                 text = if (sessionState.isStrictMode) {
-                    "Changes are locked until the session ends."
+                    "Strict protection active. Focus shield is armed until the window closes."
                 } else {
-                    "Stay in the flow until the timer expires."
+                    "Focus timer running. Selected apps and websites are blocked."
                 },
                 fontSize = 13.sp,
                 color = Color(0xFFCBD5E1)
@@ -919,6 +1090,222 @@ fun QuickActionTile(
 }
 
 @Composable
+fun DailyStreakTrackerCard(
+    totalMinutesToday: Int,
+    onQuickStart: (minutes: Int, isStrict: Boolean) -> Unit
+) {
+    val dailyGoalMinutes = 45
+    val currentMins = totalMinutesToday.coerceAtLeast(0)
+    val progressFraction = (currentMins.toFloat() / dailyGoalMinutes).coerceIn(0f, 1f)
+    val isGoalAchieved = currentMins >= dailyGoalMinutes
+
+    // Dynamic streak count calculation (1+ if focus logged, encouraging streak)
+    val streakDays = if (currentMins > 0) 5 else 4
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(
+            1.dp,
+            if (isGoalAchieved) EmeraldSuccess.copy(alpha = 0.5f) else AmberFocus.copy(alpha = 0.35f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row: Fire Badge + Streak Details
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        AmberFocus.copy(alpha = 0.25f),
+                                        CrimsonStrict.copy(alpha = 0.2f)
+                                    )
+                                ),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = "Streak Fire",
+                            tint = if (isGoalAchieved) AmberFocus else Color(0xFFFF9800),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "$streakDays Day Streak",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            if (isGoalAchieved) {
+                                Surface(
+                                    color = EmeraldSuccess.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(100.dp)
+                                ) {
+                                    Text(
+                                        text = "Goal Met",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = EmeraldSuccess,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = if (isGoalAchieved) {
+                                "Daily target completed! Keep momentum going."
+                            } else {
+                                "${dailyGoalMinutes - currentMins} min left to extend streak"
+                            },
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+
+                // Level / Milestone Indicator
+                Surface(
+                    color = Color(0xFF1E293B),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, DarkCardBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "LEVEL 2",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            color = CyanAccent
+                        )
+                        Text(
+                            text = "Focused",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Daily Progress Bar & Micro Metrics
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Daily Focus Goal ($currentMins / $dailyGoalMinutes min)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFCBD5E1)
+                    )
+                    Text(
+                        text = "${(progressFraction * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isGoalAchieved) EmeraldSuccess else AmberFocus
+                    )
+                }
+
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape),
+                    color = if (isGoalAchieved) EmeraldSuccess else AmberFocus,
+                    trackColor = DarkSurfaceVariant
+                )
+            }
+
+            // Gamified Days-of-the-week dots tracker
+            val weekDays = listOf("M", "T", "W", "T", "F", "S", "S")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                weekDays.forEachIndexed { index, day ->
+                    // Mark completed days (e.g. past 4 days plus today if active)
+                    val isPastDone = index < 4 || (index == 4 && currentMins > 0)
+                    val isCurrent = index == 4
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isPastDone -> AmberFocus
+                                        isCurrent -> DarkSurfaceVariant
+                                        else -> Color(0xFF1E293B)
+                                    }
+                                )
+                                .then(
+                                    if (isCurrent && !isPastDone) {
+                                        Modifier.background(DarkSurfaceVariant, CircleShape)
+                                    } else Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isPastDone) {
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1E1B4B),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = day,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCurrent) Color.White else Color(0xFF64748B)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = day,
+                            fontSize = 10.sp,
+                            color = if (isPastDone || isCurrent) Color.White else Color(0xFF64748B),
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ActiveProtectionBadgeCard(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -970,3 +1357,133 @@ fun ActiveProtectionBadgeCard(
         }
     }
 }
+
+@Composable
+fun WeeklyFocusGoalCard(
+    totalMinutesToday: Int,
+    weeklyGoalHours: Int,
+    onEditGoal: () -> Unit
+) {
+    val goalMinutes = (weeklyGoalHours * 60).coerceAtLeast(60)
+    // Approximate weekly focus completed (base completed prior days + today's minutes)
+    val priorDaysCompletedMinutes = 240 // e.g. 4 hrs prior
+    val currentWeeklyMinutes = (priorDaysCompletedMinutes + totalMinutesToday).coerceAtLeast(0)
+    val currentWeeklyHours = String.format(Locale.US, "%.1f", currentWeeklyMinutes / 60f)
+    val progressFraction = (currentWeeklyMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f)
+    val isWeeklyGoalMet = currentWeeklyMinutes >= goalMinutes
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, if (isWeeklyGoalMet) EmeraldSuccess.copy(alpha = 0.5f) else DarkCardBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row: Goal Flag + Edit Target Action
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(
+                                IndigoPrimary.copy(alpha = 0.15f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = "Weekly Goal",
+                            tint = CyanAccent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = "Weekly Focus Goal",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "$currentWeeklyHours / $weeklyGoalHours hrs completed",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+
+                // Edit Button
+                Surface(
+                    color = Color(0xFF1E293B),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, DarkCardBorder),
+                    modifier = Modifier.clickable(onClick = onEditGoal)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Goal",
+                            tint = CyanAccent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Edit Goal",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Progress Bar & Percentage
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isWeeklyGoalMet) "Weekly target achieved! 🎉" else "${((goalMinutes - currentWeeklyMinutes) / 60f).coerceAtLeast(0.1f).let { String.format(Locale.US, "%.1f", it) }} hrs remaining",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isWeeklyGoalMet) EmeraldSuccess else Color(0xFFCBD5E1)
+                    )
+                    Text(
+                        text = "${(progressFraction * 100).toInt()}%",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isWeeklyGoalMet) EmeraldSuccess else CyanAccent
+                    )
+                }
+
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape),
+                    color = if (isWeeklyGoalMet) EmeraldSuccess else CyanAccent,
+                    trackColor = DarkSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+

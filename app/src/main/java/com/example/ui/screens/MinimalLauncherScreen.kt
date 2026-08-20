@@ -647,6 +647,7 @@ fun MinimalLauncherScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
                 // ──────────────────────────────────────────
                 // 1. TOP BAR: Balanced Status & Actions (No Clutter)
                 // ──────────────────────────────────────────
@@ -657,18 +658,18 @@ fun MinimalLauncherScreen(
                 ) {
                     // Status Badge (Left)
                     Surface(
-                        color = if (sessionState.isActive) {
+                        color = if (isManualFocusActive) {
                             if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.12f) else IndigoPrimary.copy(alpha = 0.12f)
                         } else Color(0xFF10172A),
                         shape = RoundedCornerShape(100.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (sessionState.isActive) {
+                            if (isManualFocusActive) {
                                 if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else IndigoPrimary.copy(alpha = 0.4f)
                             } else Color(0xFF1E293B)
                         ),
                         modifier = Modifier.clickable {
-                            if (sessionState.isActive) onStartFocusSession()
+                            if (isManualFocusActive) onStartFocusSession()
                         }
                     ) {
                         Row(
@@ -679,7 +680,7 @@ fun MinimalLauncherScreen(
                                 modifier = Modifier
                                     .size(7.dp)
                                     .background(
-                                        if (sessionState.isActive) {
+                                        if (isManualFocusActive) {
                                             if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
                                         } else EmeraldSuccess,
                                         CircleShape
@@ -687,13 +688,13 @@ fun MinimalLauncherScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (sessionState.isActive) {
+                                text = if (isManualFocusActive) {
                                     if (sessionState.isStrictMode) "STRICT FOCUS" else "FOCUS ACTIVE"
                                 } else "MINIMAL",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
-                                color = if (sessionState.isActive) {
+                                color = if (isManualFocusActive) {
                                     if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
                                 } else EmeraldSuccess
                             )
@@ -726,11 +727,11 @@ fun MinimalLauncherScreen(
 
                         // Exit Button
                         Surface(
-                            color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.12f) else Color(0xFF10172A),
+                            color = if (isManualFocusActive) CrimsonStrict.copy(alpha = 0.12f) else Color(0xFF10172A),
                             shape = RoundedCornerShape(100.dp),
                             border = BorderStroke(
                                 1.dp,
-                                if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.4f) else Color(0xFF1E293B)
+                                if (isManualFocusActive) CrimsonStrict.copy(alpha = 0.4f) else Color(0xFF1E293B)
                             ),
                             modifier = Modifier
                                 .clickable(onClick = handleExitRequest)
@@ -741,17 +742,17 @@ fun MinimalLauncherScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (sessionState.isActive) Icons.Default.LockOpen else Icons.Default.ArrowBack,
+                                    imageVector = if (isManualFocusActive) Icons.Default.LockOpen else Icons.Default.ArrowBack,
                                     contentDescription = "Exit Minimal Launcher",
-                                    tint = if (sessionState.isActive) CrimsonStrict else Color(0xFF94A3B8),
+                                    tint = if (isManualFocusActive) CrimsonStrict else Color(0xFF94A3B8),
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = if (sessionState.isActive) "Exit (∞)" else "Exit",
+                                    text = if (isManualFocusActive) "Exit (∞)" else "Exit",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (sessionState.isActive) CrimsonStrict else Color(0xFFCBD5E1)
+                                    color = if (isManualFocusActive) CrimsonStrict else Color(0xFFCBD5E1)
                                 )
                             }
                         }
@@ -796,7 +797,7 @@ fun MinimalLauncherScreen(
                     )
 
                     // ── Active Session Sleek Countdown Strip (Single Source of Truth) ──
-                    if (sessionState.isActive) {
+                    if (isManualFocusActive) {
                         val mins = sessionState.remainingSeconds / 60
                         val secs = sessionState.remainingSeconds % 60
                         val totalDurationSec = (sessionState.durationMinutes * 60).coerceAtLeast(1)

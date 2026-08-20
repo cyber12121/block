@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
@@ -67,6 +69,7 @@ class BlockedOverlayActivity : ComponentActivity() {
         const val EXTRA_TARGET = "extra_target"
         const val EXTRA_REASON = "extra_reason"
         const val EXTRA_IS_WEBSITE = "extra_is_website"
+        const val EXTRA_BROWSER_PKG = "extra_browser_pkg"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +77,7 @@ class BlockedOverlayActivity : ComponentActivity() {
         val target = intent.getStringExtra(EXTRA_TARGET) ?: "Distracting Content"
         val reason = intent.getStringExtra(EXTRA_REASON) ?: "Blocked by active Focus Session"
         val isWebsite = intent.getBooleanExtra(EXTRA_IS_WEBSITE, false)
+        val browserPkg = intent.getStringExtra(EXTRA_BROWSER_PKG)
 
         val sessionManager = FocusSessionManager.getInstance(this)
 
@@ -90,7 +94,16 @@ class BlockedOverlayActivity : ComponentActivity() {
                     endTimeMillis = sessionState.endTimeMillis,
                     onPrimaryAction = {
                         if (isWebsite) {
-                            // Close overlay and return user smoothly to their previous allowed browser tab
+                            // Navigate browser to a clean safe page (about:blank) so no blocked query/URL lingers
+                            if (!browserPkg.isNullOrBlank()) {
+                                try {
+                                    val cleanIntent = Intent(Intent.ACTION_VIEW, Uri.parse("about:blank")).apply {
+                                        setPackage(browserPkg)
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    }
+                                    startActivity(cleanIntent)
+                                } catch (_: Exception) {}
+                            }
                             finish()
                         } else {
                             // Full app block: return to device home screen
@@ -105,6 +118,15 @@ class BlockedOverlayActivity : ComponentActivity() {
                     onOpenDashboard = {
                         val mainIntent = Intent(this, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+                        startActivity(mainIntent)
+                        finish()
+                    },
+                    onEnterMinimalSpace = {
+                        sessionManager.setMinimalLauncherActive(true)
+                        val mainIntent = Intent(this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra(MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
                         }
                         startActivity(mainIntent)
                         finish()
@@ -124,7 +146,8 @@ fun BlockedShieldScreen(
     remainingSeconds: Long,
     endTimeMillis: Long,
     onPrimaryAction: () -> Unit,
-    onOpenDashboard: () -> Unit
+    onOpenDashboard: () -> Unit,
+    onEnterMinimalSpace: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
@@ -298,6 +321,34 @@ fun BlockedShieldScreen(
 
             // Action Buttons
             Button(
+                onClick = onEnterMinimalSpace,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1E293B)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("enter_minimalist_space_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color(0xFF38BDF8),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Enter Minimalist Space",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
                 onClick = onPrimaryAction,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isStrictMode) CrimsonStrict else IndigoPrimary
@@ -305,38 +356,39 @@ fun BlockedShieldScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(50.dp)
                     .testTag("leave_blocked_app_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (isWebsite) "Go Back to Safe Browsing" else "Close & Return to Home",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(
                 onClick = onOpenDashboard,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
+                    contentColor = Color(0xFF94A3B8)
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(48.dp)
                     .testTag("open_focusguard_button")
             ) {
                 Text(
                     text = "Open FocusGuard Dashboard",
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
                 )
             }
         }

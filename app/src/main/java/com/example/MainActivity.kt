@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -64,24 +65,36 @@ enum class AppTab(val title: String, val icon: androidx.compose.ui.graphics.vect
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_OPEN_MINIMAL_LAUNCHER = "extra_open_minimal_launcher"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (intent?.getBooleanExtra(EXTRA_OPEN_MINIMAL_LAUNCHER, false) == true) {
+            val app = application as FocusGuardApp
+            app.sessionManager.setMinimalLauncherActive(true)
+        }
 
         val app = application as FocusGuardApp
         val factory = MainViewModelFactory(app.repository, app.sessionManager, app)
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
-        // NOTE: The Minimal Launcher is intentionally NOT auto-opened here.
-        // It used to relaunch itself on top of FocusGuard whenever the user left
-        // the app (onUserLeaveHint / LAUNCH_MINIMAL_MODE), which immediately
-        // covered any app the user had just launched from it. It is now opened
-        // only manually (Dashboard banner / "All Apps" area), so users decide
-        // when they want it.
         setContent {
             FocusGuardTheme {
                 MainAppContent(viewModel = viewModel)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_MINIMAL_LAUNCHER, false)) {
+            val app = application as FocusGuardApp
+            app.sessionManager.setMinimalLauncherActive(true)
         }
     }
 }
@@ -119,7 +132,7 @@ fun MainAppContent(viewModel: MainViewModel) {
         sessionManager.setMinimalLauncherActive(isMinimalLauncherFullscreen)
     }
 
-    val isStrictActive = sessionState.isActive && sessionState.isStrictMode
+    val isStrictActive = sessionState.isActive && sessionState.isStrictMode && !sessionState.isAutoScheduled
 
     StrictModeInteractionGuard(
         isStrictActive = isStrictActive,
