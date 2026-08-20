@@ -118,6 +118,27 @@ class AuthManager private constructor(private val context: Context) {
     }
 
     /**
+     * Get configured Developer PIN (Default: 2026)
+     */
+    fun getDeveloperPin(): String {
+        return prefs.getString(KEY_DEVELOPER_PIN, DEFAULT_DEVELOPER_PIN) ?: DEFAULT_DEVELOPER_PIN
+    }
+
+    /**
+     * Set a new Developer PIN
+     */
+    fun setDeveloperPin(newPin: String) {
+        prefs.edit().putString(KEY_DEVELOPER_PIN, newPin).apply()
+    }
+
+    /**
+     * Verify input Developer PIN
+     */
+    fun verifyDeveloperPin(inputPin: String): Boolean {
+        return inputPin.trim() == getDeveloperPin()
+    }
+
+    /**
      * Enable Developer Mode:
      * - Bypasses Login requirement
      * - Grants unlimited emergency exits and session exits
@@ -134,6 +155,7 @@ class AuthManager private constructor(private val context: Context) {
 
     /**
      * Disable Developer Mode (returns to standard login-required mode).
+     * Locks and hides developer options from standard users.
      */
     fun disableDeveloperMode() {
         prefs.edit()
@@ -142,6 +164,13 @@ class AuthManager private constructor(private val context: Context) {
 
         _isDeveloperMode.value = false
         refreshDailyExits()
+    }
+
+    /**
+     * Lock and Hide Developer Mode (Prepares app for standard user / child / friend).
+     */
+    fun lockAndHideDeveloperMode() {
+        disableDeveloperMode()
     }
 
     /**
@@ -381,6 +410,8 @@ class AuthManager private constructor(private val context: Context) {
         private const val KEY_TIMESTAMP = "auth_timestamp"
         private const val KEY_EXIT_DATE_KEY = "auth_exit_date_key"
         private const val KEY_DAILY_EXITS_COUNT = "auth_daily_exits_count"
+        private const val KEY_DEVELOPER_PIN = "auth_developer_pin"
+        const val DEFAULT_DEVELOPER_PIN = "2026"
 
         @Volatile
         private var INSTANCE: AuthManager? = null

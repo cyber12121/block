@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.DailyStat
+import com.example.ui.components.UsageStatusPersonCard
 import com.example.ui.theme.AmberFocus
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
@@ -207,6 +208,14 @@ fun InsightsScreen(
                     }
                 }
             }
+        }
+
+        // Person Usage Status Card
+        item {
+            UsageStatusPersonCard(
+                totalMinutesToday = totalMinutes,
+                blockedAttemptsCount = totalBlockedAttempts
+            )
         }
 
         if (currentMode == InsightMode.FOCUS_TRENDS) {

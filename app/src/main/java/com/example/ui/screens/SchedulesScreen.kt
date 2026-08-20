@@ -495,6 +495,33 @@ fun ScheduleCard(
                                     )
                                 }
                             }
+                            if (schedule.isUltraStrict) {
+                                Surface(
+                                    color = CrimsonStrict,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "ULTRA STRICT 🔒",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            } else if (schedule.isStrictMode) {
+                                Surface(
+                                    color = CrimsonStrict.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "STRICT",
+                                        color = CrimsonStrict,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
                                 text = if (schedule.isEnabled) "Automated block armed" else "Schedule paused",
                                 fontSize = 11.sp,

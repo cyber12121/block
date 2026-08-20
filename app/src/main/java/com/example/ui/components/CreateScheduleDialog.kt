@@ -2,12 +2,14 @@ package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -77,6 +80,7 @@ fun CreateScheduleDialog(
         endMinute: Int,
         daysOfWeek: String,
         isStrictMode: Boolean,
+        isUltraStrict: Boolean,
         activeListNames: String
     ) -> Unit
 ) {
@@ -86,6 +90,7 @@ fun CreateScheduleDialog(
     var endHour by remember { mutableIntStateOf(17) }
     var endMinute by remember { mutableIntStateOf(0) }
     var isStrictMode by remember { mutableStateOf(false) }
+    var isUltraStrict by remember { mutableStateOf(false) }
 
     // Dialog state for interactive Clock Time Picker
     var showStartTimePicker by remember { mutableStateOf(false) }
@@ -125,17 +130,18 @@ fun CreateScheduleDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .clip(RoundedCornerShape(26.dp)),
-            color = Color(0xFF16223E),
-            tonalElevation = 8.dp
+                .fillMaxWidth(0.92f)
+                .clip(RoundedCornerShape(28.dp)),
+            color = Color(0xFF0B1222),
+            border = BorderStroke(1.dp, Color(0xFF1E2D4A)),
+            tonalElevation = 12.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(22.dp)
+                    .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Header
+                // Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,34 +150,39 @@ fun CreateScheduleDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .background(IndigoPrimary.copy(alpha = 0.2f), CircleShape),
+                                .size(42.dp)
+                                .background(IndigoPrimary.copy(alpha = 0.25f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
                                 tint = CyanAccent,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Create Auto Schedule",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
                             Text(
-                                text = "Set clock hours & target rules",
-                                style = MaterialTheme.typography.bodySmall,
+                                text = "Automate custom focus windows & block rules",
+                                fontSize = 11.sp,
                                 color = Color(0xFF94A3B8)
                             )
                         }
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF94A3B8))
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(Color(0xFF16233B), CircleShape)
+                    ) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF94A3B8), modifier = Modifier.size(18.dp))
                     }
                 }
 
@@ -179,24 +190,30 @@ fun CreateScheduleDialog(
 
                 // Quick Templates
                 Text(
-                    text = "Quick Presets",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "QUICK PRESETS",
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF94A3B8)
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     templates.forEach { tmpl ->
+                        val isSelected = name == tmpl.name
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF1D2A4A),
+                            shape = RoundedCornerShape(100.dp),
+                            color = if (isSelected) IndigoPrimary.copy(alpha = 0.3f) else Color(0xFF131F37),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) CyanAccent else Color(0xFF263554)
+                            ),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(100.dp))
                                 .clickable {
                                     name = tmpl.name
                                     startHour = tmpl.startHour
@@ -210,9 +227,9 @@ fun CreateScheduleDialog(
                             Text(
                                 text = tmpl.name,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFFE2E8F0),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                             )
                         }
                     }
@@ -220,13 +237,25 @@ fun CreateScheduleDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Schedule Name Input
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Schedule Name") },
                     placeholder = { Text("e.g. Work Sprint, Night Sleep Guard") },
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyanAccent,
+                        unfocusedBorderColor = Color(0xFF263554),
+                        focusedContainerColor = Color(0xFF0F172A),
+                        unfocusedContainerColor = Color(0xFF0F172A),
+                        focusedLabelColor = CyanAccent,
+                        unfocusedLabelColor = Color(0xFF94A3B8),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = CyanAccent
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -234,39 +263,40 @@ fun CreateScheduleDialog(
 
                 // Time Range Section with Clock Dial Tapping
                 Text(
-                    text = "Active Time Window (Tap to Open Clock)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    text = "ACTIVE TIME WINDOW",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Start Time Box (Interactive Clock Card)
+                    // Start Time Box
                     Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
-                        border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                        border = BorderStroke(1.dp, CyanAccent.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .clickable { showStartTimePicker = true }
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Starts At",
-                                    fontSize = 11.sp,
+                                    text = "STARTS AT",
+                                    fontSize = 10.sp,
                                     color = Color(0xFF94A3B8),
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Icon(
                                     imageVector = Icons.Default.AccessTime,
@@ -278,47 +308,55 @@ fun CreateScheduleDialog(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = formatTime(startHour, startMinute),
-                                fontSize = 18.sp,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Tap to pick clock time",
+                                text = "Tap to change",
                                 fontSize = 10.sp,
-                                color = CyanAccent
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF38BDF8)
                             )
                         }
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.ArrowForward,
-                        contentDescription = "to",
-                        tint = Color(0xFF64748B),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(Color(0xFF16233B), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "to",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
 
-                    // End Time Box (Interactive Clock Card)
+                    // End Time Box
                     Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
                         border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .clickable { showEndTimePicker = true }
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Ends At",
-                                    fontSize = 11.sp,
+                                    text = "ENDS AT",
+                                    fontSize = 10.sp,
                                     color = Color(0xFF94A3B8),
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Icon(
                                     imageVector = Icons.Default.AccessTime,
@@ -330,15 +368,16 @@ fun CreateScheduleDialog(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = formatTime(endHour, endMinute),
-                                fontSize = 18.sp,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Tap to pick clock time",
+                                text = "Tap to change",
                                 fontSize = 10.sp,
-                                color = IndigoPrimary
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF818CF8)
                             )
                         }
                     }
@@ -348,10 +387,11 @@ fun CreateScheduleDialog(
 
                 // Repeat Days
                 Text(
-                    text = "Repeat on Days",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    text = "REPEAT ON DAYS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -363,9 +403,14 @@ fun CreateScheduleDialog(
                         val isSelected = selectedDays.value.contains(dayNum)
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) IndigoPrimary else Color(0xFF1D2A4A))
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) IndigoPrimary else Color(0xFF0F172A))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) CyanAccent.copy(alpha = 0.6f) else Color(0xFF263554),
+                                    RoundedCornerShape(10.dp)
+                                )
                                 .clickable {
                                     val current = selectedDays.value.toMutableSet()
                                     if (isSelected) {
@@ -379,7 +424,7 @@ fun CreateScheduleDialog(
                         ) {
                             Text(
                                 text = label,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSelected) Color.White else Color(0xFF94A3B8)
                             )
@@ -391,9 +436,13 @@ fun CreateScheduleDialog(
 
                 // Strict Mode Switch
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF1D2A4A)
+                        containerColor = if (isStrictMode) CrimsonStrict.copy(alpha = 0.12f) else Color(0xFF0F172A)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else Color(0xFF263554)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -419,14 +468,14 @@ fun CreateScheduleDialog(
                                 Text(
                                     text = "Strict Mode Enforcement",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
+                                    fontSize = 13.sp,
                                     color = Color.White
                                 )
                                 Text(
                                     text = "Locks settings and prevents disabling during the active schedule",
-                                    style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF94A3B8),
-                                    fontSize = 11.sp
+                                    fontSize = 10.sp,
+                                    lineHeight = 14.sp
                                 )
                             }
                         }
@@ -437,8 +486,79 @@ fun CreateScheduleDialog(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = CrimsonStrict,
-                                uncheckedTrackColor = Color(0xFF111A2E)
+                                uncheckedTrackColor = Color(0xFF1E2D4A)
                             )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Ultra Strict Blocker Card (Clean, multi-row layout to prevent text cramming)
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isUltraStrict) Color(0xFF3F0F17) else Color(0xFF0F172A)
+                    ),
+                    border = BorderStroke(1.dp, if (isUltraStrict) CrimsonStrict else Color(0xFF263554)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(14.dp)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = if (isUltraStrict) CrimsonStrict else Color(0xFF94A3B8),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Ultra Strict Blocker 🔒",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = CrimsonStrict,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "NO EXIT",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isUltraStrict,
+                                onCheckedChange = { isUltraStrict = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = CrimsonStrict,
+                                    uncheckedTrackColor = Color(0xFF1E2D4A)
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = "Automated Schedule only: Cannot be exited during the locked window. Unlocks ONLY when window opens or in Developer Mode.",
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
                         )
                     }
                 }
@@ -447,10 +567,11 @@ fun CreateScheduleDialog(
 
                 // Block Lists to enforce
                 Text(
-                    text = "Enforce Block Lists",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    text = "ENFORCE BLOCK LISTS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -462,14 +583,14 @@ fun CreateScheduleDialog(
                     availableLists.forEach { list ->
                         val isChecked = selectedListIds.value.contains(list.id)
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF1D2A4A),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF0F172A),
                             border = BorderStroke(
                                 1.dp,
-                                if (isChecked) Color(list.colorHex) else Color.Transparent
+                                if (isChecked) Color(list.colorHex) else Color(0xFF263554)
                             ),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     val current = selectedListIds.value.toMutableSet()
                                     if (isChecked) current.remove(list.id) else current.add(list.id)
@@ -485,13 +606,13 @@ fun CreateScheduleDialog(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
                                         tint = Color(list.colorHex),
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(15.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
                                 Text(
                                     text = list.name,
-                                    fontSize = 13.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = if (isChecked) Color(list.colorHex) else Color(0xFF94A3B8)
                                 )
@@ -500,9 +621,9 @@ fun CreateScheduleDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
-                // Glowing Premium Action Button
+                // Save & Activate Action Button
                 val isFormValid = name.isNotBlank() && selectedDays.value.isNotEmpty()
                 Button(
                     onClick = {
@@ -517,6 +638,7 @@ fun CreateScheduleDialog(
                                 endMinute,
                                 daysString,
                                 isStrictMode,
+                                isUltraStrict,
                                 activeNames
                             )
                         }
@@ -524,25 +646,25 @@ fun CreateScheduleDialog(
                     enabled = isFormValid,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = IndigoPrimary,
-                        disabledContainerColor = Color(0xFF1D2A4A)
+                        disabledContainerColor = Color(0xFF16233B)
                     ),
-                    shape = RoundedCornerShape(14.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .height(52.dp)
                         .testTag("submit_create_schedule_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Save & Activate Schedule",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 14.sp
                     )
                 }
             }
@@ -579,6 +701,7 @@ fun CreateScheduleDialog(
         )
     }
 }
+
 
 data class ScheduleTemplate(
     val name: String,

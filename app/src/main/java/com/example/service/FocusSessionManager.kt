@@ -22,6 +22,7 @@ import java.util.Calendar
 data class ActiveSessionState(
     val isActive: Boolean = false,
     val isStrictMode: Boolean = false,
+    val isUltraStrict: Boolean = false,
     val sessionId: Long = 0,
     val title: String = "Focus Session",
     val startTimeMillis: Long = 0,
@@ -71,6 +72,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         pomodoroRound: Int = 1,
         pomodoroTotalRounds: Int = 4,
         isPomodoroBreak: Boolean = false,
+        isUltraStrict: Boolean = false,
         plantType: PlantType = when {
             durationMinutes >= 120 -> PlantType.ANCIENT_REDWOOD
             durationMinutes >= 90 -> PlantType.GOLDEN_LOTUS
@@ -93,6 +95,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             pomodoroRound = pomodoroRound,
             pomodoroTotalRounds = pomodoroTotalRounds,
             isPomodoroBreak = isPomodoroBreak,
+            isUltraStrict = isUltraStrict,
             plantType = plantType
         )
     }
@@ -109,6 +112,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         pomodoroRound: Int = 1,
         pomodoroTotalRounds: Int = 4,
         isPomodoroBreak: Boolean = false,
+        isUltraStrict: Boolean = false,
         plantType: PlantType = when {
             durationMinutes >= 120 -> PlantType.ANCIENT_REDWOOD
             durationMinutes >= 90 -> PlantType.GOLDEN_LOTUS
@@ -146,6 +150,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             prefs.edit()
                 .putBoolean(KEY_IS_ACTIVE, true)
                 .putBoolean(KEY_IS_STRICT, isStrictMode)
+                .putBoolean(KEY_IS_ULTRA_STRICT, isUltraStrict)
                 .putLong(KEY_SESSION_ID, id)
                 .putString(KEY_TITLE, title)
                 .putLong(KEY_START_TIME, now)
@@ -168,6 +173,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             updateStateFromValues(
                 isActive = true,
                 isStrictMode = isStrictMode,
+                isUltraStrict = isUltraStrict,
                 sessionId = id,
                 title = title,
                 startTime = now,
@@ -207,6 +213,13 @@ class FocusSessionManager private constructor(private val context: Context) {
     fun forceUnlockSession(repository: AppRepository, earlyUnlocked: Boolean = true): Boolean {
         val currentState = _sessionState.value
         val now = System.currentTimeMillis()
+
+        // Ultra Strict Lockdown Enforcement (Automated Schedules only):
+        // If Ultra Strict Mode is active and remaining time > 0, exit is strictly forbidden
+        // unless Developer Mode is active.
+        if (earlyUnlocked && currentState.isUltraStrict && currentState.isAutoScheduled && getRemainingSeconds() > 0 && !isDeveloperModeActive()) {
+            return false
+        }
 
         if (earlyUnlocked) {
             val authManager = com.example.data.auth.AuthManager.getInstance(context)
@@ -250,6 +263,8 @@ class FocusSessionManager private constructor(private val context: Context) {
 
             // Clear prefs
             clearSessionPrefs()
+            stopMinimalStrictLock()
+            setMinimalLauncherActive(false)
 
             // Normal (non-emergency) end of a schedule-triggered session:
             // Cancel the lingering end-alarm and snooze this schedule for the rest
@@ -375,6 +390,7 @@ class FocusSessionManager private constructor(private val context: Context) {
                     title = "Schedule: ${schedule.name}",
                     durationMinutes = calculatedRemainingMins,
                     isStrictMode = schedule.isStrictMode,
+                    isUltraStrict = schedule.isUltraStrict,
                     activeLists = activeLists,
                     isAutoScheduled = true,
                     scheduleId = schedule.id
@@ -545,6 +561,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         }
 
         val isStrict = prefs.getBoolean(KEY_IS_STRICT, false)
+        val isUltraStrict = prefs.getBoolean(KEY_IS_ULTRA_STRICT, false)
         val id = prefs.getLong(KEY_SESSION_ID, 0L)
         val title = prefs.getString(KEY_TITLE, "Focus Session") ?: "Focus Session"
         val start = prefs.getLong(KEY_START_TIME, 0L)
@@ -561,16 +578,11 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         val remaining = ((end - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
 
-        // Timer already elapsed while the process was dead. The previous path
-        // only cleared prefs for non-strict sessions and left the FocusSession
-        // row active, the growing plant stuck on GROWING, and stats unrecorded.
-        // Strict expired sessions were restored as still-active with 0s left
-        // and waited for a tick that might never come. Run the same teardown
-        // updateTick() uses for a live expiry.
         if (remaining <= 0) {
             updateStateFromValues(
                 isActive = true,
                 isStrictMode = isStrict,
+                isUltraStrict = isUltraStrict,
                 sessionId = id,
                 title = title,
                 startTime = start,
@@ -598,6 +610,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         updateStateFromValues(
             isActive = true,
             isStrictMode = isStrict,
+            isUltraStrict = isUltraStrict,
             sessionId = id,
             title = title,
             startTime = start,
@@ -623,6 +636,7 @@ class FocusSessionManager private constructor(private val context: Context) {
     private fun updateStateFromValues(
         isActive: Boolean,
         isStrictMode: Boolean,
+        isUltraStrict: Boolean = false,
         sessionId: Long,
         title: String,
         startTime: Long,
@@ -640,6 +654,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         _sessionState.value = ActiveSessionState(
             isActive = isActive,
             isStrictMode = isStrictMode,
+            isUltraStrict = isUltraStrict,
             sessionId = sessionId,
             title = title,
             startTimeMillis = startTime,
@@ -667,6 +682,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         prefs.edit()
             .remove(KEY_IS_ACTIVE)
             .remove(KEY_IS_STRICT)
+            .remove(KEY_IS_ULTRA_STRICT)
             .remove(KEY_SESSION_ID)
             .remove(KEY_TITLE)
             .remove(KEY_START_TIME)
@@ -716,11 +732,85 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun isMinimalLauncherActive(): Boolean {
+        if (isMinimalStrictLockActive() && !hasUsedAllMinimalStrictExits()) {
+            return true
+        }
         return prefs.getBoolean(KEY_IS_MINIMAL_ACTIVE, false)
     }
 
     fun setMinimalLauncherActive(active: Boolean) {
         prefs.edit().putBoolean(KEY_IS_MINIMAL_ACTIVE, active).apply()
+    }
+
+    fun startMinimalStrictLock(durationMinutes: Int) {
+        val endTime = System.currentTimeMillis() + durationMinutes * 60 * 1000L
+        prefs.edit()
+            .putLong(KEY_MINIMAL_STRICT_END_TIME, endTime)
+            .putInt(KEY_MINIMAL_STRICT_DURATION_MINUTES, durationMinutes)
+            .putInt(KEY_MINIMAL_STRICT_EXITS_USED, 0)
+            .putBoolean(KEY_MINIMAL_STRICT_USED_EXIT, false)
+            .putBoolean(KEY_IS_MINIMAL_ACTIVE, true)
+            .apply()
+    }
+
+    fun isMinimalStrictLockActive(): Boolean {
+        return getMinimalStrictLockRemainingMillis() > 0
+    }
+
+    fun getMinimalStrictLockRemainingMillis(): Long {
+        val endTime = prefs.getLong(KEY_MINIMAL_STRICT_END_TIME, 0L)
+        val remaining = endTime - System.currentTimeMillis()
+        return if (remaining > 0) remaining else 0L
+    }
+
+    fun getMinimalStrictExitsUsed(): Int {
+        return prefs.getInt(KEY_MINIMAL_STRICT_EXITS_USED, 0)
+    }
+
+    fun getMinimalStrictExitsRemaining(): Int {
+        if (isDeveloperModeActive()) return MAX_MINIMAL_STRICT_EXITS
+        return (MAX_MINIMAL_STRICT_EXITS - getMinimalStrictExitsUsed()).coerceAtLeast(0)
+    }
+
+    fun hasUsedMinimalStrictExit(): Boolean {
+        return getMinimalStrictExitsUsed() > 0
+    }
+
+    fun hasUsedAllMinimalStrictExits(): Boolean {
+        return getMinimalStrictExitsRemaining() <= 0
+    }
+
+    fun useMinimalStrictExit(): Boolean {
+        if (isDeveloperModeActive()) {
+            stopMinimalStrictLock()
+            setMinimalLauncherActive(false)
+            return true
+        }
+        val remaining = getMinimalStrictExitsRemaining()
+        if (remaining <= 0) {
+            return false
+        }
+        val authManager = com.example.data.auth.AuthManager.getInstance(context)
+        if (!authManager.consumeDailyExit()) {
+            return false
+        }
+        val newUsed = getMinimalStrictExitsUsed() + 1
+        prefs.edit().putInt(KEY_MINIMAL_STRICT_EXITS_USED, newUsed).apply()
+
+        if (newUsed >= MAX_MINIMAL_STRICT_EXITS) {
+            stopMinimalStrictLock()
+        }
+        setMinimalLauncherActive(false)
+        return true
+    }
+
+    fun stopMinimalStrictLock() {
+        prefs.edit()
+            .putLong(KEY_MINIMAL_STRICT_END_TIME, 0L)
+            .putInt(KEY_MINIMAL_STRICT_EXITS_USED, 0)
+            .putBoolean(KEY_MINIMAL_STRICT_USED_EXIT, false)
+            .putBoolean(KEY_IS_MINIMAL_ACTIVE, false)
+            .apply()
     }
 
     fun getRemainingEmergencyExits(): Int {
@@ -734,11 +824,15 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun useEmergencyExit(): Boolean {
+        if (_sessionState.value.isUltraStrict && _sessionState.value.isAutoScheduled && !isDeveloperModeActive()) {
+            return false
+        }
         val authManager = com.example.data.auth.AuthManager.getInstance(context)
         if (!authManager.consumeDailyExit()) {
             return false
         }
         stopSession(earlyUnlocked = true)
+        stopMinimalStrictLock()
         setMinimalLauncherActive(false)
         return true
     }
@@ -750,6 +844,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         private const val PREFS_NAME = "focus_guard_secure_state"
         private const val KEY_IS_ACTIVE = "key_is_active"
         private const val KEY_IS_STRICT = "key_is_strict"
+        private const val KEY_IS_ULTRA_STRICT = "key_is_ultra_strict"
         private const val KEY_SESSION_ID = "key_session_id"
         private const val KEY_TITLE = "key_title"
         private const val KEY_START_TIME = "key_start_time"
@@ -766,6 +861,12 @@ class FocusSessionManager private constructor(private val context: Context) {
         private const val KEY_SCHEDULE_ID = "key_schedule_id"
         private const val KEY_SNOOZED_SCHEDULE_ID = "key_snoozed_schedule_id"
         private const val KEY_CUSTOM_ESSENTIAL_APPS = "key_custom_essential_apps"
+        private const val MAX_MINIMAL_STRICT_EXITS = 3
+        private const val KEY_MINIMAL_STRICT_EXITS_USED = "key_minimal_strict_exits_used"
+        private const val KEY_MINIMAL_STRICT_DURATION_MINUTES = "key_minimal_strict_duration_minutes"
+        private const val KEY_MINIMAL_STRICT_END_TIME = "key_minimal_strict_end_time"
+        private const val KEY_MINIMAL_STRICT_DURATION_HOURS = "key_minimal_strict_duration_hours"
+        private const val KEY_MINIMAL_STRICT_USED_EXIT = "key_minimal_strict_used_exit"
 
         @Volatile
         private var INSTANCE: FocusSessionManager? = null

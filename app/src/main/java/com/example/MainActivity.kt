@@ -135,6 +135,23 @@ fun MainAppContent(viewModel: MainViewModel) {
     // to MainActivity, and without this the composable always started with false).
     var isMinimalLauncherFullscreen by remember { mutableStateOf(sessionManager.isMinimalLauncherActive()) }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                if (sessionManager.isMinimalLauncherActive()) {
+                    isMinimalLauncherFullscreen = true
+                } else {
+                    isMinimalLauncherFullscreen = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     androidx.compose.runtime.LaunchedEffect(isMinimalLauncherFullscreen) {
         sessionManager.setMinimalLauncherActive(isMinimalLauncherFullscreen)
     }
@@ -193,7 +210,11 @@ fun MainAppContent(viewModel: MainViewModel) {
                     MinimalLauncherScreen(
                         sessionState = sessionState,
                         allTargets = allTargets,
-                        onExitLauncher = { isMinimalLauncherFullscreen = false },
+                        onExitLauncher = {
+                            sessionManager.stopMinimalStrictLock()
+                            sessionManager.setMinimalLauncherActive(false)
+                            isMinimalLauncherFullscreen = false
+                        },
                         onStartFocusSession = {
                             if (sessionState.isActive) {
                                 isLiveSessionFullscreen = true
@@ -348,7 +369,7 @@ fun MainAppContent(viewModel: MainViewModel) {
         CreateScheduleDialog(
             availableLists = blockLists,
             onDismiss = { viewModel.closeCreateScheduleDialog() },
-            onCreateSchedule = { name, startHour, startMinute, endHour, endMinute, daysOfWeek, isStrict, activeNames ->
+            onCreateSchedule = { name, startHour, startMinute, endHour, endMinute, daysOfWeek, isStrict, isUltraStrict, activeNames ->
                 viewModel.createSchedule(
                     name = name,
                     startHour = startHour,
@@ -357,6 +378,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                     endMinute = endMinute,
                     daysOfWeek = daysOfWeek,
                     isStrictMode = isStrict,
+                    isUltraStrict = isUltraStrict,
                     activeListNames = activeNames
                 )
             }

@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         Schedule::class,
         GardenPlant::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

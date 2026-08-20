@@ -102,6 +102,73 @@ object PermissionUtils {
         }
     }
 
+    fun openBatteryOptimizationSettings(context: Context) {
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallbackIntent)
+            } catch (_: Exception) {
+                try {
+                    val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(appDetailsIntent)
+                } catch (_: Exception) {
+                    val generalSettings = Intent(Settings.ACTION_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(generalSettings)
+                }
+            }
+        }
+    }
+
+    fun isUsageAccessGranted(context: Context): Boolean {
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
+                ?: return false
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName
+                )
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun openUsageAccessSettings(context: Context) {
+        try {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            val generalSettings = Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(generalSettings)
+        }
+    }
+
     fun getBatteryOptimizationIntent(context: Context): Intent {
         return Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
             data = Uri.parse("package:${context.packageName}")
@@ -115,8 +182,25 @@ object PermissionUtils {
         val isNotif = isNotificationGranted(context)
         val isOverlay = isOverlayGranted(context)
         val isBatteryExempt = isBatteryOptimizationExempt(context)
+        val isUsageAccess = isUsageAccessGranted(context)
 
         return listOf(
+            PermissionStatus(
+                id = "battery",
+                title = "Battery Optimization",
+                description = "Exempts app from background battery restrictions",
+                isGranted = isBatteryExempt,
+                actionLabel = if (isBatteryExempt) "Active" else "Exempt Battery",
+                intentAction = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+            ),
+            PermissionStatus(
+                id = "usage",
+                title = "Usage Stats Access",
+                description = "Monitors app usage duration and status per person",
+                isGranted = isUsageAccess,
+                actionLabel = if (isUsageAccess) "Active" else "Allow Usage Stats",
+                intentAction = Settings.ACTION_USAGE_ACCESS_SETTINGS
+            ),
             PermissionStatus(
                 id = "a11y",
                 title = "Accessibility Shield Service",
@@ -148,14 +232,6 @@ object PermissionUtils {
                 isGranted = isNotif,
                 actionLabel = if (isNotif) "Enabled" else "Allow Alerts",
                 intentAction = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-            ),
-            PermissionStatus(
-                id = "battery",
-                title = "Battery Optimization Exempt",
-                description = "Keeps FocusGuard alive on Xiaomi, Samsung & Realme when screen is off",
-                isGranted = isBatteryExempt,
-                actionLabel = if (isBatteryExempt) "Exempt" else "Exempt App",
-                intentAction = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
             )
         )
     }

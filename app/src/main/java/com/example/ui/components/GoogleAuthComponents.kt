@@ -27,10 +27,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +44,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -48,6 +53,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -148,6 +157,26 @@ fun MandatoryLoginGateScreen(
     val activity = context as? Activity
     val isLoading by authManager.isLoading.collectAsState()
     val errorMessage by authManager.errorMessage.collectAsState()
+    val isDev by authManager.isDeveloperMode.collectAsState()
+
+    var showDevPasscodeDialog by remember { mutableStateOf(false) }
+    var showPinChangeDialog by remember { mutableStateOf(false) }
+    var headerTapCount by remember { mutableIntStateOf(0) }
+
+    if (showDevPasscodeDialog) {
+        DeveloperPasscodeDialog(
+            authManager = authManager,
+            onDismiss = { showDevPasscodeDialog = false },
+            onSuccess = { headerTapCount = 0 }
+        )
+    }
+
+    if (showPinChangeDialog) {
+        DeveloperPinChangeDialog(
+            authManager = authManager,
+            onDismiss = { showPinChangeDialog = false }
+        )
+    }
 
     Box(
         modifier = modifier
@@ -164,7 +193,7 @@ fun MandatoryLoginGateScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // App Shield Hero Icon
+            // App Shield Hero Icon (Secret 5-Tap Trigger)
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -172,7 +201,14 @@ fun MandatoryLoginGateScreen(
                         Brush.linearGradient(listOf(IndigoPrimary, CyanAccent)),
                         CircleShape
                     )
-                    .border(2.dp, IndigoPrimary.copy(alpha = 0.6f), CircleShape),
+                    .border(2.dp, IndigoPrimary.copy(alpha = 0.6f), CircleShape)
+                    .clickable {
+                        headerTapCount++
+                        if (headerTapCount >= 5) {
+                            showDevPasscodeDialog = true
+                            headerTapCount = 0
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -189,7 +225,14 @@ fun MandatoryLoginGateScreen(
                 text = "FocusGuard",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier.clickable {
+                    headerTapCount++
+                    if (headerTapCount >= 5) {
+                        showDevPasscodeDialog = true
+                        headerTapCount = 0
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -293,128 +336,134 @@ fun MandatoryLoginGateScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            if (isDev) {
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Divider OR DEVELOPER
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = DarkCardBorder)
-                Text(
-                    text = "OR BYPASS WITH DEVELOPER MODE",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF64748B),
-                    letterSpacing = 0.5.sp
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = DarkCardBorder)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Prominent Developer Button Card (Click to turn ON/OFF)
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF06281E)),
-                border = BorderStroke(1.5.dp, EmeraldSuccess.copy(alpha = 0.6f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { authManager.enableDeveloperMode() }
-                    .testTag("mandatory_developer_mode_card")
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Active Developer Control Card
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF06281E)),
+                    border = BorderStroke(1.5.dp, EmeraldSuccess.copy(alpha = 0.6f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("mandatory_developer_mode_card")
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(EmeraldSuccess.copy(alpha = 0.2f), CircleShape),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Terminal,
-                                    contentDescription = "Developer",
-                                    tint = EmeraldSuccess,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "Developer Mode",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "Click to turn ON • Unlimited Exits",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = EmeraldSuccess
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(EmeraldSuccess.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Terminal,
+                                        contentDescription = "Developer",
+                                        tint = EmeraldSuccess,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Developer Mode ACTIVE",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "Unlimited Exits • Password Protected",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = EmeraldSuccess
+                                    )
+                                }
                             }
                         }
 
-                        Switch(
-                            checked = false,
-                            onCheckedChange = { authManager.enableDeveloperMode() },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = EmeraldSuccess,
-                                uncheckedThumbColor = Color(0xFF94A3B8),
-                                uncheckedTrackColor = Color(0xFF1E293B)
-                            ),
-                            modifier = Modifier.testTag("mandatory_dev_mode_switch")
+                        Text(
+                            text = "Developer Mode is active on this device. You can lock and hide Developer Mode anytime to return to clean end-user mode.",
+                            fontSize = 11.sp,
+                            color = Color(0xFFA7F3D0),
+                            lineHeight = 15.sp
                         )
-                    }
 
-                    Text(
-                        text = "Click below or flip the switch to activate Developer Mode immediately. Bypasses all login checks and gives unlimited session unlocks without the 10-exit daily limit.",
-                        fontSize = 11.sp,
-                        color = Color(0xFFA7F3D0),
-                        lineHeight = 15.sp
-                    )
-
-                    Button(
-                        onClick = { authManager.enableDeveloperMode() },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EmeraldSuccess,
-                            contentColor = Color(0xFF022C22)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .testTag("developer_mode_button")
-                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Code,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = "Turn ON Developer Mode (No Login)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+                            Button(
+                                onClick = { authManager.lockAndHideDeveloperMode() },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF7F1D1D),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Text("Lock & Hide Dev Mode", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = { showPinChangeDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.5f)),
+                                modifier = Modifier.height(44.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.Key, contentDescription = null, tint = EmeraldSuccess, modifier = Modifier.size(14.dp))
+                                    Text("PIN", fontSize = 11.sp, color = EmeraldSuccess, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Discreet Footer Trigger for Developer Access
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showDevPasscodeDialog = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Developer Gate",
+                        tint = Color(0xFF475569),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "Developer Access Gate 🔒 (PIN Protected)",
+                        fontSize = 11.sp,
+                        color = Color(0xFF475569),
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
@@ -769,119 +818,93 @@ fun GoogleAuthCard(
                     }
                 }
             } else {
-                // User is NOT signed in: Provide Developer Mode toggle and Sign In button
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isDev) Color(0xFF042017) else Color(0xFF0F172A)
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isDev) EmeraldSuccess.copy(alpha = 0.6f) else DarkCardBorder
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { authManager.toggleDeveloperMode() }
-                        .testTag("dev_mode_toggle_card")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                // User is NOT signed in: Display status or Google sign-in
+                if (isDev) {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF042017)),
+                        border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("dev_mode_toggle_card")
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .background(
-                                            if (isDev) EmeraldSuccess.copy(alpha = 0.2f) else Color(0xFF1E293B),
-                                            CircleShape
-                                        ),
-                                        contentAlignment = Alignment.Center
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Terminal,
-                                        contentDescription = "Dev Mode",
-                                        tint = if (isDev) EmeraldSuccess else Color(0xFF94A3B8),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .background(EmeraldSuccess.copy(alpha = 0.2f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Terminal,
+                                            contentDescription = "Dev Mode",
+                                            tint = EmeraldSuccess,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
 
-                                Column {
-                                    Text(
-                                        text = "Developer Mode",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = if (isDev) "ON • Unlimited exits (Click to turn OFF)" else "OFF • 10 exits/day (Click to turn ON)",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "Developer Mode ACTIVE",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = "Unlimited exits • Password Protected",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = EmeraldSuccess
+                                        )
+                                    }
                                 }
                             }
 
-                            Switch(
-                                checked = isDev,
-                                onCheckedChange = { authManager.toggleDeveloperMode() },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = EmeraldSuccess,
-                                    uncheckedThumbColor = Color(0xFF94A3B8),
-                                    uncheckedTrackColor = Color(0xFF1E293B)
+                            Button(
+                                onClick = { authManager.lockAndHideDeveloperMode() },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF7F1D1D),
+                                    contentColor = Color.White
                                 ),
-                                modifier = Modifier.testTag("dev_mode_switch")
-                            )
-                        }
-
-                        // Direct 1-Click Action Button
-                        Button(
-                            onClick = { authManager.toggleDeveloperMode() },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDev) Color(0xFF0F3D30) else Color(0xFF06281E),
-                                contentColor = if (isDev) Color(0xFF6EE7B7) else EmeraldSuccess
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isDev) Color(0xFF10B981).copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                                .testTag("toggle_dev_mode_btn")
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(40.dp)
+                                    .testTag("toggle_dev_mode_btn")
                             ) {
-                                Icon(
-                                    imageVector = if (isDev) Icons.Default.Close else Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Text(
-                                    text = if (isDev) "Click to Turn OFF Developer Mode" else "Click to Turn ON Developer Mode (Unlimited Exits)",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = "Lock & Hide Developer Mode",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
                     }
-                }
-
-                // If user is logged out and not in dev mode, provide Google sign-in button
-                if (!isDev) {
+                } else {
+                    // Normal user mode: Google sign in action
                     Button(
                         onClick = onOpenDialog,
                         shape = RoundedCornerShape(12.dp),
@@ -912,7 +935,7 @@ fun GoogleAuthCard(
 /**
  * Account Sign-in Dialog:
  * When user is signed in: shows user profile, Google details, and Sign Out (NO developer mode).
- * When user is not signed in: shows Google Sign In and Developer mode option.
+ * When user is not signed in: shows Google Sign In button and protected Developer Access Gate.
  */
 @Composable
 fun GoogleSignInDialog(
@@ -925,6 +948,16 @@ fun GoogleSignInDialog(
     val isDev by authManager.isDeveloperMode.collectAsState()
     val isLoading by authManager.isLoading.collectAsState()
     val errorMessage by authManager.errorMessage.collectAsState()
+
+    var showDevPasscodeDialog by remember { mutableStateOf(false) }
+
+    if (showDevPasscodeDialog) {
+        DeveloperPasscodeDialog(
+            authManager = authManager,
+            onDismiss = { showDevPasscodeDialog = false },
+            onSuccess = { onDismiss() }
+        )
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -999,7 +1032,7 @@ fun GoogleSignInDialog(
                     color = Color.White
                 )
 
-                // If user is already signed in, show user profile info card with avatar & sign-out option (NO developer mode)
+                // If user is already signed in, show user profile info card with avatar & sign-out option
                 if (user != null) {
                     val currentUser = user!!
                     Surface(
@@ -1089,64 +1122,41 @@ fun GoogleSignInDialog(
                         }
                     }
                 } else {
-                    // When user is NOT signed in: Show Developer Mode controls & Google Sign In button
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isDev) Color(0xFF042017) else Color(0xFF0F172A)
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            if (isDev) EmeraldSuccess.copy(alpha = 0.6f) else DarkCardBorder
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { authManager.toggleDeveloperMode() }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    // When user is NOT signed in
+                    if (isDev) {
+                        Card(
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF042017)),
+                            border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.6f)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Terminal,
-                                    contentDescription = null,
-                                    tint = if (isDev) EmeraldSuccess else Color(0xFF94A3B8),
-                                    modifier = Modifier.size(20.dp)
+                                Text(
+                                    text = "Developer Mode ACTIVE",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color.White
                                 )
-                                Column {
-                                    Text(
-                                        text = "Developer Mode",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = if (isDev) "ON (Unlimited Exits)" else "OFF (10 Exits/Day)",
-                                        fontSize = 11.sp,
-                                        color = if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
-                                    )
+                                Text(
+                                    text = "Lock & hide developer options anytime to test as standard user.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFA7F3D0)
+                                )
+                                Button(
+                                    onClick = {
+                                        authManager.lockAndHideDeveloperMode()
+                                        onDismiss()
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7F1D1D)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Lock & Hide Developer Mode", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-
-                            Switch(
-                                checked = isDev,
-                                onCheckedChange = { authManager.toggleDeveloperMode() },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = EmeraldSuccess,
-                                    uncheckedThumbColor = Color(0xFF94A3B8),
-                                    uncheckedTrackColor = Color(0xFF1E293B)
-                                ),
-                                modifier = Modifier.testTag("dialog_dev_mode_switch")
-                            )
                         }
                     }
 
@@ -1199,40 +1209,241 @@ fun GoogleSignInDialog(
                         }
                     }
 
-                    // Developer Mode 1-Click Toggle Button
-                    Button(
-                        onClick = {
-                            authManager.toggleDeveloperMode()
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDev) Color(0xFF7F1D1D) else EmeraldSuccess,
-                            contentColor = if (isDev) Color.White else Color(0xFF022C22)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .testTag("dialog_developer_mode_btn")
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    if (!isDev) {
+                        // Protected Developer Access Gate Button
+                        OutlinedButton(
+                            onClick = { showDevPasscodeDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF334155)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .testTag("dialog_developer_gate_btn")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Terminal,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = if (isDev) "Turn OFF Developer Mode" else "Turn ON Developer Mode (Unlimited Exits)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = Color(0xFF94A3B8),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Developer Access Gate 🔒 (PIN Required)",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Developer Verification Passcode Dialog (PIN Protected)
+ */
+@Composable
+fun DeveloperPasscodeDialog(
+    authManager: AuthManager,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit = {}
+) {
+    var pinInput by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showChangePin by remember { mutableStateOf(false) }
+
+    if (showChangePin) {
+        DeveloperPinChangeDialog(
+            authManager = authManager,
+            onDismiss = { showChangePin = false }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Terminal,
+                contentDescription = null,
+                tint = EmeraldSuccess,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text("Developer Access Gate 🔒", fontWeight = FontWeight.Bold, color = Color.White)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Developer Mode is PIN-protected so standard users cannot bypass strict focus sessions.",
+                    color = Color(0xFFCBD5E1),
+                    fontSize = 12.sp
+                )
+
+                OutlinedTextField(
+                    value = pinInput,
+                    onValueChange = {
+                        if (it.length <= 8) {
+                            pinInput = it
+                            errorMessage = null
+                        }
+                    },
+                    label = { Text("Enter Developer PIN (Default: 2026)") },
+                    singleLine = true,
+                    isError = errorMessage != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = EmeraldSuccess,
+                        unfocusedBorderColor = Color(0xFF334155),
+                        focusedLabelColor = EmeraldSuccess,
+                        unfocusedLabelColor = Color(0xFF94A3B8),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+
+                if (errorMessage != null) {
+                    Text(errorMessage!!, color = Color(0xFFF87171), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Change Developer PIN",
+                        color = CyanAccent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { showChangePin = true }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (authManager.verifyDeveloperPin(pinInput)) {
+                        authManager.enableDeveloperMode()
+                        onSuccess()
+                        onDismiss()
+                    } else {
+                        errorMessage = "Incorrect PIN. Default PIN is 2026."
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess, contentColor = Color(0xFF022C22))
+            ) {
+                Text("Verify & Enable Dev Mode", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFFCBD5E1))
+            }
+        },
+        containerColor = Color(0xFF0F172A)
+    )
+}
+
+/**
+ * Developer PIN Change Dialog
+ */
+@Composable
+fun DeveloperPinChangeDialog(
+    authManager: AuthManager,
+    onDismiss: () -> Unit
+) {
+    var currentPinInput by remember { mutableStateOf("") }
+    var newPinInput by remember { mutableStateOf("") }
+    var confirmPinInput by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var successMsg by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change Developer PIN", fontWeight = FontWeight.Bold, color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = currentPinInput,
+                    onValueChange = { currentPinInput = it },
+                    label = { Text("Current PIN (Default: 2026)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyanAccent,
+                        unfocusedBorderColor = Color(0xFF334155),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+                OutlinedTextField(
+                    value = newPinInput,
+                    onValueChange = { newPinInput = it },
+                    label = { Text("New PIN (e.g. 1234)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyanAccent,
+                        unfocusedBorderColor = Color(0xFF334155),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+                OutlinedTextField(
+                    value = confirmPinInput,
+                    onValueChange = { confirmPinInput = it },
+                    label = { Text("Confirm New PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CyanAccent,
+                        unfocusedBorderColor = Color(0xFF334155),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+
+                if (errorMsg != null) {
+                    Text(errorMsg!!, color = Color(0xFFF87171), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+                if (successMsg != null) {
+                    Text(successMsg!!, color = EmeraldSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (!authManager.verifyDeveloperPin(currentPinInput)) {
+                        errorMsg = "Current PIN is incorrect."
+                    } else if (newPinInput.isBlank() || newPinInput.length < 4) {
+                        errorMsg = "New PIN must be at least 4 digits."
+                    } else if (newPinInput != confirmPinInput) {
+                        errorMsg = "New PIN and Confirm PIN do not match."
+                    } else {
+                        authManager.setDeveloperPin(newPinInput)
+                        errorMsg = null
+                        successMsg = "Developer PIN successfully updated!"
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess, contentColor = Color(0xFF022C22))
+            ) {
+                Text("Save PIN", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Close", color = Color(0xFFCBD5E1))
+            }
+        },
+        containerColor = Color(0xFF0F172A)
+    )
 }

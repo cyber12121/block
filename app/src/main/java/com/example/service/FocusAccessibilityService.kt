@@ -150,6 +150,40 @@ class FocusAccessibilityService : AccessibilityService() {
             val isFgApp = targetPkg == applicationContext.packageName
             val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
 
+            // Ultra Strict Protection: Block System Settings & Uninstallation attempts (Automated schedules only)
+            if (sessionState.isUltraStrict && sessionState.isAutoScheduled && !sessionManager.isDeveloperModeActive()) {
+                val isSettingsOrInstaller = targetPkg == "com.android.settings" ||
+                        targetPkg.contains("settings") ||
+                        targetPkg.contains("packageinstaller") ||
+                        targetPkg.contains("securitycenter") ||
+                        targetPkg.contains("permission")
+                if (isSettingsOrInstaller) {
+                    triggerBlockShield(
+                        targetName = "System Settings & App Controls",
+                        reason = "Ultra Strict Lockdown Active: System Settings and App permissions are locked until session end time. Only Developer Mode can override.",
+                        isWebsite = false
+                    )
+                    return
+                }
+            }
+
+            // Minimalist Strict Lock Protection: Block System Settings & Uninstallation attempts
+            if (sessionManager.isMinimalStrictLockActive() && !sessionManager.isDeveloperModeActive()) {
+                val isSettingsOrInstaller = targetPkg == "com.android.settings" ||
+                        targetPkg.contains("settings") ||
+                        targetPkg.contains("packageinstaller") ||
+                        targetPkg.contains("securitycenter") ||
+                        targetPkg.contains("permission")
+                if (isSettingsOrInstaller) {
+                    triggerBlockShield(
+                        targetName = "System Settings & App Controls",
+                        reason = "Minimalist Strict Lock Active 🔒: System Settings and App permissions are locked during strict lock duration. Only Developer Mode can override.",
+                        isWebsite = false
+                    )
+                    return
+                }
+            }
+
             // Exact package match only. The previous `targetPkg.contains(essential)`
             // fallback let anything sharing a prefix through the shield — with
             // "com.android.dialer" marked essential, "com.android.dialer.spam" (or any
@@ -161,13 +195,12 @@ class FocusAccessibilityService : AccessibilityService() {
 
             if (!isFgApp && !isEssential) {
                 if (isLauncherOrHome) {
-                    // Home/launcher press during a session:
-                    // - Strict Mode AND Minimal Launcher is the active screen:
+                    // Home/launcher press during a session or Minimalist Strict Lock:
+                    // - Strict Mode OR Minimalist Strict Lock AND Minimal Launcher is the active screen:
                     //   bounce back — the user must stay inside the Minimal Launcher.
-                    // - Every other case (Normal mode, or Strict mode but NOT in Minimal
-                    //   Launcher): allow going home freely. App-blocking still fires
+                    // - Every other case: allow going home freely. App-blocking still fires
                     //   when the user opens a blocked app from their system launcher.
-                    if (sessionState.isStrictMode && isMinimalLauncherHome) {
+                    if ((sessionState.isStrictMode || sessionManager.isMinimalStrictLockActive()) && isMinimalLauncherHome) {
                         scope.launch {
                             kotlinx.coroutines.delay(250)
                             val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {

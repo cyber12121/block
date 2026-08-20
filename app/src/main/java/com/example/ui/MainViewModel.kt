@@ -125,7 +125,8 @@ class MainViewModel(
         isPomodoro: Boolean = false,
         pomodoroRound: Int = 1,
         pomodoroTotalRounds: Int = 4,
-        isPomodoroBreak: Boolean = false
+        isPomodoroBreak: Boolean = false,
+        isUltraStrict: Boolean = false
     ) {
         val plant = when {
             durationMinutes >= 120 -> PlantType.ANCIENT_REDWOOD
@@ -141,6 +142,7 @@ class MainViewModel(
             title = title.ifBlank { "Deep Focus Session" },
             durationMinutes = durationMinutes,
             isStrictMode = isStrictMode,
+            isUltraStrict = isUltraStrict,
             activeLists = activeListNames,
             isPomodoro = isPomodoro,
             pomodoroRound = pomodoroRound,
@@ -269,6 +271,7 @@ class MainViewModel(
         endMinute: Int,
         daysOfWeek: String,
         isStrictMode: Boolean,
+        isUltraStrict: Boolean,
         activeListNames: String
     ) {
         viewModelScope.launch {
@@ -281,6 +284,7 @@ class MainViewModel(
                     endMinute = endMinute,
                     daysOfWeek = daysOfWeek,
                     isStrictMode = isStrictMode,
+                    isUltraStrict = isUltraStrict,
                     activeListNames = activeListNames,
                     isEnabled = true
                 )

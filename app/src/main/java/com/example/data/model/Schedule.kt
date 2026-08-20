@@ -15,6 +15,7 @@ data class Schedule(
     // Comma-separated calendar day constants (e.g., "2,3,4,5,6" for Mon-Fri)
     val daysOfWeek: String,
     val isStrictMode: Boolean = false,
+    val isUltraStrict: Boolean = false,
     val activeListNames: String = "",
     val isEnabled: Boolean = true
 )

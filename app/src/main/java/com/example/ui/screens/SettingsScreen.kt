@@ -28,7 +28,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
+import com.example.ui.components.UsageStatusPersonCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -156,6 +159,14 @@ fun SettingsScreen(
             GoogleAuthCard(
                 authManager = authManager,
                 onOpenDialog = { showGoogleLoginDialog = true }
+            )
+        }
+
+        // Usage Status Person Profile Card
+        item {
+            UsageStatusPersonCard(
+                totalMinutesToday = 0,
+                blockedAttemptsCount = 0
             )
         }
 
@@ -314,20 +325,62 @@ fun SettingsScreen(
 
         items(permissions, key = { it.title }) { perm ->
             val icon = when {
+                perm.id == "battery" -> Icons.Default.BatteryChargingFull
+                perm.id == "usage" -> Icons.Default.DataUsage
                 perm.title.contains("Accessibility", ignoreCase = true) -> Icons.Default.AccessibilityNew
                 perm.title.contains("Admin", ignoreCase = true) -> Icons.Default.Shield
-                perm.title.contains("Usage", ignoreCase = true) -> Icons.Default.Visibility
                 perm.title.contains("Display", ignoreCase = true) || perm.title.contains("Overlay", ignoreCase = true) -> Icons.Default.Layers
                 else -> Icons.Default.Notifications
             }
 
             val iconColor = if (perm.isGranted) CyanAccent else CrimsonStrict
 
+            val onLaunchPermission = {
+                if (perm.id == "battery") {
+                    PermissionUtils.openBatteryOptimizationSettings(context)
+                } else if (perm.id == "usage") {
+                    PermissionUtils.openUsageAccessSettings(context)
+                } else if (perm.id == "admin") {
+                    val compName = ComponentName(context, FocusDeviceAdminReceiver::class.java)
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, compName)
+                        putExtra(
+                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "FocusGuard needs device admin to prevent bypassing focus sessions."
+                        )
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } else if (perm.id == "notif" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } else if (perm.id == "overlay") {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } else {
+                    val intent = Intent(perm.intentAction).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                }
+            }
+
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = BorderStroke(1.dp, DarkCardBorder),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onLaunchPermission() }
+                    .testTag("perm_item_${perm.id}")
             ) {
                 Row(
                     modifier = Modifier
@@ -383,42 +436,7 @@ fun SettingsScreen(
                         )
                     } else {
                         OutlinedButton(
-                            onClick = {
-                                if (perm.id == "admin") {
-                                    val compName = ComponentName(context, FocusDeviceAdminReceiver::class.java)
-                                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, compName)
-                                        putExtra(
-                                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                                            "FocusGuard needs device admin to prevent bypassing focus sessions."
-                                        )
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } else if (perm.id == "notif" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } else if (perm.id == "overlay") {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:${context.packageName}")
-                                    ).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } else if (perm.id == "battery") {
-                                    val intent = com.example.util.PermissionUtils.getBatteryOptimizationIntent(context)
-                                    context.startActivity(intent)
-                                } else {
-                                    val intent = Intent(perm.intentAction).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                }
-                            },
+                            onClick = { onLaunchPermission() },
                             border = BorderStroke(1.dp, CrimsonStrict),
                             shape = RoundedCornerShape(100.dp),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),

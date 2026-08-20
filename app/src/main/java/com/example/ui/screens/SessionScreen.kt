@@ -100,7 +100,8 @@ fun SessionScreen(
     val authManager = remember { AuthManager.getInstance(context) }
     val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-    val canExitStrict = isDeveloperMode || dailyExitsLeft > 0
+    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isAutoScheduled
+    val canExitStrict = isDeveloperMode || (!isUltraStrictActive && dailyExitsLeft > 0)
 
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
 
@@ -527,17 +528,29 @@ fun SessionScreen(
                         .height(48.dp)
                         .testTag("session_emergency_unlock_button")
                 ) {
-                    Icon(imageVector = Icons.Default.LockOpen, contentDescription = null)
+                    Icon(
+                        imageVector = if (isUltraStrictActive) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isDeveloperMode) "Developer Emergency Unlock (∞)" else if (canExitStrict) "Emergency Unlock (10 Exits/Day)" else "0 Exits Left (Limit Reached)",
+                        text = if (isUltraStrictActive && !isDeveloperMode)
+                            "ULTRA STRICT LOCKDOWN ACTIVE 🔒"
+                        else if (isDeveloperMode)
+                            "Developer Emergency Unlock (∞ Dev)"
+                        else if (canExitStrict)
+                            "Emergency Unlock (10 Exits/Day)"
+                        else
+                            "0 Exits Left (Limit Reached)",
                         fontWeight = FontWeight.Bold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (isDeveloperMode)
+                    text = if (isUltraStrictActive && !isDeveloperMode)
+                        "Ultra Strict Schedule is active! Exiting is strictly disabled until schedule end time. Only Developer Mode can override."
+                    else if (isDeveloperMode)
                         "Developer Mode: Unlimited emergency exits enabled (∞)."
                     else if (dailyExitsLeft > 0)
                         "Uses 1 of your 10 daily exits ($dailyExitsLeft/10 remaining today). Resets at midnight."
