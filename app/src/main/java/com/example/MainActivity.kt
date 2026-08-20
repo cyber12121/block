@@ -49,6 +49,8 @@ import com.example.ui.screens.MinimalLauncherScreen
 import com.example.ui.screens.SchedulesScreen
 import androidx.compose.ui.platform.LocalContext
 import com.example.service.FocusSessionManager
+import com.example.data.auth.AuthManager
+import com.example.ui.components.MandatoryLoginGateScreen
 import com.example.ui.screens.SessionScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.FocusGuardTheme
@@ -122,6 +124,11 @@ fun MainAppContent(viewModel: MainViewModel) {
     var currentTab by remember { mutableStateOf(AppTab.DASHBOARD) }
     var isLiveSessionFullscreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+    val currentUser by authManager.currentUser.collectAsStateWithLifecycle()
+    val isDeveloperMode by authManager.isDeveloperMode.collectAsStateWithLifecycle()
+    val isAuthorized = isDeveloperMode || currentUser != null
+
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
     // Restore the Minimal Launcher state from SharedPrefs so it survives process death
     // and accessibility-service-triggered relaunches (the service bounces the user back
@@ -130,6 +137,11 @@ fun MainAppContent(viewModel: MainViewModel) {
 
     androidx.compose.runtime.LaunchedEffect(isMinimalLauncherFullscreen) {
         sessionManager.setMinimalLauncherActive(isMinimalLauncherFullscreen)
+    }
+
+    if (!isAuthorized) {
+        MandatoryLoginGateScreen(authManager = authManager)
+        return
     }
 
     val isStrictActive = sessionState.isActive && sessionState.isStrictMode && !sessionState.isAutoScheduled
@@ -305,12 +317,16 @@ fun MainAppContent(viewModel: MainViewModel) {
         StartSessionDialog(
             availableLists = blockLists,
             onDismiss = { viewModel.closeStartSessionDialog() },
-            onStartSession = { title, durationMinutes, isStrict, activeLists, autoLaunchMinimal ->
+            onStartSession = { title, durationMinutes, isStrict, activeLists, autoLaunchMinimal, isPomodoro, pomodoroRound, pomodoroTotalRounds ->
                 viewModel.startFocusSession(
                     title = title,
                     durationMinutes = durationMinutes,
                     isStrictMode = isStrict,
-                    activeListNames = activeLists
+                    activeListNames = activeLists,
+                    isPomodoro = isPomodoro,
+                    pomodoroRound = pomodoroRound,
+                    pomodoroTotalRounds = pomodoroTotalRounds,
+                    isPomodoroBreak = false
                 )
                 if (autoLaunchMinimal) {
                     isMinimalLauncherFullscreen = true

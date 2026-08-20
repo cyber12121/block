@@ -204,9 +204,16 @@ class FocusSessionManager private constructor(private val context: Context) {
         forceUnlockSession(repository, earlyUnlocked = earlyUnlocked)
     }
 
-    fun forceUnlockSession(repository: AppRepository, earlyUnlocked: Boolean = true) {
+    fun forceUnlockSession(repository: AppRepository, earlyUnlocked: Boolean = true): Boolean {
         val currentState = _sessionState.value
         val now = System.currentTimeMillis()
+
+        if (earlyUnlocked) {
+            val authManager = com.example.data.auth.AuthManager.getInstance(context)
+            if (!authManager.consumeDailyExit()) {
+                return false
+            }
+        }
 
         scope.launch {
             val session = repository.getActiveSession()
@@ -261,6 +268,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             FocusTileService.requestTileUpdate(context)
             isCompletingSession = false
         }
+        return true
     }
 
     fun updateTick() {
@@ -713,15 +721,20 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun getRemainingEmergencyExits(): Int {
-        val used = prefs.getInt(KEY_EMERGENCY_EXITS_USED, 0)
-        return (MAX_EMERGENCY_EXITS - used).coerceAtLeast(0)
+        val authManager = com.example.data.auth.AuthManager.getInstance(context)
+        authManager.refreshDailyExits()
+        return authManager.dailyExitsRemaining.value
+    }
+
+    fun isDeveloperModeActive(): Boolean {
+        return com.example.data.auth.AuthManager.getInstance(context).isDeveloperMode.value
     }
 
     fun useEmergencyExit(): Boolean {
-        val remaining = getRemainingEmergencyExits()
-        if (remaining <= 0) return false
-        val used = prefs.getInt(KEY_EMERGENCY_EXITS_USED, 0)
-        prefs.edit().putInt(KEY_EMERGENCY_EXITS_USED, used + 1).apply()
+        val authManager = com.example.data.auth.AuthManager.getInstance(context)
+        if (!authManager.consumeDailyExit()) {
+            return false
+        }
         stopSession(earlyUnlocked = true)
         setMinimalLauncherActive(false)
         return true

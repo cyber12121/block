@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,9 @@ import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 import com.example.ui.theme.IndigoSecondary
 import com.example.util.PermissionStatus
+import com.example.data.auth.AuthManager
+import com.example.ui.components.GoogleAuthCard
+import com.example.ui.components.GoogleSignInDialog
 import com.example.util.PermissionUtils
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,8 +93,10 @@ fun SettingsScreen(
     onOpenSessionView: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
+    var showGoogleLoginDialog by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
 
     DisposableEffect(lifecycleOwner) {
@@ -132,17 +138,25 @@ fun SettingsScreen(
         item {
             Column {
                 Text(
-                    text = "Security",
+                    text = "Security & Account",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = "Permissions and anti-bypass protection",
+                    text = "Google sync, permissions, and anti-bypass protection",
                     fontSize = 13.sp,
                     color = Color(0xFF94A3B8)
                 )
             }
+        }
+
+        // Optional Google Account / Sign-In Card
+        item {
+            GoogleAuthCard(
+                authManager = authManager,
+                onOpenDialog = { showGoogleLoginDialog = true }
+            )
         }
 
         // 2. Strict Protection Active Card
@@ -551,6 +565,10 @@ fun SettingsScreen(
         }
     }
 
+    val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
+    val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
+    val canExit = isDeveloperMode || dailyExitsLeft > 0
+
     if (showUnlockConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showUnlockConfirmDialog = false },
@@ -563,7 +581,12 @@ fun SettingsScreen(
             },
             text = {
                 Text(
-                    text = "This will immediately terminate the active focus protection session and clear all blocking barriers.",
+                    text = if (isDeveloperMode)
+                        "Developer Mode active: Unlimited exits (∞). This will immediately terminate the active focus protection session and clear all blocking barriers."
+                    else if (dailyExitsLeft > 0)
+                        "Google Account: Uses 1 of your 10 emergency exits for today ($dailyExitsLeft/10 remaining). All app barriers will be removed immediately."
+                    else
+                        "You have reached today's 10-exit limit (0 exits remaining). Exits reset at midnight.",
                     color = Color(0xFFCBD5E1)
                 )
             },
@@ -573,9 +596,17 @@ fun SettingsScreen(
                         showUnlockConfirmDialog = false
                         onEmergencyUnlock()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
+                    enabled = canExit,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CrimsonStrict,
+                        disabledContainerColor = Color(0xFF334155)
+                    )
                 ) {
-                    Text("End Session", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isDeveloperMode) "End Session (∞ Dev)" else if (canExit) "End Session (1/10)" else "0 Exits Left",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -584,6 +615,13 @@ fun SettingsScreen(
                 }
             },
             containerColor = DarkSurface
+        )
+    }
+
+    if (showGoogleLoginDialog) {
+        GoogleSignInDialog(
+            authManager = authManager,
+            onDismiss = { showGoogleLoginDialog = false }
         )
     }
 }

@@ -80,6 +80,9 @@ import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import com.example.data.auth.AuthManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -93,6 +96,12 @@ fun SessionScreen(
     onEmergencyUnlock: () -> Unit,
     onTransitionPomodoro: (nextIsBreak: Boolean, nextRound: Int, mins: Int) -> Unit = { _, _, _ -> }
 ) {
+    val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+    val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
+    val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
+    val canExitStrict = isDeveloperMode || dailyExitsLeft > 0
+
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
 
     // Ambient Soundscape state
@@ -507,7 +516,11 @@ fun SessionScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = { showUnlockConfirmDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                    enabled = canExitStrict,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CrimsonStrict,
+                        disabledContainerColor = Color(0xFF334155)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -516,14 +529,22 @@ fun SessionScreen(
                 ) {
                     Icon(imageVector = Icons.Default.LockOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Emergency Unlock", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isDeveloperMode) "Developer Emergency Unlock (∞)" else if (canExitStrict) "Emergency Unlock (10 Exits/Day)" else "0 Exits Left (Limit Reached)",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Uses one of your 5 emergency exits. This cannot be undone.",
+                    text = if (isDeveloperMode)
+                        "Developer Mode: Unlimited emergency exits enabled (∞)."
+                    else if (dailyExitsLeft > 0)
+                        "Uses 1 of your 10 daily exits ($dailyExitsLeft/10 remaining today). Resets at midnight."
+                    else
+                        "You have reached today's limit of 10 exits. Exits reset at midnight.",
                     fontSize = 11.sp,
-                    color = Color(0xFF94A3B8),
+                    color = if (canExitStrict) Color(0xFF94A3B8) else CrimsonStrict,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -543,7 +564,12 @@ fun SessionScreen(
                 Text("Emergency Unlock Session?", fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("This will immediately cancel the active Strict Mode block and return you to dashboard.")
+                Text(
+                    text = if (isDeveloperMode)
+                        "Developer Mode is active: Unlimited exits. This will end the Strict Mode session immediately and return you to the dashboard."
+                    else
+                        "This will use 1 of your 10 emergency exits for today ($dailyExitsLeft/10 remaining). The active Strict Mode block will be cancelled immediately."
+                )
             },
             confirmButton = {
                 Button(
@@ -555,7 +581,7 @@ fun SessionScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
                 ) {
-                    Text("Unlock Now")
+                    Text(if (isDeveloperMode) "Unlock (∞ Dev)" else "Unlock Session")
                 }
             },
             dismissButton = {

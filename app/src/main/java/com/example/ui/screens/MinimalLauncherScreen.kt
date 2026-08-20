@@ -1417,6 +1417,7 @@ fun MinimalLauncherScreen(
         if (showEmergencyExitDialog) {
             EmergencyExitDialog(
                 remainingExits = remainingExits,
+                isDeveloper = sessionManager.isDeveloperModeActive(),
                 onDismiss = { showEmergencyExitDialog = false },
                 onConfirmExit = {
                     if (sessionManager.useEmergencyExit()) {
@@ -1433,9 +1434,12 @@ fun MinimalLauncherScreen(
 @Composable
 fun EmergencyExitDialog(
     remainingExits: Int,
+    isDeveloper: Boolean = false,
     onDismiss: () -> Unit,
     onConfirmExit: () -> Unit
 ) {
+    val hasExitsLeft = isDeveloper || remainingExits > 0
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1474,29 +1478,39 @@ fun EmergencyExitDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1D2A4A)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDeveloper) Color(0xFF06281E) else Color(0xFF1D2A4A)
+                    ),
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFF2D3F68)),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isDeveloper) EmeraldSuccess.copy(alpha = 0.5f) else Color(0xFF2D3F68)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "EMERGENCY EXITS STATUS",
+                            text = if (isDeveloper) "DEVELOPER MODE STATUS" else "GOOGLE ACCOUNT EXITS",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = IndigoPrimary,
+                            color = if (isDeveloper) EmeraldSuccess else IndigoPrimary,
                             letterSpacing = 1.sp
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Unlimited Exits (∞)",
+                            text = if (isDeveloper) "Unlimited Exits (∞)" else "$remainingExits / 10 Remaining Today",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = EmeraldSuccess
+                            color = if (isDeveloper) EmeraldSuccess else if (remainingExits <= 2) CrimsonStrict else Color(0xFF38BDF8)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Emergency exits are unlimited. You can unlock the launcher and conclude the current focus session anytime.",
+                            text = if (isDeveloper)
+                                "Emergency exits are unlimited in Developer Mode. You can unlock and exit anytime without restrictions."
+                            else if (remainingExits > 0)
+                                "Google login allows 10 emergency exits per day. Unlocking now will use 1 exit (resets at midnight)."
+                            else
+                                "You have reached today's 10 exits quota. Focus sessions must be completed or switched to Developer Mode.",
                             fontSize = 12.sp,
                             color = Color(0xFFCBD5E1),
                             lineHeight = 16.sp
@@ -1508,7 +1522,11 @@ fun EmergencyExitDialog(
 
                 Button(
                     onClick = onConfirmExit,
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                    enabled = hasExitsLeft,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CrimsonStrict,
+                        disabledContainerColor = Color(0xFF334155)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1516,7 +1534,11 @@ fun EmergencyExitDialog(
                 ) {
                     Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Unlock & Exit Launcher", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        text = if (hasExitsLeft) "Unlock & Exit Launcher" else "0 Exits Left (Limit Reached)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }

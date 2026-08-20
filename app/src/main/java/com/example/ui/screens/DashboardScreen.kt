@@ -98,8 +98,13 @@ import com.example.ui.theme.DarkCardBorder
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.EmeraldSuccess
+import com.example.data.auth.AuthManager
+import com.example.ui.components.ExitQuotaChip
+import com.example.ui.components.GoogleLogoIcon
+import com.example.ui.components.GoogleSignInDialog
 import com.example.ui.theme.IndigoPrimary
 import com.example.util.PermissionUtils
+import androidx.compose.runtime.collectAsState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -124,6 +129,9 @@ fun DashboardScreen(
     onOpenMinimalLauncher: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+    val authUser by authManager.currentUser.collectAsState()
+    var showGoogleAuthDialog by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var refreshTrigger by remember { mutableIntStateOf(0) }
     var showEmergencyUnlockConfirmDialog by remember { mutableStateOf(false) }
@@ -204,13 +212,13 @@ fun DashboardScreen(
                     }
                 }
 
-                val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
-                val hasEnabledBlockLists = blockLists.any { it.isEnabled }
-                if (isManualFocusActive) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
+                    val hasEnabledBlockLists = blockLists.any { it.isEnabled }
+                    if (isManualFocusActive) {
                         // Developer / User Quick Exit Button
                         Surface(
                             color = Color(0xFF111A2E),
@@ -253,46 +261,38 @@ fun DashboardScreen(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
                         }
-                    }
-                } else if (hasEnabledBlockLists) {
-                    Surface(
-                        color = IndigoPrimary.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    } else if (hasEnabledBlockLists) {
+                        Surface(
+                            color = IndigoPrimary.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f))
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .background(EmeraldSuccess, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = "24/7 GUARD ACTIVE",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.5.sp,
-                                color = Color(0xFFE0E7FF)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(EmeraldSuccess, CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = "GUARD ON",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.5.sp,
+                                    color = Color(0xFFE0E7FF)
+                                )
+                            }
                         }
                     }
-                } else {
-                    Surface(
-                        color = DarkSurfaceVariant,
-                        shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(1.dp, DarkCardBorder)
-                    ) {
-                        Text(
-                            text = "STANDBY",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
+
+                    // Google Account / Developer Mode Chip
+                    ExitQuotaChip(
+                        authManager = authManager,
+                        onClick = { showGoogleAuthDialog = true }
+                    )
                 }
             }
         }
@@ -365,7 +365,7 @@ fun DashboardScreen(
             }
         }
 
-        // 3. Active Session Card or Quick Start Hero
+        // 3. Focal Hero Card: Active Session or Clean Ready State
         item {
             val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
             if (isManualFocusActive) {
@@ -376,101 +376,16 @@ fun DashboardScreen(
                     onEmergencyUnlock = { showEmergencyUnlockConfirmDialog = true }
                 )
             } else {
-                QuickStartHeroCard(
-                    onStartSessionClick = onStartSessionClick,
-                    onQuickStart = onQuickStart
+                MinimalHeroCard(
+                    onStartSessionClick = onStartSessionClick
                 )
             }
         }
 
-        // 3.5. Gamified Daily Streak Banner & Tracker
-        item {
-            DailyStreakTrackerCard(
-                totalMinutesToday = totalMinutesToday,
-                onQuickStart = onQuickStart
-            )
-        }
-
-        // 3.6. Weekly Focus Goal & Progress Tracker
-        item {
-            WeeklyFocusGoalCard(
-                totalMinutesToday = totalMinutesToday,
-                weeklyGoalHours = weeklyGoalHours,
-                onEditGoal = { showGoalSettingsDialog = true }
-            )
-        }
-
-        // 4. Two-Column Stats Row
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Focus today
-                StatMetricCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Timer,
-                    iconTint = IndigoPrimary,
-                    title = "Focus today",
-                    value = "${totalMinutesToday} min",
-                    subtitle = "Completed session time"
-                )
-
-                // Distractions blocked
-                StatMetricCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Shield,
-                    iconTint = CyanAccent,
-                    title = "Distractions blocked",
-                    value = "$blockedAttemptsCount",
-                    subtitle = "Shield interceptions"
-                )
-            }
-        }
-
-        // 5. Quick Actions Section
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Quick actions",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    QuickActionTile(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.AppBlocking,
-                        iconTint = IndigoPrimary,
-                        label = "App Blocking",
-                        onClick = onNavigateToApps
-                    )
-                    QuickActionTile(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Language,
-                        iconTint = CyanAccent,
-                        label = "Site Blocking",
-                        onClick = onNavigateToLists
-                    )
-                    QuickActionTile(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.CalendarMonth,
-                        iconTint = AmberFocus,
-                        label = "Schedule",
-                        onClick = onNavigateToSchedules
-                    )
-                }
-            }
-        }
-
-        // 6. Minimalist Focus Launcher Card
+        // 4. Quiet, Minimal Daily Glance (Single Clean Stats Line)
         item {
             Card(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = BorderStroke(1.dp, DarkCardBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -478,96 +393,153 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .background(DarkSurfaceVariant, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Smartphone,
-                                contentDescription = null,
-                                tint = Color(0xFFCBD5E1),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = CyanAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Column {
                             Text(
-                                text = "Minimalist Focus Launcher",
+                                text = "${totalMinutesToday}m Focused",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
                                 color = Color.White
                             )
                             Text(
-                                text = "Eliminate dopamine apps with this minimal text-based launcher.",
-                                fontSize = 12.sp,
-                                color = Color(0xFF94A3B8)
+                                text = "Today's total",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(28.dp)
+                            .background(DarkCardBorder)
+                    )
 
-                    Button(
-                        onClick = onOpenMinimalLauncher,
-                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                        shape = RoundedCornerShape(100.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                        modifier = Modifier.height(34.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Open",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = IndigoPrimary,
+                            modifier = Modifier.size(18.dp)
                         )
+                        Column {
+                            Text(
+                                text = "$blockedAttemptsCount Blocked",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Distractions saved",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B)
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // 7. Active Protections Section — driven by real BlockList state
+        // 5. Two Quiet Utility Portals (Minimal Space & Blocklists)
         item {
-            val displayedProtections = blockLists
-                .filter { it.isDefault }
-                .take(2)
-            if (displayedProtections.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Active protections",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, DarkCardBorder),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onOpenMinimalLauncher() }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        displayedProtections.forEach { list ->
-                            val icon = when {
-                                list.name.contains("Social", ignoreCase = true) -> Icons.Default.People
-                                list.name.contains("Entertainment", ignoreCase = true) ||
-                                list.name.contains("Video", ignoreCase = true) -> Icons.Default.PlayCircle
-                                else -> Icons.Default.Shield
-                            }
-                            ActiveProtectionBadgeCard(
-                                modifier = Modifier.weight(1f),
-                                icon = icon,
-                                title = list.name,
-                                isActive = list.isEnabled,
-                                onClick = onNavigateToLists
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(DarkSurfaceVariant, RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Smartphone,
+                                contentDescription = null,
+                                tint = Color(0xFF38BDF8),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
+                        Text(
+                            text = "Minimal Space",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Calm distraction-free launcher",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, DarkCardBorder),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onNavigateToLists() }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(DarkSurfaceVariant, RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AppBlocking,
+                                contentDescription = null,
+                                tint = IndigoPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = "Shield Rules",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Manage blocked apps & sites",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8),
+                            lineHeight = 15.sp
+                        )
                     }
                 }
             }
@@ -575,6 +547,10 @@ fun DashboardScreen(
     }
 
     if (showEmergencyUnlockConfirmDialog) {
+        val isDevMode by authManager.isDeveloperMode.collectAsState()
+        val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
+        val canExit = isDevMode || dailyExitsLeft > 0
+
         AlertDialog(
             onDismissRequest = { showEmergencyUnlockConfirmDialog = false },
             icon = {
@@ -590,7 +566,12 @@ fun DashboardScreen(
             },
             text = {
                 Text(
-                    text = "This will immediately end your active focus session, stop the running timer/schedule, and unlock all restricted apps (∞).",
+                    text = if (isDevMode)
+                        "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
+                    else if (dailyExitsLeft > 0)
+                        "Google Account: You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will use 1 exit (resets at midnight)."
+                    else
+                        "Daily exit limit reached (0/10 exits remaining today). Focus session cannot be exited early until tomorrow, unless Developer Mode is enabled in Settings.",
                     color = Color(0xFFCBD5E1),
                     fontSize = 14.sp
                 )
@@ -601,9 +582,16 @@ fun DashboardScreen(
                         showEmergencyUnlockConfirmDialog = false
                         onEmergencyUnlock()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
+                    enabled = canExit,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CrimsonStrict,
+                        disabledContainerColor = Color(0xFF334155)
+                    )
                 ) {
-                    Text("Stop & Exit (∞)", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -714,6 +702,13 @@ fun DashboardScreen(
             containerColor = Color(0xFF111A2E)
         )
     }
+
+    if (showGoogleAuthDialog) {
+        GoogleSignInDialog(
+            authManager = authManager,
+            onDismiss = { showGoogleAuthDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -776,15 +771,18 @@ fun ActiveSessionDashboardCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (sessionState.isStrictMode) Icons.Default.Lock else Icons.Default.Shield,
+                        imageVector = if (sessionState.isStrictMode) Icons.Default.Lock else if (sessionState.isPomodoro) Icons.Default.Timer else Icons.Default.Shield,
                         contentDescription = null,
-                        tint = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
+                        tint = if (sessionState.isStrictMode) CrimsonStrict else if (sessionState.isPomodoro) Color(0xFFF43F5E) else IndigoPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isAuto) {
                             if (sessionState.isStrictMode) "SCHEDULED STRICT GUARD" else "SCHEDULED FOCUS GUARD"
+                        } else if (sessionState.isPomodoro) {
+                            if (sessionState.isPomodoroBreak) "☕ POMODORO BREAK (Round ${sessionState.pomodoroRound}/${sessionState.pomodoroTotalRounds})"
+                            else "🍅 POMODORO SPRINT (Round ${sessionState.pomodoroRound}/${sessionState.pomodoroTotalRounds})"
                         } else {
                             if (sessionState.isStrictMode) "STRICT FOCUS SESSION" else "FOCUS TIMER SESSION"
                         },
@@ -825,6 +823,9 @@ fun ActiveSessionDashboardCard(
             Text(
                 text = if (sessionState.isStrictMode) {
                     "Strict protection active. Focus shield is armed until the window closes."
+                } else if (sessionState.isPomodoro) {
+                    if (sessionState.isPomodoroBreak) "Take a gentle break, stretch, and hydrate before the next sprint."
+                    else "High-intensity focus sprint. Selected distraction apps are blocked."
                 } else {
                     "Focus timer running. Selected apps and websites are blocked."
                 },
@@ -841,7 +842,7 @@ fun ActiveSessionDashboardCard(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(CircleShape),
-                color = if (sessionState.isStrictMode) CrimsonStrict else CyanAccent,
+                color = if (sessionState.isStrictMode) CrimsonStrict else if (sessionState.isPomodoro) Color(0xFFF43F5E) else CyanAccent,
                 trackColor = DarkSurfaceVariant
             )
 
@@ -882,9 +883,8 @@ fun ActiveSessionDashboardCard(
 }
 
 @Composable
-fun QuickStartHeroCard(
-    onStartSessionClick: () -> Unit,
-    onQuickStart: (minutes: Int, isStrict: Boolean) -> Unit
+fun MinimalHeroCard(
+    onStartSessionClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -892,54 +892,56 @@ fun QuickStartHeroCard(
         border = BorderStroke(1.dp, DarkCardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .background(IndigoPrimary.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(
-                        text = "Ready to Focus?",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Block distractions & get into the flow",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(IndigoPrimary.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FlashOn,
-                        contentDescription = null,
-                        tint = IndigoPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = IndigoPrimary,
+                    modifier = Modifier.size(30.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Main Start Button
+            Text(
+                text = "Ready for Deep Work",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Block digital noise and enter high-focus flow",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF94A3B8),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Button(
                 onClick = onStartSessionClick,
                 colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(52.dp)
                     .testTag("dashboard_start_session_button")
             ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Start Focus Session",
@@ -948,72 +950,15 @@ fun QuickStartHeroCard(
                     color = Color.White
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Quick launch pills
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { onQuickStart(25, false) },
-                    color = AmberFocus.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, AmberFocus.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(
-                        text = "25m Sprint",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AmberFocus,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { onQuickStart(30, false) },
-                    color = DarkSurfaceVariant,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(
-                        text = "30m Normal",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .weight(1.1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { onQuickStart(60, true) },
-                    color = CrimsonStrict.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(
-                        text = "1h Strict",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CrimsonStrict,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
         }
     }
+}
+
+@Composable
+fun QuickStartHeroCard(
+    onStartSessionClick: () -> Unit
+) {
+    MinimalHeroCard(onStartSessionClick = onStartSessionClick)
 }
 
 @Composable
