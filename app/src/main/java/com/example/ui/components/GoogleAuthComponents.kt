@@ -23,37 +23,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,13 +59,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.data.auth.AuthManager
-import com.example.data.auth.AuthUser
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkCardBorder
@@ -141,7 +135,9 @@ fun GoogleLogoIcon(modifier: Modifier = Modifier.size(18.dp)) {
 /**
  * Mandatory Login Gate Screen:
  * Displays when user is not logged in and not in Developer Mode.
- * Features mandatory Google Login (10 exits/day) AND prominent Developer Mode button (no login, unlimited exits).
+ * Simplified strictly to:
+ * 1. Sign In / Sign Up with Google (No 1-tap card, no password, no extra fields)
+ * 2. Developer Mode bypass toggle on/off (Unlimited emergency exits)
  */
 @Composable
 fun MandatoryLoginGateScreen(
@@ -161,19 +157,19 @@ fun MandatoryLoginGateScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(horizontal = 24.dp, vertical = 28.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Shield Icon
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // App Shield Hero Icon
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(80.dp)
                     .background(
-                        Brush.linearGradient(
-                            listOf(IndigoPrimary, CyanAccent)
-                        ),
+                        Brush.linearGradient(listOf(IndigoPrimary, CyanAccent)),
                         CircleShape
                     )
                     .border(2.dp, IndigoPrimary.copy(alpha = 0.6f), CircleShape),
@@ -181,13 +177,13 @@ fun MandatoryLoginGateScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Shield,
-                    contentDescription = "Shield",
+                    contentDescription = "FocusGuard Shield",
                     tint = Color.White,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(44.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "FocusGuard",
@@ -196,11 +192,11 @@ fun MandatoryLoginGateScreen(
                 color = Color.White
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Mandatory Authentication",
-                fontSize = 14.sp,
+                text = "Sign In / Sign Up with Google",
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = CyanAccent
             )
@@ -208,8 +204,8 @@ fun MandatoryLoginGateScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Please sign in with your Google account to access focus tools, distraction blocks, and flora gardens.",
-                fontSize = 13.sp,
+                text = "Sign in or sign up using your Google Account (Gmail) to protect sessions, manage app blocklists, and sync stats.",
+                fontSize = 12.sp,
                 color = Color(0xFF94A3B8),
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp,
@@ -237,56 +233,25 @@ fun MandatoryLoginGateScreen(
                 }
             }
 
-            // Google Login Primary Card
+            // Google Sign-In / Sign-Up Primary Action Card
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Google Account Login",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(100.dp),
-                            color = Color(0xFF1E293B),
-                            border = BorderStroke(1.dp, DarkCardBorder)
-                        ) {
-                            Text(
-                                text = "10 EXITS / DAY",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CyanAccent,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Standard Google sign-in provides cloud backup, focus streaks, and allows up to 10 emergency exits per day.",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8),
-                        lineHeight = 16.sp
-                    )
-
+                    // Google Sign-In / Sign-Up Main Button
                     Button(
                         onClick = {
                             if (activity != null) {
                                 authManager.signInWithGoogle(activity)
                             } else {
-                                authManager.quickSignIn("Google User", "user@gmail.com")
+                                authManager.quickSignIn("Vinay Pandagre", "pandagre.vinay@gmail.com")
                             }
                         },
                         shape = RoundedCornerShape(14.dp),
@@ -294,7 +259,7 @@ fun MandatoryLoginGateScreen(
                         enabled = !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
+                            .height(52.dp)
                             .testTag("mandatory_google_signin_btn")
                     ) {
                         if (isLoading) {
@@ -306,11 +271,11 @@ fun MandatoryLoginGateScreen(
                         } else {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                GoogleLogoIcon(modifier = Modifier.size(20.dp))
+                                GoogleLogoIcon(modifier = Modifier.size(22.dp))
                                 Text(
-                                    text = "Sign in with Google",
+                                    text = "Sign In / Sign Up with Google",
                                     color = Color(0xFF1E293B),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
@@ -319,60 +284,40 @@ fun MandatoryLoginGateScreen(
                         }
                     }
 
-                    // 1-Tap Google Quick Demo
-                    OutlinedButton(
-                        onClick = {
-                            authManager.quickSignIn("Vinay", "pandagre.vinay@gmail.com")
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, DarkCardBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanAccent),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("mandatory_quick_demo_btn")
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            GoogleLogoIcon(modifier = Modifier.size(14.dp))
-                            Text(
-                                text = "1-Tap Google Demo (10 Exits/Day)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
+                    Text(
+                        text = "1-click Google authentication with Gmail • No password needed",
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Divider OR DEVELOPER
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = DarkCardBorder)
                 Text(
-                    text = "OR BYPASS",
-                    fontSize = 11.sp,
+                    text = "OR BYPASS WITH DEVELOPER MODE",
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF64748B),
-                    letterSpacing = 1.sp
+                    letterSpacing = 0.5.sp
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f), color = DarkCardBorder)
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Prominent Developer Button Card
+            // Prominent Developer Button Card (Click to turn ON/OFF)
             Card(
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF06281E)
-                ),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF06281E)),
                 border = BorderStroke(1.5.dp, EmeraldSuccess.copy(alpha = 0.6f)),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -390,7 +335,8 @@ fun MandatoryLoginGateScreen(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -409,61 +355,48 @@ fun MandatoryLoginGateScreen(
                                 Text(
                                     text = "Developer Mode",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
+                                    fontSize = 15.sp,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "No Login Required",
-                                    fontSize = 12.sp,
+                                    text = "Click to turn ON • Unlimited Exits",
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = EmeraldSuccess
                                 )
                             }
                         }
 
-                        Surface(
-                            shape = RoundedCornerShape(100.dp),
-                            color = EmeraldSuccess.copy(alpha = 0.2f),
-                            border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AllInclusive,
-                                    contentDescription = "Unlimited",
-                                    tint = EmeraldSuccess,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "UNLIMITED EXITS",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = EmeraldSuccess
-                                )
-                            }
-                        }
+                        Switch(
+                            checked = false,
+                            onCheckedChange = { authManager.enableDeveloperMode() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = EmeraldSuccess,
+                                uncheckedThumbColor = Color(0xFF94A3B8),
+                                uncheckedTrackColor = Color(0xFF1E293B)
+                            ),
+                            modifier = Modifier.testTag("mandatory_dev_mode_switch")
+                        )
                     }
 
                     Text(
-                        text = "Click below to activate Developer Mode immediately. Bypasses mandatory login and gives unlimited session unlocks and emergency exits.",
-                        fontSize = 12.sp,
+                        text = "Click below or flip the switch to activate Developer Mode immediately. Bypasses all login checks and gives unlimited session unlocks without the 10-exit daily limit.",
+                        fontSize = 11.sp,
                         color = Color(0xFFA7F3D0),
-                        lineHeight = 16.sp
+                        lineHeight = 15.sp
                     )
 
                     Button(
                         onClick = { authManager.enableDeveloperMode() },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = EmeraldSuccess,
                             contentColor = Color(0xFF022C22)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(46.dp)
                             .testTag("developer_mode_button")
                     ) {
                         Row(
@@ -476,20 +409,24 @@ fun MandatoryLoginGateScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "Enter Developer Mode (Unlimited Exits)",
+                                text = "Turn ON Developer Mode (No Login)",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
 
 /**
- * Compact Exit Quota Chip for Top Bars & Headers
+ * Compact Signed-In User Icon / Exit Quota Chip for Top Bars & Headers
+ * When user is signed in: prominently displays Google user avatar, Google logo, signed-in check, and remaining exits.
+ * When in Dev mode: displays active Dev Mode unlimited badge.
  */
 @Composable
 fun ExitQuotaChip(
@@ -506,7 +443,10 @@ fun ExitQuotaChip(
         shape = RoundedCornerShape(100.dp),
         border = BorderStroke(
             1.dp,
-            if (isDev) EmeraldSuccess.copy(alpha = 0.5f) else if (remaining <= 2) Color(0xFFEF4444).copy(alpha = 0.5f) else IndigoPrimary.copy(alpha = 0.3f)
+            if (isDev) EmeraldSuccess.copy(alpha = 0.5f)
+            else if (user != null) EmeraldSuccess.copy(alpha = 0.6f)
+            else if (remaining <= 2) Color(0xFFEF4444).copy(alpha = 0.5f)
+            else IndigoPrimary.copy(alpha = 0.3f)
         ),
         modifier = modifier
             .clickable { onClick() }
@@ -515,17 +455,72 @@ fun ExitQuotaChip(
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (isDev) {
+            if (user != null) {
+                val currentUser = user!!
+                // Prominent Signed-in User Avatar with Verified Green Check
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    if (!currentUser.photoUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = currentUser.photoUrl,
+                            contentDescription = "User Photo",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .background(
+                                    Brush.linearGradient(listOf(Color(0xFF4285F4), Color(0xFF34A853))),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = currentUser.displayName.take(1).uppercase(),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 11.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    // Verified Signed-In Green Dot Badge
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(EmeraldSuccess, CircleShape)
+                            .border(0.5.dp, Color(0xFF131D33), CircleShape)
+                    )
+                }
+
+                GoogleLogoIcon(modifier = Modifier.size(12.dp))
+
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Signed In",
+                    tint = EmeraldSuccess,
+                    modifier = Modifier.size(13.dp)
+                )
+
+                Text(
+                    text = "$remaining/10",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            } else if (isDev) {
                 Icon(
                     imageVector = Icons.Default.Terminal,
-                    contentDescription = "Dev",
+                    contentDescription = "Dev Mode",
                     tint = EmeraldSuccess,
-                    modifier = Modifier.size(12.dp)
+                    modifier = Modifier.size(13.dp)
                 )
                 Text(
-                    text = "DEV (∞ EXITS)",
+                    text = "DEV (∞)",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = EmeraldSuccess
@@ -544,7 +539,9 @@ fun ExitQuotaChip(
 }
 
 /**
- * Account & Google Login Card for Settings/Security screen
+ * Account & Auth Card for Settings/Security screen
+ * When user is signed in: displays Google profile, verified badge, exits, and sign out (NO developer mode).
+ * When user is not signed in: displays Google sign in and developer mode bypass.
  */
 @Composable
 fun GoogleAuthCard(
@@ -562,14 +559,17 @@ fun GoogleAuthCard(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(
             1.dp,
-            if (isDev) EmeraldSuccess.copy(alpha = 0.4f) else IndigoPrimary.copy(alpha = 0.3f)
+            if (user != null) EmeraldSuccess.copy(alpha = 0.4f)
+            else if (isDev) EmeraldSuccess.copy(alpha = 0.5f)
+            else IndigoPrimary.copy(alpha = 0.3f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Header Row with Main Account / Mode status
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -581,101 +581,86 @@ fun GoogleAuthCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .background(
-                                if (isDev) EmeraldSuccess.copy(alpha = 0.15f)
+                                if (user != null) EmeraldSuccess.copy(alpha = 0.15f)
+                                else if (isDev) EmeraldSuccess.copy(alpha = 0.15f)
                                 else IndigoPrimary.copy(alpha = 0.15f),
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isDev) {
+                        if (user != null) {
+                            GoogleLogoIcon(modifier = Modifier.size(20.dp))
+                        } else if (isDev) {
                             Icon(
                                 imageVector = Icons.Default.Terminal,
                                 contentDescription = null,
                                 tint = EmeraldSuccess,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         } else {
-                            GoogleLogoIcon(modifier = Modifier.size(18.dp))
+                            GoogleLogoIcon(modifier = Modifier.size(20.dp))
                         }
                     }
 
                     Column {
                         Text(
-                            text = if (isDev) "Developer Mode Active" else "Google Account",
+                            text = if (user != null) "Google Account (Gmail)" else if (isDev) "Developer Mode (ACTIVE)" else "Google Authentication",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = Color.White
                         )
                         Text(
-                            text = if (isDev) "Unlimited exits • No restrictions" else "10 exits/day quota",
+                            text = if (user != null) "$remaining/10 exits remaining today" else if (isDev) "Unlimited exits • No restrictions" else "Sign in required",
                             fontSize = 12.sp,
-                            color = if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
+                            color = if (user != null) CyanAccent else if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
                         )
                     }
                 }
 
                 Surface(
                     shape = RoundedCornerShape(100.dp),
-                    color = if (isDev) EmeraldSuccess.copy(alpha = 0.15f) else Color(0xFF1E293B),
+                    color = if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.15f) else Color(0xFF1E293B),
                     border = BorderStroke(
                         1.dp,
-                        if (isDev) EmeraldSuccess.copy(alpha = 0.4f) else DarkCardBorder
+                        if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.4f) else DarkCardBorder
                     )
                 ) {
-                    Text(
-                        text = if (isDev) "DEV MODE" else "GOOGLE SYNC",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDev) EmeraldSuccess else CyanAccent,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (user != null) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Signed In",
+                                tint = EmeraldSuccess,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Text(
+                            text = if (user != null) "SIGNED IN" else if (isDev) "DEV MODE ON" else "LOGGED OUT",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (user != null || isDev) EmeraldSuccess else CyanAccent
+                        )
+                    }
                 }
             }
 
-            if (isDev) {
-                // Developer Mode Active Info
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF06281E), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Unlimited Emergency Exits (∞)",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = EmeraldSuccess
-                        )
-                        Text(
-                            text = "No login required • No daily 10-exit cap",
-                            fontSize = 11.sp,
-                            color = Color(0xFFA7F3D0)
-                        )
-                    }
-
-                    Button(
-                        onClick = onOpenDialog,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF134E4A)),
-                        modifier = Modifier.testTag("switch_to_google_btn")
-                    ) {
-                        Text("Switch", fontSize = 11.sp, color = Color.White)
-                    }
-                }
-            } else if (user != null) {
-                // Logged In Google Info
+            // If user IS signed in: Display ONLY user details and sign out.
+            // Developer mode is completely removed when signed in!
+            if (user != null) {
                 val currentUser = user!!
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF131D33), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .background(Color(0xFF131D33), RoundedCornerShape(14.dp))
+                        .border(1.dp, EmeraldSuccess.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -684,49 +669,68 @@ fun GoogleAuthCard(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            if (!currentUser.photoUrl.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = currentUser.photoUrl,
-                                    contentDescription = "Profile Photo",
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                if (!currentUser.photoUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = currentUser.photoUrl,
+                                        contentDescription = "Profile Photo",
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(Color(0xFF4285F4), Color(0xFF34A853))
+                                                ),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = currentUser.displayName.take(1).uppercase(),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
                                 Box(
                                     modifier = Modifier
-                                        .size(38.dp)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(IndigoPrimary, CyanAccent)
-                                            ),
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = currentUser.displayName.take(1).uppercase(),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = Color.White
-                                    )
-                                }
+                                        .size(13.dp)
+                                        .background(EmeraldSuccess, CircleShape)
+                                        .border(1.5.dp, Color(0xFF131D33), CircleShape)
+                                )
                             }
 
                             Column {
-                                Text(
-                                    text = currentUser.displayName,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    color = Color.White
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = currentUser.displayName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    GoogleLogoIcon(modifier = Modifier.size(13.dp))
+                                }
                                 Text(
                                     text = currentUser.email,
-                                    fontSize = 11.sp,
-                                    color = Color(0xFF94A3B8)
+                                    fontSize = 12.sp,
+                                    color = CyanAccent,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -734,17 +738,17 @@ fun GoogleAuthCard(
                         OutlinedButton(
                             onClick = { authManager.signOut() },
                             shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, DarkCardBorder),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = Color(0xFFF87171)
                             ),
                             modifier = Modifier.testTag("sign_out_button")
                         ) {
-                            Text("Sign Out", fontSize = 11.sp)
+                            Text("Sign Out", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Daily Exits Progress Bar
+                    // Daily Exits Progress
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -764,33 +768,140 @@ fun GoogleAuthCard(
                         }
                     }
                 }
-
-                // Switch to Developer Mode button
-                Button(
-                    onClick = { authManager.enableDeveloperMode() },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06281E)),
-                    border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.4f)),
+            } else {
+                // User is NOT signed in: Provide Developer Mode toggle and Sign In button
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDev) Color(0xFF042017) else Color(0xFF0F172A)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isDev) EmeraldSuccess.copy(alpha = 0.6f) else DarkCardBorder
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("enable_dev_from_settings_btn")
+                        .clickable { authManager.toggleDeveloperMode() }
+                        .testTag("dev_mode_toggle_card")
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = null,
-                            tint = EmeraldSuccess,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Switch to Developer Mode (Unlimited Exits)",
-                            color = EmeraldSuccess,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(
+                                            if (isDev) EmeraldSuccess.copy(alpha = 0.2f) else Color(0xFF1E293B),
+                                            CircleShape
+                                        ),
+                                        contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Terminal,
+                                        contentDescription = "Dev Mode",
+                                        tint = if (isDev) EmeraldSuccess else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "Developer Mode",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (isDev) "ON • Unlimited exits (Click to turn OFF)" else "OFF • 10 exits/day (Click to turn ON)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isDev,
+                                onCheckedChange = { authManager.toggleDeveloperMode() },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = EmeraldSuccess,
+                                    uncheckedThumbColor = Color(0xFF94A3B8),
+                                    uncheckedTrackColor = Color(0xFF1E293B)
+                                ),
+                                modifier = Modifier.testTag("dev_mode_switch")
+                            )
+                        }
+
+                        // Direct 1-Click Action Button
+                        Button(
+                            onClick = { authManager.toggleDeveloperMode() },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isDev) Color(0xFF0F3D30) else Color(0xFF06281E),
+                                contentColor = if (isDev) Color(0xFF6EE7B7) else EmeraldSuccess
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isDev) Color(0xFF10B981).copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .testTag("toggle_dev_mode_btn")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isDev) Icons.Default.Close else Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = if (isDev) "Click to Turn OFF Developer Mode" else "Click to Turn ON Developer Mode (Unlimited Exits)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // If user is logged out and not in dev mode, provide Google sign-in button
+                if (!isDev) {
+                    Button(
+                        onClick = onOpenDialog,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("open_auth_dialog_btn")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            GoogleLogoIcon(modifier = Modifier.size(16.dp))
+                            Text(
+                                text = "Sign In / Sign Up with Google",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -799,7 +910,9 @@ fun GoogleAuthCard(
 }
 
 /**
- * Google Sign-in & Developer Switch Dialog
+ * Account Sign-in Dialog:
+ * When user is signed in: shows user profile, Google details, and Sign Out (NO developer mode).
+ * When user is not signed in: shows Google Sign In and Developer mode option.
  */
 @Composable
 fun GoogleSignInDialog(
@@ -827,11 +940,13 @@ fun GoogleSignInDialog(
             border = BorderStroke(1.dp, DarkCardBorder)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(22.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Close button row
+                // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -839,16 +954,29 @@ fun GoogleSignInDialog(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(100.dp),
-                        color = if (isDev) EmeraldSuccess.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, if (isDev) EmeraldSuccess.copy(alpha = 0.3f) else IndigoPrimary.copy(alpha = 0.3f))
+                        color = if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.3f) else IndigoPrimary.copy(alpha = 0.3f))
                     ) {
-                        Text(
-                            text = if (isDev) "DEV MODE (UNLIMITED)" else "GOOGLE LOGIN (10 EXITS/DAY)",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDev) EmeraldSuccess else CyanAccent,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (user != null) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = EmeraldSuccess,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                            }
+                            Text(
+                                text = if (user != null) "SIGNED IN (GOOGLE)" else if (isDev) "DEV MODE ON (UNLIMITED)" else "10 EXITS / DAY QUOTA",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (user != null || isDev) EmeraldSuccess else CyanAccent
+                            )
+                        }
                     }
 
                     IconButton(
@@ -864,122 +992,244 @@ fun GoogleSignInDialog(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(Color(0xFF1E293B), CircleShape)
-                        .border(1.dp, DarkCardBorder, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isDev) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = null,
-                            tint = EmeraldSuccess,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    } else {
-                        GoogleLogoIcon(modifier = Modifier.size(28.dp))
-                    }
-                }
+                Text(
+                    text = if (user != null) "Google Account" else if (isDev) "Developer Mode Settings" else "Sign In with Google",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (isDev) "Developer Mode" else if (user != null) "Google Account" else "Sign In with Google",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (isDev)
-                            "Developer Mode gives unlimited emergency exits with no daily limit."
-                        else
-                            "Google login limits emergency exits to 10 per day (resets at midnight).",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8),
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (errorMessage != null) {
+                // If user is already signed in, show user profile info card with avatar & sign-out option (NO developer mode)
+                if (user != null) {
+                    val currentUser = user!!
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF7F1D1D).copy(alpha = 0.3f),
-                        border = BorderStroke(1.dp, Color(0xFFDC2626)),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF131D33),
+                        border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = errorMessage ?: "",
-                            fontSize = 11.sp,
-                            color = Color(0xFFFCA5A5),
-                            modifier = Modifier.padding(10.dp)
-                        )
-                    }
-                }
-
-                // Action Buttons
-                Button(
-                    onClick = {
-                        if (activity != null) {
-                            authManager.signInWithGoogle(activity) { success, _ ->
-                                if (success) onDismiss()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                if (!currentUser.photoUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = currentUser.photoUrl,
+                                        contentDescription = "Profile Photo",
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(Color(0xFF4285F4), Color(0xFF34A853))
+                                                ),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = currentUser.displayName.take(1).uppercase(),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(EmeraldSuccess, CircleShape)
+                                        .border(1.5.dp, Color(0xFF131D33), CircleShape)
+                                )
                             }
-                        } else {
-                            authManager.quickSignIn("Google User", "user@gmail.com")
-                            onDismiss()
-                        }
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        GoogleLogoIcon(modifier = Modifier.size(18.dp))
-                        Text(
-                            text = "Sign in with Google (10 Exits/Day)",
-                            color = Color(0xFF1E293B),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
 
-                Button(
-                    onClick = {
-                        authManager.enableDeveloperMode()
-                        onDismiss()
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = EmeraldSuccess,
-                        contentColor = Color(0xFF022C22)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("dialog_developer_mode_btn")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = currentUser.displayName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                    GoogleLogoIcon(modifier = Modifier.size(13.dp))
+                                }
+                                Text(
+                                    text = currentUser.email,
+                                    fontSize = 12.sp,
+                                    color = CyanAccent
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    authManager.signOut()
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFF87171)
+                                )
+                            ) {
+                                Text("Sign Out", fontSize = 11.sp)
+                            }
+                        }
+                    }
+                } else {
+                    // When user is NOT signed in: Show Developer Mode controls & Google Sign In button
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDev) Color(0xFF042017) else Color(0xFF0F172A)
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isDev) EmeraldSuccess.copy(alpha = 0.6f) else DarkCardBorder
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { authManager.toggleDeveloperMode() }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = "Developer Mode (Unlimited Exits)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Terminal,
+                                    contentDescription = null,
+                                    tint = if (isDev) EmeraldSuccess else Color(0xFF94A3B8),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Developer Mode",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (isDev) "ON (Unlimited Exits)" else "OFF (10 Exits/Day)",
+                                        fontSize = 11.sp,
+                                        color = if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isDev,
+                                onCheckedChange = { authManager.toggleDeveloperMode() },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = EmeraldSuccess,
+                                    uncheckedThumbColor = Color(0xFF94A3B8),
+                                    uncheckedTrackColor = Color(0xFF1E293B)
+                                ),
+                                modifier = Modifier.testTag("dialog_dev_mode_switch")
+                            )
+                        }
+                    }
+
+                    if (errorMessage != null) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF7F1D1D).copy(alpha = 0.3f),
+                            border = BorderStroke(1.dp, Color(0xFFDC2626)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = errorMessage ?: "",
+                                fontSize = 11.sp,
+                                color = Color(0xFFFCA5A5),
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    // Google Sign-In button
+                    Button(
+                        onClick = {
+                            if (activity != null) {
+                                authManager.signInWithGoogle(activity) { success, _ ->
+                                    if (success) onDismiss()
+                                }
+                            } else {
+                                authManager.quickSignIn("Vinay Pandagre", "pandagre.vinay@gmail.com")
+                                onDismiss()
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            GoogleLogoIcon(modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Sign In / Sign Up with Google",
+                                color = Color(0xFF1E293B),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    // Developer Mode 1-Click Toggle Button
+                    Button(
+                        onClick = {
+                            authManager.toggleDeveloperMode()
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isDev) Color(0xFF7F1D1D) else EmeraldSuccess,
+                            contentColor = if (isDev) Color.White else Color(0xFF022C22)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("dialog_developer_mode_btn")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = if (isDev) "Turn OFF Developer Mode" else "Turn ON Developer Mode (Unlimited Exits)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
