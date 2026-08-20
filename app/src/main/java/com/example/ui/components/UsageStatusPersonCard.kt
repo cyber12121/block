@@ -116,11 +116,12 @@ fun UsageStatusPersonCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(44.dp)
                             .background(
                                 Brush.linearGradient(listOf(IndigoPrimary, CyanAccent)),
                                 CircleShape
@@ -133,42 +134,49 @@ fun UsageStatusPersonCard(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Person Usage Profile",
                             tint = CyanAccent,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = personName,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Surface(
                                 color = EmeraldSuccess.copy(alpha = 0.2f),
                                 shape = CircleShape
                             ) {
                                 Text(
-                                    text = "USAGE ACTIVE",
+                                    text = "ACTIVE",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = EmeraldSuccess,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    maxLines = 1
                                 )
                             }
                         }
                         Text(
                             text = statusLevel,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = AmberFocus
+                            color = AmberFocus,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(6.dp))
 
                 // Overall Status Pill
                 val allGood = isBatteryExempt && isUsageAccessGranted
@@ -178,7 +186,7 @@ fun UsageStatusPersonCard(
                     border = BorderStroke(1.dp, if (allGood) EmeraldSuccess.copy(alpha = 0.4f) else CrimsonStrict.copy(alpha = 0.4f))
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -186,13 +194,14 @@ fun UsageStatusPersonCard(
                             imageVector = if (allGood) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = null,
                             tint = if (allGood) EmeraldSuccess else CrimsonStrict,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = if (allGood) "OPTIMAL" else "SETTING NEEDED",
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (allGood) EmeraldSuccess else CrimsonStrict
+                            color = if (allGood) EmeraldSuccess else CrimsonStrict,
+                            maxLines = 1
                         )
                     }
                 }

@@ -150,8 +150,8 @@ class FocusAccessibilityService : AccessibilityService() {
             val isFgApp = targetPkg == applicationContext.packageName
             val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
 
-            // Ultra Strict Protection: Block System Settings & Uninstallation attempts (Automated schedules only)
-            if (sessionState.isUltraStrict && sessionState.isAutoScheduled && !sessionManager.isDeveloperModeActive()) {
+            // Ultra Strict Protection: Block System Settings & Uninstallation attempts under ALL circumstances
+            if (sessionState.isUltraStrict) {
                 val isSettingsOrInstaller = targetPkg == "com.android.settings" ||
                         targetPkg.contains("settings") ||
                         targetPkg.contains("packageinstaller") ||
@@ -160,7 +160,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 if (isSettingsOrInstaller) {
                     triggerBlockShield(
                         targetName = "System Settings & App Controls",
-                        reason = "Ultra Strict Lockdown Active: System Settings and App permissions are locked until session end time. Only Developer Mode can override.",
+                        reason = "Ultra Strict Lockdown Active 🔒: System Settings and App permissions are locked until session end time. Exiting is disabled for all users (including Developer Mode).",
                         isWebsite = false
                     )
                     return

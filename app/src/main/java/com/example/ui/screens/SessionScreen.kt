@@ -100,8 +100,8 @@ fun SessionScreen(
     val authManager = remember { AuthManager.getInstance(context) }
     val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isAutoScheduled
-    val canExitStrict = isDeveloperMode || (!isUltraStrictActive && dailyExitsLeft > 0)
+    val isUltraStrictActive = sessionState.isUltraStrict
+    val canExitStrict = !isUltraStrictActive && (isDeveloperMode || dailyExitsLeft > 0)
 
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
 
@@ -534,7 +534,7 @@ fun SessionScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isUltraStrictActive && !isDeveloperMode)
+                        text = if (isUltraStrictActive)
                             "ULTRA STRICT LOCKDOWN ACTIVE 🔒"
                         else if (isDeveloperMode)
                             "Developer Emergency Unlock (∞ Dev)"
@@ -548,8 +548,8 @@ fun SessionScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (isUltraStrictActive && !isDeveloperMode)
-                        "Ultra Strict Schedule is active! Exiting is strictly disabled until schedule end time. Only Developer Mode can override."
+                    text = if (isUltraStrictActive)
+                        "Ultra Strict Mode is active! Exiting is strictly disabled under all circumstances (even in Developer Mode) until timer completes."
                     else if (isDeveloperMode)
                         "Developer Mode: Unlimited emergency exits enabled (∞)."
                     else if (dailyExitsLeft > 0)

@@ -88,9 +88,9 @@ import java.util.Date
 import java.util.Locale
 
 enum class SessionModeType {
-    NORMAL,
-    POMODORO,
-    STRICT
+    STRICT,
+    ULTRA_STRICT,
+    POMODORO
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
@@ -106,7 +106,8 @@ fun StartSessionDialog(
         autoLaunchMinimal: Boolean,
         isPomodoro: Boolean,
         pomodoroRound: Int,
-        pomodoroTotalRounds: Int
+        pomodoroTotalRounds: Int,
+        isUltraStrict: Boolean
     ) -> Unit
 ) {
     val context = LocalContext.current
@@ -116,7 +117,7 @@ fun StartSessionDialog(
     var selectedMinutes by remember { mutableIntStateOf(60) } // Default 1 hour
     var customMinutesText by remember { mutableStateOf("") }
     var isCustomDuration by remember { mutableStateOf(false) }
-    var modeType by remember { mutableStateOf(SessionModeType.NORMAL) }
+    var modeType by remember { mutableStateOf(SessionModeType.STRICT) }
     var isAcknowledged by remember { mutableStateOf(false) }
     var showShieldOptions by remember { mutableStateOf(false) }
 
@@ -202,14 +203,15 @@ fun StartSessionDialog(
                 sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
                 val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
                 onStartSession(
-                    if (title.isBlank()) "Strict Focus (${effectiveMinutes}m)" else title,
+                    if (title.isBlank()) "Ultra Strict Focus (${effectiveMinutes}m)" else title,
                     effectiveMinutes,
                     true,
                     activeNames,
                     false,
                     false,
                     1,
-                    4
+                    4,
+                    true // isUltraStrict = true
                 )
             }
         } else {
@@ -251,9 +253,9 @@ fun StartSessionDialog(
                                 .size(36.dp)
                                 .background(
                                     when (modeType) {
+                                        SessionModeType.ULTRA_STRICT -> Color(0xFF991B1B).copy(alpha = 0.25f)
                                         SessionModeType.STRICT -> CrimsonStrict.copy(alpha = 0.15f)
                                         SessionModeType.POMODORO -> Color(0xFFE11D48).copy(alpha = 0.15f)
-                                        SessionModeType.NORMAL -> IndigoPrimary.copy(alpha = 0.15f)
                                     },
                                     CircleShape
                                 ),
@@ -261,15 +263,15 @@ fun StartSessionDialog(
                         ) {
                             Icon(
                                 imageVector = when (modeType) {
+                                    SessionModeType.ULTRA_STRICT -> Icons.Default.Lock
                                     SessionModeType.STRICT -> Icons.Default.Lock
                                     SessionModeType.POMODORO -> Icons.Default.Timer
-                                    SessionModeType.NORMAL -> Icons.Default.Shield
                                 },
                                 contentDescription = null,
                                 tint = when (modeType) {
+                                    SessionModeType.ULTRA_STRICT -> CrimsonStrict
                                     SessionModeType.STRICT -> CrimsonStrict
                                     SessionModeType.POMODORO -> Color(0xFFF43F5E)
-                                    SessionModeType.NORMAL -> IndigoPrimary
                                 },
                                 modifier = Modifier.size(18.dp)
                             )
@@ -303,11 +305,18 @@ fun StartSessionDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     ModeTab(
-                        title = "Timer",
-                        isSelected = modeType == SessionModeType.NORMAL,
-                        selectedColor = IndigoPrimary,
+                        title = "Strict Lock",
+                        isSelected = modeType == SessionModeType.STRICT,
+                        selectedColor = CrimsonStrict,
                         modifier = Modifier.weight(1f),
-                        onClick = { modeType = SessionModeType.NORMAL }
+                        onClick = { modeType = SessionModeType.STRICT }
+                    )
+                    ModeTab(
+                        title = "Ultra Strict 🔒",
+                        isSelected = modeType == SessionModeType.ULTRA_STRICT,
+                        selectedColor = Color(0xFF991B1B),
+                        modifier = Modifier.weight(1f),
+                        onClick = { modeType = SessionModeType.ULTRA_STRICT }
                     )
                     ModeTab(
                         title = "Pomodoro",
@@ -315,13 +324,6 @@ fun StartSessionDialog(
                         selectedColor = Color(0xFFE11D48),
                         modifier = Modifier.weight(1f),
                         onClick = { modeType = SessionModeType.POMODORO }
-                    )
-                    ModeTab(
-                        title = "Strict Lock",
-                        isSelected = modeType == SessionModeType.STRICT,
-                        selectedColor = CrimsonStrict,
-                        modifier = Modifier.weight(1f),
-                        onClick = { modeType = SessionModeType.STRICT }
                     )
                 }
 
@@ -938,12 +940,14 @@ fun StartSessionDialog(
                     }
                 }
 
-                // 7. Strict Mode Agreement (Only when Strict is selected)
-                if (isStrictMode) {
+                // 7. Strict / Ultra Strict Mode Agreement Box
+                if (modeType == SessionModeType.ULTRA_STRICT || modeType == SessionModeType.STRICT) {
                     Card(
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = CrimsonStrict.copy(alpha = 0.1f)),
-                        border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.3f)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (modeType == SessionModeType.ULTRA_STRICT) Color(0xFF3F0F17) else CrimsonStrict.copy(alpha = 0.1f)
+                        ),
+                        border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.5f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -960,7 +964,10 @@ fun StartSessionDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "I commit to locking distractions until $endTimeString without early exit.",
+                                text = if (modeType == SessionModeType.ULTRA_STRICT)
+                                    "I understand that Ultra Strict Mode CANNOT be exited or broken under ANY circumstance until $endTimeString (even in Developer Mode)."
+                                else
+                                    "I commit to locking distractions until $endTimeString. Emergency exit uses 1 daily exit.",
                                 fontSize = 11.sp,
                                 color = Color.White,
                                 lineHeight = 15.sp
@@ -970,7 +977,7 @@ fun StartSessionDialog(
                 }
 
                 // 8. Action Button
-                if (isStrictMode) {
+                if (modeType == SessionModeType.ULTRA_STRICT) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -998,7 +1005,7 @@ fun StartSessionDialog(
                                     else -> false
                                 }
                             }
-                            .testTag("hold_strict_mode_button"),
+                            .testTag("hold_ultra_strict_mode_button"),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Box(
@@ -1020,12 +1027,49 @@ fun StartSessionDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (!isAcknowledged) "Check agreement above" else if (isHolding) "Locking in... (${(holdProgress * 100).toInt()}%)" else "HOLD 3 SECONDS TO LOCK",
+                                text = if (!isAcknowledged) "Check agreement above" else if (isHolding) "Locking Ultra Strict... (${(holdProgress * 100).toInt()}%)" else "HOLD 3 SECONDS TO LOCK ULTRA STRICT",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 color = if (isAcknowledged) Color.White else Color(0xFF94A3B8)
                             )
                         }
+                    }
+                } else if (modeType == SessionModeType.STRICT) {
+                    Button(
+                        onClick = {
+                            sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
+                            val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
+                            val defaultTitle = if (effectiveMinutes == 60) "1-Hour Strict Session" else "Strict Session (${effectiveMinutes}m)"
+                            onStartSession(
+                                if (title.isBlank()) defaultTitle else title,
+                                effectiveMinutes,
+                                true, // isStrictMode = true
+                                activeNames,
+                                false,
+                                false,
+                                1,
+                                4,
+                                false // isUltraStrict = false
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("start_strict_focus_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (effectiveMinutes == 60) "Start 1-Hour Strict Session" else "Start Strict Focus (${effectiveMinutes}m)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 } else if (isPomodoroMode) {
                     Button(
@@ -1035,12 +1079,13 @@ fun StartSessionDialog(
                             onStartSession(
                                 if (title.isBlank()) "Pomodoro (Round 1/4)" else title,
                                 pomodoroWorkMinutes,
-                                false,
+                                true, // isStrictMode = true
                                 activeNames,
                                 false,
                                 true,
                                 1,
-                                pomodoroTotalRounds
+                                pomodoroTotalRounds,
+                                false // isUltraStrict = false
                             )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
@@ -1057,42 +1102,6 @@ fun StartSessionDialog(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = Color.White
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
-                            val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
-                            val defaultTitle = if (effectiveMinutes == 60) "1-Hour Focus Session" else "Focus Session (${effectiveMinutes}m)"
-                            onStartSession(
-                                if (title.isBlank()) defaultTitle else title,
-                                effectiveMinutes,
-                                false,
-                                activeNames,
-                                false,
-                                false,
-                                1,
-                                4
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("start_normal_focus_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (effectiveMinutes == 60) "Start 1-Hour Focus Session" else "Start Focus (${effectiveMinutes}m)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
                         )
                     }
                 }

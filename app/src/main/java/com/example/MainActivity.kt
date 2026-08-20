@@ -338,7 +338,7 @@ fun MainAppContent(viewModel: MainViewModel) {
         StartSessionDialog(
             availableLists = blockLists,
             onDismiss = { viewModel.closeStartSessionDialog() },
-            onStartSession = { title, durationMinutes, isStrict, activeLists, autoLaunchMinimal, isPomodoro, pomodoroRound, pomodoroTotalRounds ->
+            onStartSession = { title, durationMinutes, isStrict, activeLists, autoLaunchMinimal, isPomodoro, pomodoroRound, pomodoroTotalRounds, isUltraStrict ->
                 viewModel.startFocusSession(
                     title = title,
                     durationMinutes = durationMinutes,
@@ -347,7 +347,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                     isPomodoro = isPomodoro,
                     pomodoroRound = pomodoroRound,
                     pomodoroTotalRounds = pomodoroTotalRounds,
-                    isPomodoroBreak = false
+                    isPomodoroBreak = false,
+                    isUltraStrict = isUltraStrict
                 )
                 if (autoLaunchMinimal) {
                     isMinimalLauncherFullscreen = true

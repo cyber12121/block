@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
-import com.example.ui.components.UsageStatusPersonCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -159,14 +158,6 @@ fun SettingsScreen(
             GoogleAuthCard(
                 authManager = authManager,
                 onOpenDialog = { showGoogleLoginDialog = true }
-            )
-        }
-
-        // Usage Status Person Profile Card
-        item {
-            UsageStatusPersonCard(
-                totalMinutesToday = 0,
-                blockedAttemptsCount = 0
             )
         }
 
@@ -588,7 +579,8 @@ fun SettingsScreen(
 
     val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-    val canExit = isDeveloperMode || dailyExitsLeft > 0
+    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
+    val canExit = !isUltraStrictActive && (isDeveloperMode || dailyExitsLeft > 0)
 
     if (showUnlockConfirmDialog) {
         AlertDialog(
@@ -602,7 +594,9 @@ fun SettingsScreen(
             },
             text = {
                 Text(
-                    text = if (isDeveloperMode)
+                    text = if (isUltraStrictActive)
+                        "Ultra Strict Lockdown Active 🔒: Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
+                    else if (isDeveloperMode)
                         "Developer Mode active: Unlimited exits (∞). This will immediately terminate the active focus protection session and clear all blocking barriers."
                     else if (dailyExitsLeft > 0)
                         "Google Account: Uses 1 of your 10 emergency exits for today ($dailyExitsLeft/10 remaining). All app barriers will be removed immediately."
@@ -624,7 +618,7 @@ fun SettingsScreen(
                     )
                 ) {
                     Text(
-                        text = if (isDeveloperMode) "End Session (∞ Dev)" else if (canExit) "End Session (1/10)" else "0 Exits Left",
+                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (isDeveloperMode) "End Session (∞ Dev)" else if (canExit) "End Session (1/10)" else "0 Exits Left",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )

@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,17 +25,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,6 +106,8 @@ fun CreateScheduleDialog(
     // Day numbers: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
     val selectedDays = remember { mutableStateOf(setOf(2, 3, 4, 5, 6)) } // Mon-Fri default
     val selectedListIds = remember { mutableStateOf(availableLists.filter { it.isEnabled }.map { it.id }.toSet()) }
+    var isAppBlockingEnforced by remember { mutableStateOf(true) }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
 
     val daysList = listOf(
         Pair(2, "Mon"),
@@ -565,9 +574,9 @@ fun CreateScheduleDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Block Lists to enforce
+                // Block Lists & App Blocking Dropdown Selector
                 Text(
-                    text = "ENFORCE BLOCK LISTS",
+                    text = "ENFORCE BLOCK LISTS & APP BLOCKING",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF64748B),
@@ -575,47 +584,233 @@ fun CreateScheduleDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Dropdown Header Card
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                    border = BorderStroke(1.dp, if (isDropdownExpanded) CyanAccent else Color(0xFF263554)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { isDropdownExpanded = !isDropdownExpanded }
                 ) {
-                    availableLists.forEach { list ->
-                        val isChecked = selectedListIds.value.contains(list.id)
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isChecked) Color(list.colorHex).copy(alpha = 0.2f) else Color(0xFF0F172A),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isChecked) Color(list.colorHex) else Color(0xFF263554)
-                            ),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    val current = selectedListIds.value.toMutableSet()
-                                    if (isChecked) current.remove(list.id) else current.add(list.id)
-                                    selectedListIds.value = current
-                                }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(CyanAccent.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                if (isChecked) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = Color(list.colorHex),
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.Default.PhoneAndroid,
+                                    contentDescription = null,
+                                    tint = CyanAccent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Enforced App & Site Lists",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                val activeNamesList = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }.toMutableList()
+                                if (isAppBlockingEnforced) {
+                                    activeNamesList.add(0, "Installed Apps Blocker")
+                                }
+                                val summary = if (activeNamesList.isEmpty()) {
+                                    "No lists or apps selected"
+                                } else {
+                                    activeNamesList.joinToString(", ")
                                 }
                                 Text(
-                                    text = list.name,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (isChecked) Color(list.colorHex) else Color(0xFF94A3B8)
+                                    text = summary,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF94A3B8),
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = if (isDropdownExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                            contentDescription = "Toggle Dropdown",
+                            tint = CyanAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                // Animated Dropdown Body
+                AnimatedVisibility(visible = isDropdownExpanded) {
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .fillMaxWidth()
+                            .background(Color(0xFF0F172A), RoundedCornerShape(16.dp))
+                            .border(1.dp, Color(0xFF1E2D4A), RoundedCornerShape(16.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Featured Installed Apps Blocker Toggle
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isAppBlockingEnforced) IndigoPrimary.copy(alpha = 0.18f) else Color(0xFF131D31),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isAppBlockingEnforced) CyanAccent.copy(alpha = 0.5f) else Color(0xFF263554),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable { isAppBlockingEnforced = !isAppBlockingEnforced }
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(CyanAccent.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhoneAndroid,
+                                        contentDescription = "Installed Apps",
+                                        tint = CyanAccent,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Installed Apps Blocker",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "Enforce blocking on installed mobile apps",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isAppBlockingEnforced,
+                                onCheckedChange = { isAppBlockingEnforced = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = IndigoPrimary,
+                                    uncheckedTrackColor = Color(0xFF1E2D4A)
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = Color(0xFF1E2D4A), thickness = 1.dp)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "CATEGORY BLOCK LISTS",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF64748B),
+                                letterSpacing = 0.5.sp
+                            )
+                            val allSelected = selectedListIds.value.size == availableLists.size
+                            Text(
+                                text = if (allSelected) "Deselect All" else "Select All",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyanAccent,
+                                modifier = Modifier.clickable {
+                                    selectedListIds.value = if (allSelected) emptySet() else availableLists.map { it.id }.toSet()
+                                }
+                            )
+                        }
+
+                        // Category list items
+                        availableLists.forEach { list ->
+                            val isChecked = selectedListIds.value.contains(list.id)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isChecked) Color(list.colorHex).copy(alpha = 0.12f) else Color.Transparent)
+                                    .clickable {
+                                        val current = selectedListIds.value.toMutableSet()
+                                        if (isChecked) current.remove(list.id) else current.add(list.id)
+                                        selectedListIds.value = current
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(
+                                                if (isChecked) Color(list.colorHex) else Color(0xFF1E2D4A),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isChecked) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = list.name,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isChecked) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isChecked) Color.White else Color(0xFFCBD5E1)
+                                        )
+                                        if (list.description.isNotBlank()) {
+                                            Text(
+                                                text = list.description,
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF64748B),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -629,7 +824,11 @@ fun CreateScheduleDialog(
                     onClick = {
                         if (isFormValid) {
                             val daysString = selectedDays.value.sorted().joinToString(",")
-                            val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }.joinToString(", ")
+                            val activeListNamesList = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }.toMutableList()
+                            if (isAppBlockingEnforced && !activeListNamesList.contains("Installed Apps Blocker")) {
+                                activeListNamesList.add(0, "Installed Apps Blocker")
+                            }
+                            val activeNames = activeListNamesList.joinToString(", ")
                             onCreateSchedule(
                                 name,
                                 startHour,

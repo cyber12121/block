@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
@@ -172,7 +173,7 @@ fun AppsScreen(
                 ) {
                     category = "Video"
                 } else if (pkgLower.contains("game") || nameLower.contains("game") ||
-                    info.activityInfo.applicationInfo.category == ApplicationInfo.CATEGORY_GAME
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && info.activityInfo.applicationInfo.category == ApplicationInfo.CATEGORY_GAME)
                 ) {
                     category = "Games"
                 } else if (pkgLower.contains("amazon") || pkgLower.contains("ebay") || pkgLower.contains("shopping") ||

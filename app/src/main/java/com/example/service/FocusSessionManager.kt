@@ -214,10 +214,9 @@ class FocusSessionManager private constructor(private val context: Context) {
         val currentState = _sessionState.value
         val now = System.currentTimeMillis()
 
-        // Ultra Strict Lockdown Enforcement (Automated Schedules only):
-        // If Ultra Strict Mode is active and remaining time > 0, exit is strictly forbidden
-        // unless Developer Mode is active.
-        if (earlyUnlocked && currentState.isUltraStrict && currentState.isAutoScheduled && getRemainingSeconds() > 0 && !isDeveloperModeActive()) {
+        // Ultra Strict Lockdown Enforcement:
+        // If Ultra Strict Mode is active and remaining time > 0, exit is strictly forbidden under ALL circumstances (even in Developer Mode).
+        if (earlyUnlocked && currentState.isUltraStrict && getRemainingSeconds() > 0) {
             return false
         }
 
@@ -824,7 +823,7 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun useEmergencyExit(): Boolean {
-        if (_sessionState.value.isUltraStrict && _sessionState.value.isAutoScheduled && !isDeveloperModeActive()) {
+        if (_sessionState.value.isUltraStrict && getRemainingSeconds() > 0) {
             return false
         }
         val authManager = com.example.data.auth.AuthManager.getInstance(context)
