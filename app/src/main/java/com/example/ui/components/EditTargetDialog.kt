@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.TextFields
@@ -53,6 +54,7 @@ import com.example.ui.theme.IndigoPrimary
 @Composable
 fun EditTargetDialog(
     target: BlockedTarget,
+    isSessionActive: Boolean = false,
     onDismiss: () -> Unit,
     onSaveTarget: (updatedTarget: BlockedTarget) -> Unit,
     onDeleteTarget: (target: BlockedTarget) -> Unit
@@ -155,8 +157,9 @@ fun EditTargetDialog(
 
                 OutlinedTextField(
                     value = identifier,
-                    onValueChange = { identifier = it },
-                    label = { Text("Identifier / Domain / Package") },
+                    onValueChange = { if (!isSessionActive) identifier = it },
+                    readOnly = isSessionActive,
+                    label = { Text(if (isSessionActive) "Identifier / Domain (Locked during session 🔒)" else "Identifier / Domain / Package") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -193,14 +196,26 @@ fun EditTargetDialog(
                 ) {
                     TextButton(
                         onClick = {
-                            onDeleteTarget(target)
-                            onDismiss()
+                            if (!isSessionActive) {
+                                onDeleteTarget(target)
+                                onDismiss()
+                            }
                         },
-                        colors = ButtonDefaults.textButtonColors(contentColor = CrimsonStrict)
+                        enabled = !isSessionActive,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (isSessionActive) Color(0xFF64748B) else CrimsonStrict
+                        )
                     ) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = if (isSessionActive) Icons.Default.Lock else Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Delete Rule", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isSessionActive) "Delete Locked 🔒" else "Delete Rule",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Button(

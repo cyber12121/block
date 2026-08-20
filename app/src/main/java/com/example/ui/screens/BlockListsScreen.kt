@@ -91,7 +91,7 @@ fun BlockListsScreen(
 ) {
     val expandedMap = remember { mutableStateMapOf<Long, Boolean>() }
     var targetToEdit by remember { mutableStateOf<BlockedTarget?>(null) }
-    val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
+    val isSessionActive = sessionState.isActive
 
     val endFormatted = if (sessionState.endTimeMillis > 0) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
@@ -125,11 +125,11 @@ fun BlockListsScreen(
                             color = Color.White
                         )
 
-                        if (isSessionStrict) {
+                        if (isSessionActive) {
                             Surface(
-                                color = CrimsonStrict.copy(alpha = 0.2f),
+                                color = IndigoPrimary.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(100.dp),
-                                border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.5f))
+                                border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -138,15 +138,15 @@ fun BlockListsScreen(
                                     Icon(
                                         imageVector = Icons.Default.Lock,
                                         contentDescription = null,
-                                        tint = Color(0xFFF87171),
+                                        tint = CyanAccent,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "LOCKED",
+                                        text = "ADD-ONLY ACTIVE",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFF87171)
+                                        color = CyanAccent
                                     )
                                 }
                             }
@@ -177,13 +177,13 @@ fun BlockListsScreen(
             }
         }
 
-        // 2. Strict Session Active Banner
-        if (isSessionStrict) {
+        // 2. Active Session Add-Only Banner
+        if (isSessionActive) {
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF221118)),
-                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
+                    border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -195,28 +195,29 @@ fun BlockListsScreen(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(CrimsonStrict.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                                .background(IndigoPrimary.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Lock,
+                                imageVector = Icons.Default.Shield,
                                 contentDescription = null,
-                                tint = CrimsonStrict,
-                                modifier = Modifier.size(18.dp)
+                                tint = CyanAccent,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Rules locked during strict session",
+                                text = "Add-Only Focus Protection 🔒",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = Color(0xFFF87171)
+                                color = Color.White
                             )
                             Text(
-                                text = "Available again at $endFormatted",
+                                text = "You can ADD new websites, apps, or keywords anytime. Deleting or unblocking existing rules is locked until session end ($endFormatted).",
                                 fontSize = 12.sp,
-                                color = Color(0xFFCBD5E1)
+                                color = Color(0xFFCBD5E1),
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -238,17 +239,15 @@ fun BlockListsScreen(
                     color = Color.White
                 )
 
-                if (!isSessionStrict) {
-                    Text(
-                        text = "+ Add List",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = IndigoPrimary,
-                        modifier = Modifier
-                            .clickable(onClick = onOpenCreateList)
-                            .padding(4.dp)
-                    )
-                }
+                Text(
+                    text = "+ Add List",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = IndigoPrimary,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenCreateList)
+                        .padding(4.dp)
+                )
             }
         }
 
@@ -321,8 +320,12 @@ fun BlockListsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
                                 checked = list.isEnabled,
-                                onCheckedChange = { if (!isSessionStrict) onToggleList(list) },
-                                enabled = !isSessionStrict,
+                                onCheckedChange = {
+                                    if (!isSessionActive || !list.isEnabled) {
+                                        onToggleList(list)
+                                    }
+                                },
+                                enabled = !isSessionActive || !list.isEnabled,
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = CyanAccent,
@@ -390,18 +393,18 @@ fun BlockListsScreen(
                                         }
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (!isSessionStrict) {
-                                                IconButton(
-                                                    onClick = { targetToEdit = target },
-                                                    modifier = Modifier.size(28.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Edit,
-                                                        contentDescription = "Edit",
-                                                        tint = Color(0xFF94A3B8),
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                }
+                                            IconButton(
+                                                onClick = { targetToEdit = target },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit",
+                                                    tint = Color(0xFF94A3B8),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            if (!isSessionActive) {
                                                 IconButton(
                                                     onClick = { onDeleteTarget(target) },
                                                     modifier = Modifier.size(28.dp)
@@ -413,24 +416,35 @@ fun BlockListsScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                 }
+                                            } else {
+                                                IconButton(
+                                                    onClick = { /* Locked during session */ },
+                                                    enabled = false,
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Lock,
+                                                        contentDescription = "Delete Locked",
+                                                        tint = Color(0xFF64748B),
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            if (!isSessionStrict) {
-                                Button(
-                                    onClick = { onOpenAddTarget(list) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurface),
-                                    border = BorderStroke(1.dp, DarkCardBorder),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.fillMaxWidth().height(38.dp)
-                                ) {
-                                    Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "Add Rule to ${list.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                }
+                            Button(
+                                onClick = { onOpenAddTarget(list) },
+                                colors = ButtonDefaults.buttonColors(containerColor = DarkSurface),
+                                border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().height(38.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "+ Add Website, Keyword or App to ${list.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
@@ -474,6 +488,7 @@ fun BlockListsScreen(
     if (targetToEdit != null) {
         EditTargetDialog(
             target = targetToEdit!!,
+            isSessionActive = isSessionActive,
             onDismiss = { targetToEdit = null },
             onSaveTarget = { updated ->
                 onUpdateTarget(updated)
