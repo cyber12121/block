@@ -104,6 +104,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         isStrictMode: Boolean,
         activeLists: List<String>,
         isAutoScheduled: Boolean = false,
+        scheduleId: Long = -1L,
         isPomodoro: Boolean = false,
         pomodoroRound: Int = 1,
         pomodoroTotalRounds: Int = 4,
@@ -158,6 +159,8 @@ class FocusSessionManager private constructor(private val context: Context) {
                 .putInt(KEY_POMODORO_TOTAL, pomodoroTotalRounds)
                 .putBoolean(KEY_IS_POMODORO_BREAK, isPomodoroBreak)
                 .putString(KEY_PLANT_TYPE, plantType.name)
+                .putLong(KEY_SCHEDULE_ID, if (isAutoScheduled) scheduleId else -1L)
+                .remove(KEY_SNOOZED_SCHEDULE_ID) // clear any lingering snooze on new session start
                 .putInt(KEY_EMERGENCY_EXITS_USED, 0) // reset per-session exit quota
                 .apply()
 
@@ -230,6 +233,9 @@ class FocusSessionManager private constructor(private val context: Context) {
                 repository.recordCompletedSession(currentState.durationMinutes)
             }
 
+            // Read the schedule ID before clearing prefs (needed for the snooze below)
+            val scheduledSessionId = prefs.getLong(KEY_SCHEDULE_ID, -1L)
+
             // Developer Emergency Unlock: Turn OFF all schedules to prevent immediate re-locking
             if (earlyUnlocked) {
                 repository.disableAllSchedules()
@@ -237,6 +243,16 @@ class FocusSessionManager private constructor(private val context: Context) {
 
             // Clear prefs
             clearSessionPrefs()
+
+            // Normal (non-emergency) end of a schedule-triggered session:
+            // Cancel the lingering end-alarm and snooze this schedule for the rest
+            // of the current window so checkAutomaticSchedules() won't immediately
+            // re-start it.
+            if (!earlyUnlocked && currentState.isAutoScheduled && scheduledSessionId >= 0) {
+                prefs.edit().putLong(KEY_SNOOZED_SCHEDULE_ID, scheduledSessionId).apply()
+                val allSchedules = repository.getEnabledSchedules()
+                ScheduleAlarmManager.rescheduleAll(context, allSchedules)
+            }
 
             _sessionState.value = ActiveSessionState()
 
@@ -334,6 +350,11 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         if (activeScheduleFound != null) {
             val schedule = activeScheduleFound
+            // If the user manually ended this schedule's session, skip re-triggering
+            // for the rest of the current window. The snooze is cleared once the
+            // window passes (see the else branch below).
+            val snoozedId = prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L)
+            if (schedule.id == snoozedId) return
             if (!_sessionState.value.isActive) {
                 val activeLists = if (schedule.activeListNames.isNotBlank()) {
                     schedule.activeListNames.split(",").map { it.trim() }
@@ -347,14 +368,22 @@ class FocusSessionManager private constructor(private val context: Context) {
                     durationMinutes = calculatedRemainingMins,
                     isStrictMode = schedule.isStrictMode,
                     activeLists = activeLists,
-                    isAutoScheduled = true
+                    isAutoScheduled = true,
+                    scheduleId = schedule.id
                 )
             }
-        } else if (_sessionState.value.isAutoScheduled) {
-            // Auto-scheduled window has passed
-            val remaining = getRemainingSeconds()
-            if (remaining <= 0) {
-                endSession(repository, earlyUnlocked = false)
+        } else {
+            // No active schedule window: clear any lingering snooze so the next
+            // scheduled window fires correctly.
+            if (prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L) >= 0) {
+                prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
+            }
+            if (_sessionState.value.isAutoScheduled) {
+                // Auto-scheduled window has passed
+                val remaining = getRemainingSeconds()
+                if (remaining <= 0) {
+                    endSession(repository, earlyUnlocked = false)
+                }
             }
         }
     }
@@ -640,6 +669,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             .remove(KEY_POMODORO_TOTAL)
             .remove(KEY_IS_POMODORO_BREAK)
             .remove(KEY_PLANT_TYPE)
+            .remove(KEY_SCHEDULE_ID)
             .apply()
     }
 
@@ -717,6 +747,8 @@ class FocusSessionManager private constructor(private val context: Context) {
         private const val KEY_POMODORO_TOTAL = "key_pomodoro_total"
         private const val KEY_IS_POMODORO_BREAK = "key_is_pomodoro_break"
         private const val KEY_PLANT_TYPE = "key_plant_type"
+        private const val KEY_SCHEDULE_ID = "key_schedule_id"
+        private const val KEY_SNOOZED_SCHEDULE_ID = "key_snoozed_schedule_id"
         private const val KEY_CUSTOM_ESSENTIAL_APPS = "key_custom_essential_apps"
 
         @Volatile

@@ -78,6 +78,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                                 isStrictMode   = schedule.isStrictMode,
                                 activeLists    = activeLists,
                                 isAutoScheduled = true,
+                                scheduleId     = schedule.id,
                                 plantType      = plant
                             )
                         }

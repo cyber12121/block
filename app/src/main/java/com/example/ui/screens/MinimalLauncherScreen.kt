@@ -647,117 +647,111 @@ fun MinimalLauncherScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // TOP BAR: Exit button, Emergency Exit counter, and Status indicator
+                // ──────────────────────────────────────────
+                // 1. TOP BAR: Balanced Status & Actions (No Clutter)
+                // ──────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Exit / Lock indicator
+                    // Status Badge (Left)
                     Surface(
-                        color = Color(0xFF111A2E),
+                        color = if (sessionState.isActive) {
+                            if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.12f) else IndigoPrimary.copy(alpha = 0.12f)
+                        } else Color(0xFF10172A),
                         shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        modifier = Modifier.clickable(onClick = handleExitRequest)
+                        border = BorderStroke(
+                            1.dp,
+                            if (sessionState.isActive) {
+                                if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else IndigoPrimary.copy(alpha = 0.4f)
+                            } else Color(0xFF1E293B)
+                        ),
+                        modifier = Modifier.clickable {
+                            if (sessionState.isActive) onStartFocusSession()
+                        }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (sessionState.isActive) Icons.Default.Lock else Icons.Default.ArrowBack,
-                                contentDescription = "Exit Minimal Launcher",
-                                tint = if (sessionState.isActive) CrimsonStrict else Color(0xFF94A3B8),
-                                modifier = Modifier.size(14.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .background(
+                                        if (sessionState.isActive) {
+                                            if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
+                                        } else EmeraldSuccess,
+                                        CircleShape
+                                    )
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (sessionState.isActive) "Locked" else "Exit",
-                                fontSize = 12.sp,
-                                color = if (sessionState.isActive) CrimsonStrict else Color(0xFFCBD5E1),
-                                fontWeight = FontWeight.SemiBold
+                                text = if (sessionState.isActive) {
+                                    if (sessionState.isStrictMode) "STRICT FOCUS" else "FOCUS ACTIVE"
+                                } else "MINIMAL",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = if (sessionState.isActive) {
+                                    if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
+                                } else EmeraldSuccess
                             )
                         }
                     }
 
-                    // Preferences & Theme Trigger
+                    // Action Controls (Right)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Quick Settings / Typography
                         Surface(
-                            color = Color(0xFF111A2E),
-                            shape = RoundedCornerShape(100.dp),
+                            color = Color(0xFF10172A),
+                            shape = CircleShape,
                             border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                            modifier = Modifier.clickable { showPreferencesDialog = true }
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clickable { showPreferencesDialog = true }
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = "Preferences",
                                     tint = Color(0xFF94A3B8),
-                                    modifier = Modifier.size(14.dp)
-                                )
+                                    modifier = Modifier.size(15.dp)
+                                }
                             }
                         }
 
-                        // Emergency Exit Trigger
+                        // Exit Button
                         Surface(
-                            color = Color(0xFF111A2E),
+                            color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.12f) else Color(0xFF10172A),
                             shape = RoundedCornerShape(100.dp),
-                            border = BorderStroke(1.dp, Color(0xFF1E293B)),
+                            border = BorderStroke(
+                                1.dp,
+                                if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.4f) else Color(0xFF1E293B)
+                            ),
                             modifier = Modifier
-                                .clickable { showEmergencyExitDialog = true }
+                                .clickable(onClick = handleExitRequest)
                                 .testTag("minimal_emergency_exit_button")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LockOpen,
-                                    contentDescription = "Emergency Exit",
-                                    tint = CrimsonStrict,
+                                    imageVector = if (sessionState.isActive) Icons.Default.LockOpen else Icons.Default.ArrowBack,
+                                    contentDescription = "Exit Minimal Launcher",
+                                    tint = if (sessionState.isActive) CrimsonStrict else Color(0xFF94A3B8),
                                     modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = "Exit (∞)",
+                                    text = if (sessionState.isActive) "Exit (∞)" else "Exit",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFE2E8F0),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        // Status Pill (Standby vs Active Session)
-                        Surface(
-                            color = if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.15f) else Color(0xFF111A2E),
-                            shape = RoundedCornerShape(100.dp),
-                            border = BorderStroke(1.dp, if (sessionState.isActive) CrimsonStrict.copy(alpha = 0.5f) else Color(0xFF1E293B))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .background(
-                                            if (sessionState.isActive) CrimsonStrict else EmeraldSuccess,
-                                            CircleShape
-                                        )
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (sessionState.isActive) "ACTIVE" else "STANDBY",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 1.sp,
-                                    color = if (sessionState.isActive) CrimsonStrict else EmeraldSuccess
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (sessionState.isActive) CrimsonStrict else Color(0xFFCBD5E1)
                                 )
                             }
                         }
@@ -767,30 +761,32 @@ fun MinimalLauncherScreen(
                 // ==========================================
                 // MIDDLE: HERO CLOCK, DATE, INTENTION & QUOTE
                 // ==========================================
+                // ──────────────────────────────────────────
+                // 2. HERO SECTION: Clock, Date, Timer & Zen
+                // ──────────────────────────────────────────
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Large Digital Clock
                     val clockFontFamily = when (clockStyle) {
                         MinimalClockStyle.MODERN_CLEAN -> FontFamily.Default
                         MinimalClockStyle.MINIMAL_MONO -> FontFamily.Monospace
                         MinimalClockStyle.EDITORIAL_SERIF -> FontFamily.Serif
                     }
 
+                    // Digital Clock
                     Text(
                         text = currentTime.ifEmpty { "12:00" },
-                        fontSize = 76.sp,
-                        fontWeight = FontWeight.ExtraLight,
+                        fontSize = 68.sp,
+                        fontWeight = FontWeight.Light,
                         fontFamily = clockFontFamily,
                         color = Color.White,
                         letterSpacing = (-2).sp,
-                        lineHeight = 76.sp
+                        lineHeight = 68.sp
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
+                    // Date
                     Text(
                         text = currentDate.ifEmpty { "Focus Day" },
                         fontSize = 15.sp,
@@ -799,144 +795,152 @@ fun MinimalLauncherScreen(
                         letterSpacing = 0.5.sp
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Active Focus Session Live Countdown Card (if active)
+                    // ── Active Session Sleek Countdown Strip (Single Source of Truth) ──
                     if (sessionState.isActive) {
                         val mins = sessionState.remainingSeconds / 60
                         val secs = sessionState.remainingSeconds % 60
                         val totalDurationSec = (sessionState.durationMinutes * 60).coerceAtLeast(1)
                         val progress = (sessionState.remainingSeconds.toFloat() / totalDurationSec.toFloat()).coerceIn(0f, 1f)
 
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = CrimsonStrict.copy(alpha = pulseGlowAlpha)),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.6f)),
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Surface(
+                            color = Color(0xFF101728),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.5f) else IndigoPrimary.copy(alpha = 0.5f)
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onStartFocusSession() }
-                                .padding(vertical = 6.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(
-                                            progress = { progress },
-                                            modifier = Modifier.size(34.dp),
-                                            color = CrimsonStrict,
-                                            trackColor = CrimsonStrict.copy(alpha = 0.2f),
-                                            strokeWidth = 3.dp
-                                        )
+                            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = Icons.Default.Lock,
+                                            imageVector = if (sessionState.isStrictMode) Icons.Default.Lock else Icons.Default.Shield,
                                             contentDescription = null,
-                                            tint = CrimsonStrict,
+                                            tint = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
                                             modifier = Modifier.size(16.dp)
                                         )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column {
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = String.format(Locale.getDefault(), "%02d:%02d REMAINING", mins, secs),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 1.sp,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = if (sessionState.isStrictMode) "Strict Lock Active • Tap to view" else "Focus Flow Active • Tap to view",
-                                            fontSize = 11.sp,
-                                            color = Color(0xFFE2E8F0)
+                                            text = if (sessionState.isStrictMode) "Strict Lock In Progress" else "Focus Flow In Progress",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFCBD5E1)
                                         )
                                     }
+
+                                    Text(
+                                        text = String.format(Locale.getDefault(), "%02d:%02d", mins, secs),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
+                                    )
                                 }
 
-                                Surface(
-                                    color = CrimsonStrict.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(8.dp)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Minimalist Progress Bar
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(3.dp)
+                                        .background(Color(0xFF1E293B), RoundedCornerShape(100.dp))
                                 ) {
-                                    Text(
-                                        text = "VIEW",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(progress)
+                                            .height(3.dp)
+                                            .background(
+                                                if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary,
+                                                RoundedCornerShape(100.dp)
+                                            )
                                     )
                                 }
                             }
                         }
                     }
 
-                    // Intention Prompt Widget (Hallmark of Minimalist Launchers)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // ── Intention & Zen Quote Unified Container ──
                     Surface(
-                        color = Color(0xFF101728),
+                        color = Color(0xFF0F172A).copy(alpha = 0.6f),
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable {
-                                intentionDraft = userIntention
-                                isEditingIntention = true
-                            }
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = IndigoPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            if (userIntention.isBlank()) {
-                                Text(
-                                    text = "Set current intention / key task...",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF64748B),
-                                    fontStyle = FontStyle.Italic
+                            // Intention row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        intentionDraft = userIntention
+                                        isEditingIntention = true
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = IndigoPrimary,
+                                    modifier = Modifier.size(14.dp)
                                 )
-                            } else {
-                                Text(
-                                    text = "Goal: $userIntention",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFE2E8F0),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                if (userIntention.isBlank()) {
+                                    Text(
+                                        text = "Set today's focus intention...",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF64748B),
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                } else {
+                                    Text(
+                                        text = userIntention,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFE2E8F0),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Quote row
+                            Text(
+                                text = FOCUS_QUOTES[currentQuoteIndex % FOCUS_QUOTES.size],
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B),
+                                lineHeight = 15.sp,
+                                fontStyle = FontStyle.Italic,
+                                modifier = Modifier
+                                    .clickable { currentQuoteIndex++ }
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Stoic Quote of the Day
-                    Text(
-                        text = FOCUS_QUOTES[currentQuoteIndex % FOCUS_QUOTES.size],
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8),
-                        lineHeight = 16.sp,
-                        modifier = Modifier
-                            .clickable { currentQuoteIndex++ }
-                            .padding(vertical = 4.dp)
-                    )
                 }
 
                 // ==========================================
                 // ESSENTIAL APPS LIST (THE CORE LAUNCHER)
                 // ==========================================
+                // ──────────────────────────────────────────
+                // 3. ESSENTIAL APPS LIST (Core Launcher)
+                // ──────────────────────────────────────────
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -944,262 +948,214 @@ fun MinimalLauncherScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "ESSENTIAL APPS",
+                            text = "ESSENTIAL APPS (${essentialAppsShortcuts.size}/6)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 2.sp,
+                            letterSpacing = 1.5.sp,
                             color = Color(0xFF64748B)
                         )
 
                         if (!sessionState.isActive) {
-                            Surface(
-                                color = Color(0xFF131C31),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, Color(0xFF1E293B)),
+                            Text(
+                                text = "Manage",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = IndigoPrimary,
                                 modifier = Modifier
                                     .clickable { showConfigureEssentialAppsDialog = true }
                                     .testTag("edit_essential_apps")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = "Edit",
-                                        tint = IndigoPrimary,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        "Manage",
-                                        fontSize = 11.sp,
-                                        color = IndigoPrimary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                                    .padding(vertical = 4.dp, horizontal = 4.dp)
+                            )
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     if (essentialAppsShortcuts.isEmpty()) {
-                        // Empty State - Guided Action
+                        // Empty State Card
                         Surface(
                             color = Color(0xFF0F172A),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showConfigureEssentialAppsDialog = true }
+                                .padding(vertical = 4.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(20.dp)
-                                    .fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
                                     Icons.Default.Add,
                                     contentDescription = null,
                                     tint = IndigoPrimary,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "No essential apps chosen",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "Choose up to 6 essential apps",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF94A3B8)
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Pin up to 6 apps you want accessible in minimal mode.",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF94A3B8),
-                                    textAlign = TextAlign.Center
-                                )
-                                if (!sessionState.isActive) {
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Button(
-                                        onClick = { showConfigureEssentialAppsDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.testTag("choose_essential_apps")
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Select Essential Apps", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    }
-                                }
                             }
                         }
                     } else {
-                        // High Contrast Minimal App List
-                        essentialAppsShortcuts.forEach { app ->
-                            val isBlocked = blockedPackages.contains(app.packageName.lowercase())
+                        // Sleek Minimal App Items
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            essentialAppsShortcuts.forEach { app ->
+                                val isBlocked = blockedPackages.contains(app.packageName.lowercase())
 
-                            Surface(
-                                color = Color.Transparent,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (isBlocked) {
-                                            showAppBlockedDialog = app.label
-                                        } else if (app.packageName == context.packageName || app.label.equals("FocusGuard", ignoreCase = true)) {
-                                            handleExitRequest()
-                                        } else {
-                                            launchApp(context, app.packageName)
+                                Surface(
+                                    color = if (isBlocked) Color(0xFF120E18).copy(alpha = 0.5f) else Color(0xFF0D1424),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isBlocked) CrimsonStrict.copy(alpha = 0.2f) else Color(0xFF1A2640).copy(alpha = 0.6f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (isBlocked) {
+                                                showAppBlockedDialog = app.label
+                                            } else if (app.packageName == context.packageName || app.label.equals("FocusGuard", ignoreCase = true)) {
+                                                handleExitRequest()
+                                            } else {
+                                                launchApp(context, app.packageName)
+                                            }
                                         }
-                                    }
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 11.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        // Sleek minimal bullet
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .background(
-                                                    if (isBlocked) CrimsonStrict else IndigoPrimary,
-                                                    CircleShape
-                                                )
-                                        )
-
-                                        Spacer(modifier = Modifier.width(14.dp))
-
-                                        Text(
-                                            text = app.label,
-                                            fontSize = 24.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = if (isBlocked) Color(0xFF64748B) else Color.White,
-                                            letterSpacing = 0.3.sp,
-                                            textDecoration = if (isBlocked) TextDecoration.LineThrough else TextDecoration.None
-                                        )
-                                    }
-
-                                    if (isBlocked) {
-                                        Surface(
-                                            color = CrimsonStrict.copy(alpha = 0.15f),
-                                            shape = RoundedCornerShape(6.dp)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
                                         ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                            // Minimalist Dot / Avatar Indicator
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .background(
+                                                        if (isBlocked) CrimsonStrict else IndigoPrimary,
+                                                        CircleShape
+                                                    )
+                                            )
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Text(
+                                                text = app.label,
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = if (isBlocked) Color(0xFF64748B) else Color.White,
+                                                letterSpacing = 0.2.sp,
+                                                textDecoration = if (isBlocked) TextDecoration.LineThrough else TextDecoration.None
+                                            )
+                                        }
+
+                                        if (isBlocked) {
+                                            Surface(
+                                                color = CrimsonStrict.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(4.dp)
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Lock,
-                                                    contentDescription = "Blocked",
-                                                    tint = CrimsonStrict,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    "BLOCKED",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = CrimsonStrict
-                                                )
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Lock,
+                                                        contentDescription = "Blocked",
+                                                        tint = CrimsonStrict,
+                                                        modifier = Modifier.size(10.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(3.dp))
+                                                    Text(
+                                                        "BLOCKED",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = CrimsonStrict
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-
-                        // Add another app shortcut slot if less than 6
-                        if (!sessionState.isActive && essentialAppsShortcuts.size < 6) {
-                            Surface(
-                                color = Color.Transparent,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showConfigureEssentialAppsDialog = true }
-                                    .padding(vertical = 2.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = "Add app",
-                                        tint = Color(0xFF475569),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "+ add shortcut",
-                                        fontSize = 14.sp,
-                                        color = Color(0xFF475569),
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
 
-                // ==========================================
-                // BOTTOM BAR: ALL APPS, NOTES & START FOCUS
-                // ==========================================
+                // ──────────────────────────────────────────
+                // 4. UNIFIED BOTTOM DOCK (Clean, Balanced & Consistent)
+                // ──────────────────────────────────────────
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // All Apps Drawer Trigger
+                    // App Drawer Trigger (Left Pill)
                     Surface(
-                        color = Color(0xFF111A2E),
+                        color = Color(0xFF10172A),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, Color(0xFF1E293B)),
                         modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                             .clickable { isAppDrawerOpen = true }
                             .testTag("open_minimal_drawer")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Icon(
                                 imageVector = if (sessionState.isActive) Icons.Default.Lock else Icons.Default.Search,
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
+                                tint = Color(0xFF94A3B8),
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (sessionState.isActive) "Focus Drawer" else "All Apps",
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = Color.White
                             )
                         }
                     }
 
-                    // Scratchpad / Quick Thoughts Trigger
+                    // Scratchpad / Quick Notes (Center Icon Surface)
                     Surface(
-                        color = Color(0xFF111A2E),
+                        color = Color(0xFF10172A),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, Color(0xFF1E293B)),
-                        modifier = Modifier.clickable { showScratchpadDialog = true }
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable { showScratchpadDialog = true }
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.EditNote,
                                 contentDescription = "Quick Notes",
                                 tint = Color(0xFF94A3B8),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
 
-                    // Start / Manage Focus Button
+                    // Focus Action (Right Button)
                     Button(
                         onClick = onStartFocusSession,
                         colors = ButtonDefaults.buttonColors(
@@ -1208,25 +1164,21 @@ fun MinimalLauncherScreen(
                             } else IndigoPrimary
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                     ) {
-                        val icon = if (sessionState.isActive) {
-                            if (sessionState.isStrictMode) Icons.Default.Lock else Icons.Default.Shield
-                        } else Icons.Default.PlayArrow
-
-                        val mins = sessionState.remainingSeconds / 60
-                        val secs = sessionState.remainingSeconds % 60
-                        val timerString = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
-
-                        val buttonText = if (sessionState.isActive) {
-                            "Timer ($timerString)"
-                        } else {
-                            "Start Focus"
-                        }
-
-                        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = if (sessionState.isActive) Icons.Default.Shield else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = buttonText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            text = if (sessionState.isActive) "Manage Focus" else "Start Focus",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
