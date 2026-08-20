@@ -1,5 +1,6 @@
 package com.example.util
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -12,7 +13,6 @@ import android.os.Process
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.accessibility.AccessibilityManager
-import android.view.accessibility.AccessibilityServiceInfo
 import androidx.core.app.NotificationManagerCompat
 import com.example.receiver.FocusDeviceAdminReceiver
 import com.example.service.FocusAccessibilityService

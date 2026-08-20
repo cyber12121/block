@@ -101,7 +101,7 @@ object FocusSoundEngine {
      * The 10 Hz difference is perceived as a beat inside the listener's head
      * when using stereo headphones.
      */
-    private suspend fun playBinauralStereo() {
+    private suspend fun CoroutineScope.playBinauralStereo() {
         val bufferSize = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_OUT_STEREO,
@@ -134,7 +134,7 @@ object FocusSoundEngine {
         }
     }
 
-    private suspend fun playMonoPreset(preset: SoundPreset, bufferSize: Int) {
+    private suspend fun CoroutineScope.playMonoPreset(preset: SoundPreset, bufferSize: Int) {
         val buffer = ShortArray(bufferSize)
         val random = Random()
         var filterState = 0.0
