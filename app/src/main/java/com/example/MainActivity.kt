@@ -221,6 +221,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 },
                                 onOpenSessionView = { isLiveSessionFullscreen = true },
                                 onEndNormalSession = { viewModel.endCurrentSession(earlyUnlocked = false) },
+                                onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
                                 onToggleList = { viewModel.toggleBlockList(it) },
                                 onNavigateToLists = { currentTab = AppTab.BLOCK_LISTS },
                                 onNavigateToApps = { currentTab = AppTab.APPS },
@@ -261,7 +262,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 schedules = allSchedules,
                                 onToggleSchedule = { viewModel.toggleSchedule(it) },
                                 onDeleteSchedule = { viewModel.deleteSchedule(it) },
-                                onOpenCreateSchedule = { viewModel.openCreateScheduleDialog() }
+                                onOpenCreateSchedule = { viewModel.openCreateScheduleDialog() },
+                                onEmergencyUnlock = { viewModel.forceEmergencyUnlock() }
                             )
                         }
                         AppTab.INSIGHTS -> {

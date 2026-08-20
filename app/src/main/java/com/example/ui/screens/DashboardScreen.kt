@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,11 +55,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,6 +104,7 @@ fun DashboardScreen(
     onQuickStart: (minutes: Int, isStrict: Boolean) -> Unit,
     onOpenSessionView: () -> Unit,
     onEndNormalSession: () -> Unit,
+    onEmergencyUnlock: () -> Unit = {},
     onToggleList: (BlockList) -> Unit,
     onNavigateToLists: () -> Unit,
     onNavigateToApps: () -> Unit = {},
@@ -109,6 +115,7 @@ fun DashboardScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    var showEmergencyUnlockConfirmDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -176,25 +183,68 @@ fun DashboardScreen(
                     }
                 }
 
-                // Strict / Active Status Badge
-                Surface(
-                    color = if (sessionState.isActive) {
-                        if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess
-                    } else {
-                        DarkSurfaceVariant
-                    },
-                    shape = RoundedCornerShape(100.dp),
-                    border = if (!sessionState.isActive) BorderStroke(1.dp, DarkCardBorder) else null
-                ) {
-                    Text(
-                        text = if (sessionState.isActive) {
-                            if (sessionState.isStrictMode) "STRICT" else "ACTIVE"
-                        } else "STANDBY",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (sessionState.isActive) Color.White else Color(0xFF94A3B8),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                if (sessionState.isActive) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Developer / User Quick Exit Button
+                        Surface(
+                            color = Color(0xFF111A2E),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.6f)),
+                            modifier = Modifier
+                                .clickable { showEmergencyUnlockConfirmDialog = true }
+                                .testTag("dashboard_top_emergency_exit_button")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LockOpen,
+                                    contentDescription = "Stop Active Session",
+                                    tint = CrimsonStrict,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Exit (∞)",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFE2E8F0),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Strict / Active Status Badge
+                        Surface(
+                            color = if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess,
+                            shape = RoundedCornerShape(100.dp)
+                        ) {
+                            Text(
+                                text = if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Surface(
+                        color = DarkSurfaceVariant,
+                        shape = RoundedCornerShape(100.dp),
+                        border = BorderStroke(1.dp, DarkCardBorder)
+                    ) {
+                        Text(
+                            text = "STANDBY",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
@@ -273,7 +323,8 @@ fun DashboardScreen(
                 ActiveSessionDashboardCard(
                     sessionState = sessionState,
                     onOpenSessionView = onOpenSessionView,
-                    onEndNormalSession = onEndNormalSession
+                    onEndNormalSession = onEndNormalSession,
+                    onEmergencyUnlock = { showEmergencyUnlockConfirmDialog = true }
                 )
             } else {
                 QuickStartHeroCard(
@@ -456,13 +507,55 @@ fun DashboardScreen(
             }
         }
     }
+
+    if (showEmergencyUnlockConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showEmergencyUnlockConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LockOpen,
+                    contentDescription = null,
+                    tint = CrimsonStrict,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text("Exit Active Focus & Timer?", fontWeight = FontWeight.Bold, color = Color.White)
+            },
+            text = {
+                Text(
+                    text = "This will immediately end your active focus session, stop the running timer/schedule, and unlock all restricted apps (∞).",
+                    color = Color(0xFFCBD5E1),
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEmergencyUnlockConfirmDialog = false
+                        onEmergencyUnlock()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
+                ) {
+                    Text("Stop & Exit (∞)", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEmergencyUnlockConfirmDialog = false }) {
+                    Text("Keep Focusing", color = Color(0xFF94A3B8))
+                }
+            },
+            containerColor = Color(0xFF111A2E)
+        )
+    }
 }
 
 @Composable
 fun ActiveSessionDashboardCard(
     sessionState: ActiveSessionState,
     onOpenSessionView: () -> Unit,
-    onEndNormalSession: () -> Unit
+    onEndNormalSession: () -> Unit,
+    onEmergencyUnlock: () -> Unit = {}
 ) {
     val hours = sessionState.remainingSeconds / 3600
     val minutes = (sessionState.remainingSeconds % 3600) / 60
@@ -581,17 +674,36 @@ fun ActiveSessionDashboardCard(
                 trackColor = DarkSurfaceVariant
             )
 
-            if (!sessionState.isStrictMode) {
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (sessionState.isStrictMode) {
+                Button(
+                    onClick = onEmergencyUnlock,
+                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .testTag("dashboard_strict_unlock_button")
+                ) {
+                    Icon(imageVector = Icons.Default.LockOpen, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Stop & Exit Focus (∞)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            } else {
                 Button(
                     onClick = onEndNormalSession,
                     colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
+                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .testTag("dashboard_end_session_button")
                 ) {
                     Icon(imageVector = Icons.Default.Stop, contentDescription = null, tint = CrimsonStrict, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "End Session", color = CrimsonStrict, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(text = "End Session (∞)", color = CrimsonStrict, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

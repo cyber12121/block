@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shield
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Schedule
@@ -102,7 +104,8 @@ fun SchedulesScreen(
     schedules: List<Schedule>,
     onToggleSchedule: (Schedule) -> Unit,
     onDeleteSchedule: (Schedule) -> Unit,
-    onOpenCreateSchedule: () -> Unit
+    onOpenCreateSchedule: () -> Unit,
+    onEmergencyUnlock: () -> Unit = {}
 ) {
     var lockedScheduleInfo by remember { mutableStateOf<Schedule?>(null) }
     val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
@@ -146,76 +149,64 @@ fun SchedulesScreen(
         ) {
             // Header
             item {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Automated Schedules",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Auto-start focus shields on recurring clock hours & days",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Automated Schedules",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Auto-start focus shields on recurring clock hours & days",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-            // Hero "Create New Schedule" Action Banner
-            if (!isSessionStrict) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenCreateSchedule() }
-                    ) {
-                        Row(
+                    if (sessionState.isActive) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = Color(0xFF111A2E),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.6f)),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .clickable { onEmergencyUnlock() }
+                                .testTag("schedules_top_exit_button")
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.MoreTime,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(22.dp)
+                                    imageVector = Icons.Default.LockOpen,
+                                    contentDescription = "Stop Active Session",
+                                    tint = CrimsonStrict,
+                                    modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Set Up New Schedule",
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        text = "Pick clock times and recurring days",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Exit (∞)",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFE2E8F0),
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-
-                            Text(
-                                text = "Add",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 13.sp
-                            )
                         }
                     }
                 }
             }
 
+
+
             // Active Scheduled Status Info Card
             item {
                 val isAutoActive = sessionState.isActive && sessionState.isAutoScheduled
+                val isAnyActive = sessionState.isActive
                 val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                 val pulseAlpha by infiniteTransition.animateFloat(
                     initialValue = 0.6f,
@@ -234,63 +225,92 @@ fun SchedulesScreen(
                     ),
                     border = BorderStroke(
                         1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+                        if (isAnyActive) CrimsonStrict.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(
-                                    if (isAutoActive) CyanAccent.copy(alpha = 0.2f) else IndigoPrimary.copy(alpha = 0.15f),
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isAutoActive) Icons.Default.AutoAwesome else Icons.Default.Schedule,
-                                contentDescription = null,
-                                tint = if (isAutoActive) CyanAccent else IndigoPrimary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (isAutoActive) "Scheduled Block Active Now" else "24/7 Clock Guard Armed",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (isAnyActive) CrimsonStrict.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isAutoActive) Icons.Default.AutoAwesome else if (isAnyActive) Icons.Default.Lock else Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = if (isAnyActive) CrimsonStrict else IndigoPrimary,
+                                    modifier = Modifier.size(22.dp)
                                 )
-                                if (isAutoActive) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        color = EmeraldSuccess.copy(alpha = 0.2f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "RUNNING",
-                                            color = EmeraldSuccess,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Black,
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                        )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (isAutoActive) "Scheduled Block Active Now" else if (isAnyActive) "Focus Timer Running" else "24/7 Clock Guard Armed",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (isAnyActive) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = CrimsonStrict.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
+                                                color = CrimsonStrict,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Black,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                            )
+                                        }
                                     }
                                 }
+                                Text(
+                                    text = if (isAnyActive)
+                                        "Focus block “${sessionState.title}” is active (${sessionState.remainingSeconds / 60}m remaining)."
+                                    else
+                                        "Schedules engage automatically when their clock time window arrives.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            Text(
-                                text = if (isAutoActive)
-                                    "Focus block “${sessionState.title}” is active with ${sessionState.remainingSeconds / 60}m remaining."
-                                else
-                                    "Schedules engage automatically when their clock time window arrives.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        }
+
+                        if (isAnyActive) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = onEmergencyUnlock,
+                                colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(38.dp)
+                                    .testTag("schedules_stop_active_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LockOpen,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Stop Active Schedule / Timer (∞)",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -448,36 +468,45 @@ fun ScheduleCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = schedule.name,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = schedule.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             if (isActiveNow) {
-                                Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
                                     color = EmeraldSuccess.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(6.dp)
+                                    shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
                                         text = "ACTIVE NOW",
                                         color = EmeraldSuccess,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
                             }
+                            Text(
+                                text = if (schedule.isEnabled) "Automated block armed" else "Schedule paused",
+                                fontSize = 11.sp,
+                                color = if (schedule.isEnabled) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                        Text(
-                            text = if (schedule.isEnabled) "Automated block armed" else "Schedule paused",
-                            fontSize = 11.sp,
-                            color = if (schedule.isEnabled) Color(0xFF94A3B8) else Color(0xFF64748B)
-                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(
