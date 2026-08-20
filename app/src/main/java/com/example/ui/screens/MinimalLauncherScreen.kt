@@ -720,7 +720,7 @@ fun MinimalLauncherScreen(
                                     contentDescription = "Preferences",
                                     tint = Color(0xFF94A3B8),
                                     modifier = Modifier.size(15.dp)
-                                }
+                                )
                             }
                         }
 
