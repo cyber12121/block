@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val app = application as FocusGuardApp
-        val factory = MainViewModelFactory(app.repository, app.sessionManager)
+        val factory = MainViewModelFactory(app.repository, app.sessionManager, app)
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
         // NOTE: The Minimal Launcher is intentionally NOT auto-opened here.

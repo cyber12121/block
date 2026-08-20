@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Required on API 31+ for setExactAndAllowWhileIdle() to fire at the precise
+         scheduled second. ScheduleAlarmManager falls back to setAndAllowWhileIdle()
+         (~1 min accuracy) if the user has not granted this in Settings. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
@@ -106,6 +110,17 @@
                 android:resource="@xml/device_admin_sample" />
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- AlarmManager receiver for exact schedule start/end alarms -->
+        <receiver
+            android:name=".service.ScheduleAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.focusguard.SCHEDULE_START" />
+                <action android:name="com.example.focusguard.SCHEDULE_END" />
             </intent-filter>
         </receiver>
 

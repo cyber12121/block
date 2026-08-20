@@ -78,18 +78,17 @@ class FocusForegroundService : Service() {
             val sessionManager = app.sessionManager
             val repository = app.repository
 
+            // Warm the blocking cache immediately on start
             sessionManager.refreshBlockedTargetsCache(repository)
 
-            var scheduleCheckCounter = 0
+            // One-time schedule check: catches any window that started while the
+            // device was powered off and whose exact alarm was therefore missed.
+            sessionManager.checkAutomaticSchedules(repository)
+
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             while (isActive) {
                 sessionManager.updateTick()
-                scheduleCheckCounter++
-                if (scheduleCheckCounter >= 15) { // check schedules every 15s to save CPU
-                    scheduleCheckCounter = 0
-                    sessionManager.checkAutomaticSchedules(repository)
-                }
 
                 val sessionState = sessionManager.sessionState.value
                 val now = System.currentTimeMillis()

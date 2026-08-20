@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.example.data.model.Schedule
 import com.example.data.model.TargetType
 import com.example.service.ActiveSessionState
 import com.example.service.FocusSessionManager
+import com.example.service.ScheduleAlarmManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,8 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(
     private val repository: AppRepository,
-    private val sessionManager: FocusSessionManager
+    private val sessionManager: FocusSessionManager,
+    private val application: Application
 ) : ViewModel() {
 
     val sessionState: StateFlow<ActiveSessionState> = sessionManager.sessionState
@@ -248,7 +251,12 @@ class MainViewModel(
     // Schedule operations
     fun toggleSchedule(schedule: Schedule) {
         viewModelScope.launch {
-            repository.updateSchedule(schedule.copy(isEnabled = !schedule.isEnabled))
+            val updated = schedule.copy(isEnabled = !schedule.isEnabled)
+            repository.updateSchedule(updated)
+            // Re-arm or cancel the exact alarm for this schedule
+            val allSchedules = repository.getEnabledSchedules()
+            ScheduleAlarmManager.rescheduleAll(application, allSchedules)
+            // Also run an immediate check in case we just enabled a window that's active now
             sessionManager.checkAutomaticSchedules(repository)
         }
     }
@@ -277,6 +285,10 @@ class MainViewModel(
                     isEnabled = true
                 )
             )
+            // Reschedule alarms for all enabled schedules (new one included)
+            val allSchedules = repository.getEnabledSchedules()
+            ScheduleAlarmManager.rescheduleAll(application, allSchedules)
+            // Immediately start session if this new schedule's window is active right now
             sessionManager.checkAutomaticSchedules(repository)
         }
         closeCreateScheduleDialog()
@@ -284,6 +296,8 @@ class MainViewModel(
 
     fun deleteSchedule(schedule: Schedule) {
         viewModelScope.launch {
+            // Cancel this schedule's alarms before deleting it from DB
+            ScheduleAlarmManager.cancel(application, schedule)
             repository.deleteSchedule(schedule)
         }
     }
@@ -291,12 +305,13 @@ class MainViewModel(
 
 class MainViewModelFactory(
     private val repository: AppRepository,
-    private val sessionManager: FocusSessionManager
+    private val sessionManager: FocusSessionManager,
+    private val application: Application
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(repository, sessionManager) as T
+            return MainViewModel(repository, sessionManager, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
