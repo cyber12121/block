@@ -61,8 +61,8 @@ object ScheduleAlarmManager {
     private fun arm(context: Context, schedule: Schedule, am: AlarmManager) {
         val (startMs, endMs) = computeNextWindow(schedule) ?: return
 
-        setAlarm(context, am, startMs, startPendingIntent(context, schedule.id))
-        setAlarm(context, am, endMs,   endPendingIntent(context, schedule.id))
+        setAlarm(am, startMs, startPendingIntent(context, schedule.id))
+        setAlarm(am, endMs,   endPendingIntent(context, schedule.id))
     }
 
     /**
@@ -71,7 +71,7 @@ object ScheduleAlarmManager {
      *   If not granted we fall back to [setAndAllowWhileIdle] (~1 min accuracy).
      * - Below API 31 we always use [setExactAndAllowWhileIdle].
      */
-    private fun setAlarm(context: Context, am: AlarmManager, triggerAtMs: Long, pi: PendingIntent) {
+    private fun setAlarm(am: AlarmManager, triggerAtMs: Long, pi: PendingIntent) {
         if (triggerAtMs <= System.currentTimeMillis()) return  // already in the past
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
