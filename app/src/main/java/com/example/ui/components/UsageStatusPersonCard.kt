@@ -87,7 +87,7 @@ fun UsageStatusPersonCard(
 
     val personName = currentUser?.displayName 
         ?: currentUser?.email?.substringBefore("@") 
-        ?: if (isDeveloperMode) "Developer Person" else "Focus Person"
+        ?: "Focus Person"
 
     val usageScore = (totalMinutesToday * 2 + blockedAttemptsCount * 5).coerceIn(10, 100)
     val statusLevel = when {

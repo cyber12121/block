@@ -239,7 +239,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Exit (∞)",
+                                    text = "Exit",
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -565,12 +565,10 @@ fun DashboardScreen(
             },
             text = {
                 Text(
-                    text = if (isDevMode)
-                        "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
-                    else if (dailyExitsLeft > 0)
-                        "Google Account: You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will use 1 exit (resets at midnight)."
+                    text = if (canExit)
+                        "You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will stop the running timer and unblock all apps."
                     else
-                        "Daily exit limit reached (0/10 exits remaining today). Focus session cannot be exited early until tomorrow, unless Developer Mode is enabled in Settings.",
+                        "Daily exit limit reached (0/10 exits remaining today). Focus session cannot be exited early until tomorrow.",
                     color = Color(0xFFCBD5E1),
                     fontSize = 14.sp
                 )

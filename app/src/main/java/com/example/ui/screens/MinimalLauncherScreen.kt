@@ -1475,8 +1475,8 @@ fun MinimalLauncherScreen(
                                         fontSize = 13.sp
                                     )
                                     Text(
-                                        text = if (strictLockRemainingMillis > 0) "Remaining: ${formatRemainingTime(strictLockRemainingMillis)} • 3 emergency exits (1-min exit timer)"
-                                        else "Lock launcher for 1h, 2h, 3h. Non-developers can exit ONLY 1 TIME.",
+                                        text = if (strictLockRemainingMillis > 0) "Remaining: ${formatRemainingTime(strictLockRemainingMillis)} • 1 exit per day"
+                                        else "Lock launcher for 1h, 2h, 3h. Allowed ONLY 1 EXIT PER DAY.",
                                         fontSize = 11.sp,
                                         color = Color(0xFFCBD5E1)
                                     )
@@ -1609,7 +1609,7 @@ fun MinimalLauncherScreen(
             )
         }
 
-        // Emergency Exit Dialog (3 Exits + 1-Min Timer) for Minimalist Strict Lock
+        // Emergency Exit Dialog (1 Daily Exit) for Minimalist Strict Lock
         if (showMinimalStrictUseExitDialog) {
             MinimalStrictUseExitDialog(
                 remainingFormatted = formatRemainingTime(strictLockRemainingMillis),
@@ -1716,19 +1716,17 @@ fun EmergencyExitDialog(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = if (isDeveloper) "Unlimited Exits (∞)" else "$remainingExits / 10 Remaining Today",
+                            text = "$remainingExits / 10 Remaining Today",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isDeveloper) EmeraldSuccess else if (remainingExits <= 2) CrimsonStrict else Color(0xFF38BDF8)
+                            color = if (remainingExits <= 2) CrimsonStrict else Color(0xFF38BDF8)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = if (isDeveloper)
-                                "Emergency exits are unlimited in Developer Mode. You can unlock and exit anytime without restrictions."
-                            else if (remainingExits > 0)
-                                "Google login allows 10 emergency exits per day. Unlocking now will use 1 exit (resets at midnight)."
+                            text = if (remainingExits > 0)
+                                "You have 10 emergency exits per day. Unlocking now will use 1 exit (resets at midnight)."
                             else
-                                "You have reached today's 10 exits quota. Focus sessions must be completed or switched to Developer Mode.",
+                                "You have reached today's 10 exits quota. Focus sessions must be completed.",
                             fontSize = 12.sp,
                             color = Color(0xFFCBD5E1),
                             lineHeight = 16.sp
@@ -2155,7 +2153,7 @@ fun MinimalStrictLockSetupDialog(
                             fontSize = 12.sp
                         )
                         Text(
-                            text = "• Exits allowed: 3 Emergency Exits\n• Exit Reflection Delay: 1-Minute Live Timer\n• Developer Bypass: Unlimited\n• System Settings & Uninstallation: Locked",
+                            text = "• Exits allowed: 1 Emergency Exit Per Day\n• Fast Exit: Instant Unlock",
                             color = Color(0xFFCBD5E1),
                             fontSize = 11.sp,
                             lineHeight = 16.sp
@@ -2249,9 +2247,8 @@ fun MinimalStrictLockStatusDialog(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (isDeveloper) "Developer Mode: Unlimited Exits Enabled (∞)"
-                            else if (exitsRemaining <= 0) "Emergency Exits: ALL 3 USED (Locked until timer ends)"
-                            else "Emergency Exits Available: $exitsRemaining / 3 Remaining",
+                            text = if (exitsRemaining <= 0) "Emergency Exit: 1/1 USED TODAY (Locked until timer ends)"
+                            else "Emergency Exit Available: $exitsRemaining / 1 Remaining Today",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -2260,7 +2257,7 @@ fun MinimalStrictLockStatusDialog(
                 }
 
                 Text(
-                    text = "During this lock session, you are allowed up to 3 emergency exits. Each exit requires a mandatory 1-minute reflection timer.",
+                    text = "During Minimalist Strict Lock, you are allowed 1 emergency exit per day.",
                     fontSize = 11.sp,
                     color = Color(0xFFCBD5E1)
                 )
@@ -2371,7 +2368,7 @@ fun MinimalStrictUseExitDialog(
                         Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Emergency Exits Remaining: $exitsRemaining / 3",
+                            text = "Daily Exit Quota: $exitsRemaining / 1 Exit Remaining Today",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -2380,7 +2377,7 @@ fun MinimalStrictUseExitDialog(
                 }
 
                 Text(
-                    text = "A 1-minute reflection timer enforces mindful decisions before leaving Minimalist space. Exiting now will consume 1 of your 3 emergency exits.",
+                    text = "A 1-minute reflection timer enforces mindful decisions before leaving Minimalist space. Exiting now will consume your 1 daily exit.",
                     color = Color(0xFFCBD5E1),
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -2397,7 +2394,7 @@ fun MinimalStrictUseExitDialog(
                 )
             ) {
                 Text(
-                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else "Confirm Exit ($exitsRemaining/3)",
+                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else "Confirm Exit (Use 1 Daily Exit)",
                     fontWeight = FontWeight.Bold,
                     color = if (countdownSeconds > 0) Color.LightGray else Color.White
                 )
@@ -2439,7 +2436,7 @@ fun MinimalStrictLockedDialog(
                     fontSize = 13.sp
                 )
                 Text(
-                    text = "You have ALREADY USED all 3 emergency exits for this lock session. Exiting is strictly locked until the timer ends.\n\nOnly Developer Mode can override.",
+                    text = "You have ALREADY USED your 1 daily emergency exit for today. Minimalist Launcher is locked until the timer ends.",
                     color = Color(0xFFCBD5E1),
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -2475,11 +2472,11 @@ fun DevExitConfirmDialog(
             )
         },
         title = {
-            Text("Developer Mode Exit", fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Exit Minimal Launcher", fontWeight = FontWeight.Bold, color = Color.White)
         },
         text = {
             Text(
-                text = "Minimalist Strict Lock is active ($remainingFormatted remaining).\n\nAs a Developer, you can bypass the lock anytime.",
+                text = "Minimalist Strict Lock is active ($remainingFormatted remaining).\n\nDo you want to exit the launcher now?",
                 color = Color(0xFFCBD5E1),
                 fontSize = 13.sp,
                 lineHeight = 18.sp
@@ -2490,7 +2487,7 @@ fun DevExitConfirmDialog(
                 onClick = onConfirmExit,
                 colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary)
             ) {
-                Text("Exit Launcher (Dev Bypass)", fontWeight = FontWeight.Bold)
+                Text("Exit Launcher", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
