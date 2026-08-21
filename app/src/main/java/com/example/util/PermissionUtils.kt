@@ -102,28 +102,15 @@ object PermissionUtils {
     }
 
     fun isDefaultHomeLauncher(context: Context): Boolean {
-        return try {
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-            resolveInfo?.activityInfo?.packageName == context.packageName
-        } catch (_: Exception) {
-            false
-        }
+        // Kept as a stub for any remaining call-sites; always returns false
+        // since FocusGuard no longer promotes itself as the default home app.
+        return false
     }
 
     fun openHomeSettings(context: Context) {
-        val intents = listOf(
-            Intent(Settings.ACTION_HOME_SETTINGS),
-            Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
-            Intent(Settings.ACTION_SETTINGS)
-        )
-        for (intent in intents) {
-            try {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-                return
-            } catch (_: Exception) {}
-        }
+        // Kept as a no-op stub so existing call-sites compile cleanly; the
+        // "Set Default Launcher" UI has been removed — FocusGuard no longer
+        // requires or promotes setting itself as the default home app.
     }
 
     fun isOverlayGranted(context: Context): Boolean {
@@ -187,17 +174,11 @@ object PermissionUtils {
         val isNotif = isNotificationGranted(context)
         val isOverlay = isOverlayGranted(context)
         val isBatteryExempt = isBatteryOptimizationExempt(context)
-        val isHomeLauncher = isDefaultHomeLauncher(context)
+        // Note: Default Home Launcher permission has been intentionally removed.
+        // FocusGuard uses the Accessibility Service + bounce-back approach instead,
+        // which works on all OEMs without replacing the home app.
 
         return listOf(
-            PermissionStatus(
-                id = "home_launcher",
-                title = "Default Home Launcher",
-                description = "Seamless Minimalist experience: Home button returns to focus space without breaking essential apps",
-                isGranted = isHomeLauncher,
-                actionLabel = if (isHomeLauncher) "Active Launcher" else "Set Home App",
-                intentAction = Settings.ACTION_HOME_SETTINGS
-            ),
             PermissionStatus(
                 id = "battery",
                 title = "Battery Optimization",

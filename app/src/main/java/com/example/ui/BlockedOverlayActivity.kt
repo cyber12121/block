@@ -121,8 +121,22 @@ class BlockedOverlayActivity : ComponentActivity() {
                                 } catch (_: Exception) {}
                             }
                             finish()
+                        } else if (sessionManager.isMinimalStrictLockActive()) {
+                            // During Minimalist Strict Lock, go directly to our own Minimalist
+                            // Launcher instead of the OEM home screen.  Sending to the OEM home
+                            // creates a visible flicker window before the accessibility service
+                            // can bounce the user back — routing here eliminates that gap.
+                            sessionManager.setMinimalLauncherActive(true)
+                            val launcherIntent = Intent(this, MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+                                putExtra(MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                            }
+                            startActivity(launcherIntent)
+                            finish()
                         } else {
-                            // Full app block: return to device home screen
+                            // Full app block outside strict lock: return to device home screen
                             val homeIntent = Intent(Intent.ACTION_MAIN).apply {
                                 addCategory(Intent.CATEGORY_HOME)
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK

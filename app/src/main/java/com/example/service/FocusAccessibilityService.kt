@@ -179,8 +179,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK or
                         Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
                     putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
@@ -209,7 +208,11 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         // 2. Active Session App-Blocking (Enforced during active focus session or schedule)
-        if (isBlockingActive && !isFgApp && !isEssential) {
+        // Skip this section if Minimalist Strict Lock is active — section 1 above already
+        // handled all enforcement and returned.  Without this guard, isAnyBlockingActive()
+        // (which is true even in background-only guard mode) would double-trigger the
+        // block shield for apps that section 1 already dealt with.
+        if (!shouldLockToMinimalist && isBlockingActive && !isFgApp && !isEssential) {
             if (sessionManager.isAppBlocked(targetPkg)) {
                 triggerBlockShield(
                     targetName = getReadableAppName(targetPkg),

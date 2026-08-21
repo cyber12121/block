@@ -1442,57 +1442,6 @@ fun MinimalLauncherScreen(
                         }
 
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text("HOME LAUNCHER SETUP 🏠", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CyanAccent, letterSpacing = 1.sp)
-                        val isDefaultLauncher = com.example.util.PermissionUtils.isDefaultHomeLauncher(context)
-                        Surface(
-                            color = Color(0xFF1A2640),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    com.example.util.PermissionUtils.openHomeSettings(context)
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = if (isDefaultLauncher) "FocusGuard is Default Launcher" else "Set as Default Home Launcher",
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            fontSize = 13.sp
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        if (isDefaultLauncher) {
-                                            Surface(
-                                                color = EmeraldSuccess.copy(alpha = 0.2f),
-                                                shape = RoundedCornerShape(4.dp)
-                                            ) {
-                                                Text("ACTIVE", color = EmeraldSuccess, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
-                                            }
-                                        }
-                                    }
-                                    Text(
-                                        text = if (isDefaultLauncher) "Home swipes return to Minimalist space smoothly without trapping essential apps."
-                                        else "Tap to select FocusGuard as default home app in system settings.",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFFCBD5E1)
-                                    )
-                                }
-                                Icon(
-                                    Icons.Default.Home,
-                                    contentDescription = null,
-                                    tint = if (isDefaultLauncher) EmeraldSuccess else CyanAccent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
                         Text("STRICT LOCK SECURITY 🔒", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrimsonStrict, letterSpacing = 1.sp)
                         Surface(
                             color = Color(0xFF1A2640),

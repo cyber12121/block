@@ -110,11 +110,36 @@ class FocusSessionManager private constructor(private val context: Context) {
         return systemEssentials.contains(pkg)
     }
 
+    /**
+     * Returns true only when the user is genuinely outside both FocusGuard and the
+     * allowed-app set.  The OEM home launcher is intentionally excluded: pressing
+     * Home is not an "escape" — the accessibility service will bounce the user back
+     * to the Minimalist Launcher within ~1 second.  Treating the launcher as an
+     * escape caused lockScreen() to fire every 5 s just for pressing Home.
+     *
+     * The stale threshold is 15 s (was 10 s) to tolerate accessibility-event delays
+     * on busy / low-end devices.
+     */
     fun isLockEscaped(): Boolean {
         if (!isMinimalStrictLockActive()) return false
         val pkg = lastSeenForegroundPackage ?: return false
-        if (System.currentTimeMillis() - lastSeenForegroundTime > 10_000) return false // stale
+        if (System.currentTimeMillis() - lastSeenForegroundTime > 15_000) return false // stale
+        // OEM launcher = user just pressed Home; accessibility bounces them back — not an escape
+        if (isOemLauncher(pkg)) return false
         return !isEssentialApp(pkg)
+    }
+
+    /** Mirrors the launcher-detection logic in FocusAccessibilityService. */
+    private fun isOemLauncher(pkg: String): Boolean {
+        val lower = pkg.lowercase()
+        return lower.contains("launcher") ||
+               lower.contains("home") ||
+               lower.contains("quickstep") ||
+               lower.contains("nexuslauncher") ||
+               lower.contains("recents") ||
+               lower.contains("pixellauncher") ||
+               lower.contains("sec.android.app.launcher") ||
+               lower.contains("miui.home")
     }
 
     fun isSessionOrScheduleActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
