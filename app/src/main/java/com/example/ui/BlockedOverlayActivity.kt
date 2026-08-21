@@ -86,15 +86,28 @@ class BlockedOverlayActivity : ComponentActivity() {
         setContent {
             FocusGuardTheme(darkTheme = true) {
                 val sessionState by sessionManager.sessionState.collectAsStateWithLifecycle()
+                val activeSchedulesState by sessionManager.activeSchedulesState.collectAsStateWithLifecycle()
+
+                val isSessionActive = sessionState.isActive
+                val isScheduleActive = activeSchedulesState.isActive
+
+                val effectiveStrictMode = if (isSessionActive) sessionState.isStrictMode else activeSchedulesState.isStrictMode
+                val effectiveUltraStrict = if (isSessionActive) sessionState.isUltraStrict else activeSchedulesState.isUltraStrict
+                val effectiveEndTime = if (isSessionActive) sessionState.endTimeMillis else activeSchedulesState.endTimeMillis
+                val effectiveRemainingSeconds = if (isSessionActive) {
+                    sessionState.remainingSeconds
+                } else if (isScheduleActive && effectiveEndTime > 0) {
+                    ((effectiveEndTime - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+                } else 0L
 
                 BlockedShieldScreen(
                     target = target,
                     reason = reason,
                     isWebsite = isWebsite,
-                    isStrictMode = sessionState.isStrictMode,
-                    isUltraStrict = sessionState.isUltraStrict,
-                    remainingSeconds = sessionState.remainingSeconds,
-                    endTimeMillis = sessionState.endTimeMillis,
+                    isStrictMode = effectiveStrictMode,
+                    isUltraStrict = effectiveUltraStrict,
+                    remainingSeconds = effectiveRemainingSeconds,
+                    endTimeMillis = effectiveEndTime,
                     onPrimaryAction = {
                         if (isWebsite) {
                             // Navigate browser to a clean safe page (about:blank) so no blocked query/URL lingers

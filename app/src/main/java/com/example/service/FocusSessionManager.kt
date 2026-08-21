@@ -43,7 +43,8 @@ data class ActiveSchedulesState(
     val isActive: Boolean = false,
     val activeSchedules: List<Schedule> = emptyList(),
     val isStrictMode: Boolean = false,
-    val isUltraStrict: Boolean = false
+    val isUltraStrict: Boolean = false,
+    val endTimeMillis: Long = 0L
 )
 
 class FocusSessionManager private constructor(private val context: Context) {
@@ -124,8 +125,17 @@ class FocusSessionManager private constructor(private val context: Context) {
 
     fun isUltraStrictActive(): Boolean = (_sessionState.value.isActive && _sessionState.value.isUltraStrict) || (_activeSchedulesState.value.isActive && _activeSchedulesState.value.isUltraStrict)
 
-    fun clearSnooze() {
-        prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
+    fun clearSnooze(scheduleId: Long? = null) {
+        val editor = prefs.edit()
+        if (scheduleId != null) {
+            editor.remove("${KEY_SNOOZED_SCHEDULE_ID}_$scheduleId")
+        } else {
+            editor.remove(KEY_SNOOZED_SCHEDULE_ID)
+            prefs.all.keys.filter { it.startsWith(KEY_SNOOZED_SCHEDULE_ID) }.forEach {
+                editor.remove(it)
+            }
+        }
+        editor.apply()
     }
 
     // Guards against the expiry path running more than once. updateTick() is driven by
@@ -439,11 +449,37 @@ class FocusSessionManager private constructor(private val context: Context) {
         }
 
         val isNowActive = activeList.isNotEmpty()
+        var earliestEndTimeMillis = 0L
+        if (isNowActive) {
+            val endTimes = activeList.map { sch ->
+                val endCal = cal.clone() as Calendar
+                endCal.set(Calendar.SECOND, 0)
+                endCal.set(Calendar.MILLISECOND, 0)
+                endCal.set(Calendar.HOUR_OF_DAY, sch.endHour)
+                endCal.set(Calendar.MINUTE, sch.endMinute)
+
+                val startTotalMins = sch.startHour * 60 + sch.startMinute
+                val endTotalMins = sch.endHour * 60 + sch.endMinute
+                if (startTotalMins > endTotalMins && currentTotalMinutes >= startTotalMins) {
+                    // Overnight window before midnight, end is tomorrow
+                    endCal.add(Calendar.DAY_OF_YEAR, 1)
+                } else if (startTotalMins == endTotalMins) {
+                    // 24h block, end at midnight
+                    endCal.set(Calendar.HOUR_OF_DAY, 23)
+                    endCal.set(Calendar.MINUTE, 59)
+                    endCal.set(Calendar.SECOND, 59)
+                }
+                endCal.timeInMillis
+            }
+            earliestEndTimeMillis = endTimes.minOrNull() ?: 0L
+        }
+
         _activeSchedulesState.value = ActiveSchedulesState(
             isActive = isNowActive,
             activeSchedules = activeList,
             isStrictMode = if (anyUltraStrict) false else anyStrict,
-            isUltraStrict = anyUltraStrict
+            isUltraStrict = anyUltraStrict,
+            endTimeMillis = earliestEndTimeMillis
         )
 
         // SYNCHRONIZE BLOCK LISTS WITH ACTIVE SCHEDULE:
@@ -539,13 +575,22 @@ class FocusSessionManager private constructor(private val context: Context) {
             validListIds.addAll(allLists.filter { it.isEnabled }.map { it.id })
         }
 
+        val manualSessionTokens = if (_sessionState.value.isActive) {
+            _sessionState.value.activeListNames
+        } else {
+            prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
+        }
+        val allowAllAppsDueToInstalledAppsToken = (manualSessionActive && manualSessionTokens.contains("Installed Apps", ignoreCase = true)) ||
+                (scheduleActive && _activeSchedulesState.value.activeSchedules.any { it.activeListNames.contains("Installed Apps", ignoreCase = true) })
+
         val targets = repository.getAllEnabledTargets()
         val pkgSet = mutableSetOf<String>()
         val domainSet = mutableSetOf<String>()
         val keywordSet = mutableSetOf<String>()
 
         for (t in targets) {
-            if (validListIds.contains(t.listId)) {
+            val isTargetIncluded = validListIds.contains(t.listId) || (t.targetType == TargetType.APP && allowAllAppsDueToInstalledAppsToken)
+            if (isTargetIncluded) {
                 when (t.targetType) {
                     TargetType.APP -> {
                         val cleanPkg = t.identifier.lowercase().trim()

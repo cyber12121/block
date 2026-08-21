@@ -273,8 +273,8 @@ class MainViewModel(
     }
 
     fun deleteBlockList(list: BlockList) {
-        if (sessionManager.isAnyBlockingActive()) {
-            // Cannot delete block lists during an active focus or schedule session
+        if (sessionManager.isStrictActive() || (sessionManager.isSessionOrScheduleActive() && list.isEnabled)) {
+            // Cannot delete active or strict block lists during an active session
             return
         }
         viewModelScope.launch {
@@ -284,14 +284,18 @@ class MainViewModel(
     }
 
     fun toggleSchedule(schedule: Schedule) {
-        if (schedule.isEnabled && sessionManager.isAnyBlockingActive()) {
-            // Cannot turn off active schedules during an active focus or schedule session in any mode
+        val isActivelyRunning = com.example.util.ScheduleUtils.isScheduleActiveAt(schedule)
+        val isStrictLock = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive() ||
+                (isActivelyRunning && (schedule.isStrictMode || schedule.isUltraStrict))
+
+        if (schedule.isEnabled && isStrictLock) {
+            // Cannot turn off schedule while running in strict or ultra strict mode
             return
         }
         viewModelScope.launch {
             val updated = schedule.copy(isEnabled = !schedule.isEnabled)
             repository.updateSchedule(updated)
-            sessionManager.clearSnooze()
+            sessionManager.clearSnooze(schedule.id)
             val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
             sessionManager.checkAutomaticSchedules(repository)
@@ -310,8 +314,12 @@ class MainViewModel(
         isUltraStrict: Boolean,
         activeListNames: String
     ) {
-        if (existingSchedule != null && existingSchedule.isEnabled && sessionManager.isAnyBlockingActive()) {
-            // Locked during active session
+        val isActivelyRunning = existingSchedule?.let { com.example.util.ScheduleUtils.isScheduleActiveAt(it) } ?: false
+        val isStrictLock = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive() ||
+                (isActivelyRunning && existingSchedule?.isEnabled == true && (existingSchedule.isStrictMode || existingSchedule.isUltraStrict))
+
+        if (isStrictLock) {
+            // Locked during active strict session
             closeCreateScheduleDialog()
             return
         }
@@ -353,8 +361,12 @@ class MainViewModel(
     }
 
     fun deleteSchedule(schedule: Schedule) {
-        if (schedule.isEnabled && sessionManager.isAnyBlockingActive()) {
-            // Cannot delete active schedule during an active session
+        val isActivelyRunning = com.example.util.ScheduleUtils.isScheduleActiveAt(schedule)
+        val isStrictLock = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive() ||
+                (isActivelyRunning && schedule.isEnabled && (schedule.isStrictMode || schedule.isUltraStrict))
+
+        if (isStrictLock) {
+            // Cannot delete active strict schedule
             return
         }
         viewModelScope.launch {
