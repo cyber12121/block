@@ -493,7 +493,7 @@ fun CreateScheduleDialog(
                             checked = isStrictMode,
                             onCheckedChange = { checked ->
                                 isStrictMode = checked
-                                if (!checked) {
+                                if (checked) {
                                     isUltraStrict = false
                                 }
                             },
@@ -562,7 +562,7 @@ fun CreateScheduleDialog(
                                 onCheckedChange = { checked ->
                                     isUltraStrict = checked
                                     if (checked) {
-                                        isStrictMode = true
+                                        isStrictMode = false
                                     }
                                 },
                                 colors = SwitchDefaults.colors(
