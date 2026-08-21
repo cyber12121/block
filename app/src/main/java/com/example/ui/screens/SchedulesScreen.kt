@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreTime
@@ -78,36 +79,11 @@ import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
+import com.example.util.ScheduleUtils
 import java.util.Calendar
 
 fun isScheduleActiveNow(schedule: Schedule): Boolean {
-    if (!schedule.isEnabled) return false
-    val cal = Calendar.getInstance()
-    val currentDay = cal.get(Calendar.DAY_OF_WEEK)
-    val currentHour = cal.get(Calendar.HOUR_OF_DAY)
-    val currentMinute = cal.get(Calendar.MINUTE)
-    val currentTotalMinutes = currentHour * 60 + currentMinute
-
-    val days = schedule.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-    if (days.isEmpty()) return false
-
-    val startMinutes = schedule.startHour * 60 + schedule.startMinute
-    val endMinutes = schedule.endHour * 60 + schedule.endMinute
-
-    return if (startMinutes < endMinutes) {
-        days.contains(currentDay) && (currentTotalMinutes in startMinutes until endMinutes)
-    } else if (startMinutes > endMinutes) {
-        if (currentTotalMinutes >= startMinutes) {
-            days.contains(currentDay)
-        } else if (currentTotalMinutes < endMinutes) {
-            val yesterdayDay = (currentDay - 2 + 7) % 7 + 1
-            days.contains(yesterdayDay)
-        } else {
-            false
-        }
-    } else {
-        false
-    }
+    return ScheduleUtils.isScheduleActiveAt(schedule)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -117,6 +93,7 @@ fun SchedulesScreen(
     activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     schedules: List<Schedule>,
     onToggleSchedule: (Schedule) -> Unit,
+    onEditSchedule: (Schedule) -> Unit = {},
     onDeleteSchedule: (Schedule) -> Unit,
     onOpenCreateSchedule: () -> Unit,
     onEmergencyUnlock: () -> Unit = {}
@@ -400,6 +377,13 @@ fun SchedulesScreen(
                                 onToggleSchedule(schedule)
                             }
                         },
+                        onEdit = {
+                            if (isLocked) {
+                                lockedScheduleInfo = schedule
+                            } else {
+                                onEditSchedule(schedule)
+                            }
+                        },
                         onDelete = {
                             if (isLocked) {
                                 lockedScheduleInfo = schedule
@@ -424,7 +408,7 @@ fun SchedulesScreen(
                 Text("Schedule Locked In Active Window", fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("“${schedule.name}” is currently active and enforcing focus. To prevent distraction bypasses, schedules can only be turned off or deleted outside of their active schedule hours.")
+                Text("“${schedule.name}” is currently active and enforcing focus. To prevent distraction bypasses, schedules can only be edited, turned off, or deleted after the active session window completes.")
             },
             confirmButton = {
                 Button(
@@ -458,6 +442,7 @@ fun ScheduleCard(
     isActiveNow: Boolean,
     isGlobalStrict: Boolean,
     onToggle: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     fun formatHour(hour: Int, minute: Int): String {
@@ -489,7 +474,9 @@ fun ScheduleCard(
             1.dp,
             MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEdit() }
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             // Title Row with Icon & Toggle
@@ -581,9 +568,20 @@ fun ScheduleCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(36.dp).testTag("edit_schedule_${schedule.id}")
+                    ) {
+                        Icon(
+                            imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Edit,
+                            contentDescription = if (isLocked) "Locked" else "Edit Schedule",
+                            tint = if (isLocked) CrimsonStrict else CyanAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Switch(
                         checked = schedule.isEnabled,
                         onCheckedChange = { onToggle() },
@@ -594,12 +592,15 @@ fun ScheduleCard(
                         ),
                         modifier = Modifier.testTag("toggle_schedule_${schedule.id}")
                     )
-                    IconButton(onClick = onDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Delete,
                             contentDescription = if (isLocked) "Locked" else "Delete",
                             tint = if (isLocked) CrimsonStrict else Color(0xFF64748B),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

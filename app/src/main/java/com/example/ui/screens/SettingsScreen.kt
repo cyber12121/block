@@ -324,7 +324,6 @@ fun SettingsScreen(
         items(permissions, key = { it.title }) { perm ->
             val icon = when {
                 perm.id == "battery" -> Icons.Default.BatteryChargingFull
-                perm.id == "usage" -> Icons.Default.DataUsage
                 perm.title.contains("Accessibility", ignoreCase = true) -> Icons.Default.AccessibilityNew
                 perm.title.contains("Admin", ignoreCase = true) -> Icons.Default.Shield
                 perm.title.contains("Display", ignoreCase = true) || perm.title.contains("Overlay", ignoreCase = true) -> Icons.Default.Layers
@@ -336,8 +335,6 @@ fun SettingsScreen(
             val onLaunchPermission = {
                 if (perm.id == "battery") {
                     PermissionUtils.openBatteryOptimizationSettings(context)
-                } else if (perm.id == "usage") {
-                    PermissionUtils.openUsageAccessSettings(context)
                 } else if (perm.id == "admin") {
                     val compName = ComponentName(context, FocusDeviceAdminReceiver::class.java)
                     val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {

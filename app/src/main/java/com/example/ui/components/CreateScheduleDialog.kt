@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.BlockList
+import com.example.data.model.Schedule
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.EmeraldSuccess
@@ -78,6 +79,7 @@ import com.example.ui.theme.IndigoPrimary
 @Composable
 fun CreateScheduleDialog(
     availableLists: List<BlockList>,
+    scheduleToEdit: Schedule? = null,
     onDismiss: () -> Unit,
     onCreateSchedule: (
         name: String,
@@ -91,21 +93,38 @@ fun CreateScheduleDialog(
         activeListNames: String
     ) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var startHour by remember { mutableIntStateOf(9) }
-    var startMinute by remember { mutableIntStateOf(0) }
-    var endHour by remember { mutableIntStateOf(17) }
-    var endMinute by remember { mutableIntStateOf(0) }
-    var isStrictMode by remember { mutableStateOf(false) }
-    var isUltraStrict by remember { mutableStateOf(false) }
+    val isEditing = scheduleToEdit != null
+    var name by remember { mutableStateOf(scheduleToEdit?.name ?: "") }
+    var startHour by remember { mutableIntStateOf(scheduleToEdit?.startHour ?: 9) }
+    var startMinute by remember { mutableIntStateOf(scheduleToEdit?.startMinute ?: 0) }
+    var endHour by remember { mutableIntStateOf(scheduleToEdit?.endHour ?: 17) }
+    var endMinute by remember { mutableIntStateOf(scheduleToEdit?.endMinute ?: 0) }
+    var isStrictMode by remember { mutableStateOf(scheduleToEdit?.isStrictMode ?: false) }
+    var isUltraStrict by remember { mutableStateOf(scheduleToEdit?.isUltraStrict ?: false) }
 
     // Dialog state for interactive Clock Time Picker
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
     // Day numbers: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
-    val selectedDays = remember { mutableStateOf(setOf(2, 3, 4, 5, 6)) } // Mon-Fri default
-    val selectedListIds = remember { mutableStateOf(availableLists.filter { it.isEnabled }.map { it.id }.toSet()) }
+    val initialDays = remember(scheduleToEdit) {
+        if (scheduleToEdit != null && scheduleToEdit.daysOfWeek.isNotBlank()) {
+            scheduleToEdit.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+        } else {
+            setOf(2, 3, 4, 5, 6) // Mon-Fri default
+        }
+    }
+    val selectedDays = remember { mutableStateOf(initialDays) }
+
+    val initialSelectedLists = remember(scheduleToEdit, availableLists) {
+        if (scheduleToEdit != null && scheduleToEdit.activeListNames.isNotBlank()) {
+            val namesOrIds = scheduleToEdit.activeListNames.split(",").map { it.trim() }.toSet()
+            availableLists.filter { namesOrIds.contains(it.name) || namesOrIds.contains(it.id.toString()) }.map { it.id }.toSet()
+        } else {
+            availableLists.filter { it.isEnabled }.map { it.id }.toSet()
+        }
+    }
+    val selectedListIds = remember { mutableStateOf(initialSelectedLists) }
     var isAppBlockingEnforced by remember { mutableStateOf(true) }
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -173,13 +192,13 @@ fun CreateScheduleDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Create Auto Schedule",
+                                text = if (isEditing) "Edit Focus Schedule" else "Create Auto Schedule",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
                             Text(
-                                text = "Automate custom focus windows & block rules",
+                                text = if (isEditing) "Modify time window, days, and strictness" else "Automate custom focus windows & block rules",
                                 fontSize = 11.sp,
                                 color = Color(0xFF94A3B8)
                             )
@@ -871,7 +890,7 @@ fun CreateScheduleDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Save & Activate Schedule",
+                        text = if (isEditing) "Update Schedule" else "Save & Activate Schedule",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )

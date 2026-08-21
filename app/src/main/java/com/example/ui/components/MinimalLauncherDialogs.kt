@@ -47,6 +47,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -426,10 +428,18 @@ fun EditEssentialAppsDialog(
 
 data class StrictDurationOption(val label: String, val minutes: Int)
 
+data class StrictLevelOption(
+    val level: Int,
+    val title: String,
+    val subtitle: String,
+    val badge: String,
+    val exitsDesc: String
+)
+
 @Composable
 fun MinimalStrictLockSetupDialog(
     onDismiss: () -> Unit,
-    onStartLock: (minutes: Int) -> Unit
+    onStartLock: (minutes: Int, level: Int) -> Unit
 ) {
     val durationOptions = listOf(
         StrictDurationOption("1 Min", 1),
@@ -441,7 +451,33 @@ fun MinimalStrictLockSetupDialog(
         StrictDurationOption("8 Hours", 480),
         StrictDurationOption("12 Hours", 720)
     )
+
+    val strictLevels = listOf(
+        StrictLevelOption(
+            level = 1,
+            title = "Level 1: Soft Strict",
+            subtitle = "Mindful Focus • 15s Reflection Exit",
+            badge = "ACCOUNTABILITY",
+            exitsDesc = "Unlimited daily exits with a short 15-second reflection timer."
+        ),
+        StrictLevelOption(
+            level = 2,
+            title = "Level 2: Standard Strict",
+            subtitle = "Guarded Mode • 1 Exit Per Day",
+            badge = "RECOMMENDED",
+            exitsDesc = "1 Emergency Exit per day with a mandatory 1-minute reflection timer."
+        ),
+        StrictLevelOption(
+            level = 3,
+            title = "Level 3: Ultra Strict",
+            subtitle = "Iron Lockdown • Zero Early Exits",
+            badge = "UNBYPASSABLE",
+            exitsDesc = "Completely locks Minimal Launcher until the timer reaches zero."
+        )
+    )
+
     var selectedOption by remember { mutableStateOf(durationOptions[0]) }
+    var selectedLevel by remember { mutableIntStateOf(2) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -459,14 +495,83 @@ fun MinimalStrictLockSetupDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    text = "Lock Minimalist Launcher for a fixed duration. Non-developer users get up to 3 Emergency Exits during the locked period with a mandatory 1-minute exit timer.",
+                    text = "Lock Minimalist Launcher for a fixed duration to eliminate phone distractions. Select your strictness level below:",
                     color = Color(0xFFCBD5E1),
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )
 
                 Text(
-                    text = "SELECT LOCK DURATION",
+                    text = "1. SELECT STRICT LEVEL",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = IndigoPrimary,
+                    letterSpacing = 1.sp
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    strictLevels.forEach { lvl ->
+                        val isSelected = selectedLevel == lvl.level
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) CrimsonStrict.copy(alpha = 0.16f) else Color(0xFF131D33),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) CrimsonStrict else Color(0xFF223252)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedLevel = lvl.level }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = lvl.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isSelected) Color.White else Color(0xFFE2E8F0)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = if (isSelected) CrimsonStrict else Color(0xFF1E293B),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = lvl.badge,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = lvl.subtitle,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { selectedLevel = lvl.level },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = CrimsonStrict,
+                                        unselectedColor = Color(0xFF64748B)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    text = "2. SELECT LOCK DURATION",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = IndigoPrimary,
@@ -480,12 +585,13 @@ fun MinimalStrictLockSetupDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     durationOptions.forEach { opt ->
+                        val isSelected = selectedOption.minutes == opt.minutes
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (selectedOption.minutes == opt.minutes) CrimsonStrict else Color(0xFF1A2640),
+                            color = if (isSelected) CrimsonStrict else Color(0xFF1A2640),
                             border = BorderStroke(
                                 1.dp,
-                                if (selectedOption.minutes == opt.minutes) CrimsonStrict else Color(0xFF2A3A5E)
+                                if (isSelected) CrimsonStrict else Color(0xFF2A3A5E)
                             ),
                             modifier = Modifier.clickable { selectedOption = opt }
                         ) {
@@ -500,6 +606,7 @@ fun MinimalStrictLockSetupDialog(
                     }
                 }
 
+                val activeLevelInfo = strictLevels.first { it.level == selectedLevel }
                 Surface(
                     color = CrimsonStrict.copy(alpha = 0.12f),
                     shape = RoundedCornerShape(10.dp),
@@ -508,13 +615,13 @@ fun MinimalStrictLockSetupDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Summary: ${selectedOption.label} Lock",
+                            text = "Summary: ${activeLevelInfo.title} (${selectedOption.label})",
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             fontSize = 12.sp
                         )
                         Text(
-                            text = "• Exits allowed: 1 Emergency Exit Per Day\n• Fast Exit: Instant Unlock",
+                            text = activeLevelInfo.exitsDesc,
                             color = Color(0xFFCBD5E1),
                             fontSize = 11.sp,
                             lineHeight = 16.sp
@@ -525,7 +632,7 @@ fun MinimalStrictLockSetupDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onStartLock(selectedOption.minutes) },
+                onClick = { onStartLock(selectedOption.minutes, selectedLevel) },
                 colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
             ) {
                 Text("Lock Launcher (${selectedOption.label})", fontWeight = FontWeight.Bold)
@@ -544,6 +651,7 @@ fun MinimalStrictLockSetupDialog(
 fun MinimalStrictLockStatusDialog(
     remainingMillis: Long,
     exitsRemaining: Int,
+    strictLevel: Int = 2,
     isDeveloper: Boolean,
     onDismiss: () -> Unit,
     onDisarm: () -> Unit
@@ -555,6 +663,12 @@ fun MinimalStrictLockStatusDialog(
     val formattedTime = when {
         hours > 0 -> "${hours}h ${minutes}m ${seconds}s"
         else -> "${minutes}m ${seconds}s"
+    }
+
+    val levelTitle = when (strictLevel) {
+        1 -> "Level 1: Soft Strict (15s Reflection)"
+        3 -> "Level 3: Ultra Strict (Zero Exits)"
+        else -> "Level 2: Standard Strict (1 Exit / Day)"
     }
 
     AlertDialog(
@@ -584,15 +698,17 @@ fun MinimalStrictLockStatusDialog(
                         Text("REMAINING LOCK TIME", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8), letterSpacing = 1.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(formattedTime, fontSize = 24.sp, fontWeight = FontWeight.Black, color = CrimsonStrict)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(levelTitle, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF06B6D4))
                     }
                 }
 
                 Surface(
-                    color = if (exitsRemaining <= 0 && !isDeveloper) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f),
+                    color = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (exitsRemaining <= 0 && !isDeveloper) CrimsonStrict.copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
+                        if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict.copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -601,15 +717,19 @@ fun MinimalStrictLockStatusDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (exitsRemaining <= 0 && !isDeveloper) Icons.Default.Lock else Icons.Default.CheckCircle,
+                            imageVector = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) Icons.Default.Lock else Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = if (exitsRemaining <= 0 && !isDeveloper) CrimsonStrict else EmeraldSuccess,
+                            tint = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict else EmeraldSuccess,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (exitsRemaining <= 0) "Emergency Exit: 1/1 USED TODAY (Locked until timer ends)"
-                            else "Emergency Exit Available: $exitsRemaining / 1 Remaining Today",
+                            text = when {
+                                strictLevel == 3 -> "Level 3: Zero Exits Allowed (Locked until countdown ends)"
+                                strictLevel == 1 -> "Level 1: Flexible Exits (15-second reflection timer)"
+                                exitsRemaining <= 0 -> "Emergency Exit: 1/1 USED TODAY (Locked until timer ends)"
+                                else -> "Emergency Exit Available: $exitsRemaining / 1 Remaining Today"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -618,7 +738,11 @@ fun MinimalStrictLockStatusDialog(
                 }
 
                 Text(
-                    text = "During Minimalist Strict Lock, you are allowed 1 emergency exit per day.",
+                    text = when (strictLevel) {
+                        1 -> "Level 1 allows mindful exits with a quick 15-second reflection delay."
+                        3 -> "Level 3 Ultra Strict completely locks the Minimal Launcher until the timer reaches zero."
+                        else -> "Level 2 allows 1 emergency exit per day with a mandatory 1-minute reflection timer."
+                    },
                     fontSize = 11.sp,
                     color = Color(0xFFCBD5E1)
                 )
@@ -656,10 +780,12 @@ fun MinimalStrictLockStatusDialog(
 fun MinimalStrictUseExitDialog(
     remainingFormatted: String,
     exitsRemaining: Int,
+    strictLevel: Int = 2,
     onDismiss: () -> Unit,
     onConfirmExit: () -> Unit
 ) {
-    var countdownSeconds by remember { mutableIntStateOf(60) }
+    val initialSeconds = if (strictLevel == 1) 15 else 60
+    var countdownSeconds by remember { mutableIntStateOf(initialSeconds) }
 
     LaunchedEffect(Unit) {
         while (countdownSeconds > 0) {
@@ -679,7 +805,7 @@ fun MinimalStrictUseExitDialog(
             )
         },
         title = {
-            Text("1-Minute Exit Reflection Timer ⏳", fontWeight = FontWeight.Bold, color = Color.White)
+            Text(if (strictLevel == 1) "15-Second Reflection Timer ⏳" else "1-Minute Exit Reflection Timer ⏳", fontWeight = FontWeight.Bold, color = Color.White)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -729,7 +855,8 @@ fun MinimalStrictUseExitDialog(
                         Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Daily Exit Quota: $exitsRemaining / 1 Exit Remaining Today",
+                            text = if (strictLevel == 1) "Level 1: Flexible Exit with Mindful Delay"
+                            else "Daily Exit Quota: $exitsRemaining / 1 Exit Remaining Today",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -738,7 +865,8 @@ fun MinimalStrictUseExitDialog(
                 }
 
                 Text(
-                    text = "A 1-minute reflection timer enforces mindful decisions before leaving Minimalist space. Exiting now will consume your 1 daily exit.",
+                    text = if (strictLevel == 1) "A 15-second reflection timer prevents reflexive app hopping while still allowing flexible exits."
+                    else "A 1-minute reflection timer enforces mindful decisions before leaving Minimalist space. Exiting now will consume your 1 daily exit.",
                     color = Color(0xFFCBD5E1),
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -755,7 +883,7 @@ fun MinimalStrictUseExitDialog(
                 )
             ) {
                 Text(
-                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else "Confirm Exit (Use 1 Daily Exit)",
+                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else if (strictLevel == 1) "Confirm Exit" else "Confirm Exit (Use 1 Daily Exit)",
                     fontWeight = FontWeight.Bold,
                     color = if (countdownSeconds > 0) Color.LightGray else Color.White
                 )
@@ -773,6 +901,7 @@ fun MinimalStrictUseExitDialog(
 @Composable
 fun MinimalStrictLockedDialog(
     remainingFormatted: String,
+    strictLevel: Int = 2,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -797,7 +926,11 @@ fun MinimalStrictLockedDialog(
                     fontSize = 13.sp
                 )
                 Text(
-                    text = "You have ALREADY USED your 1 daily emergency exit for today. Minimalist Launcher is locked until the timer ends.",
+                    text = if (strictLevel == 3) {
+                        "Level 3 Ultra Strict is active. No early exits are permitted under any circumstances until the lock countdown reaches zero."
+                    } else {
+                        "You have ALREADY USED your 1 daily emergency exit for today. Minimalist Launcher is locked until the timer ends."
+                    },
                     color = Color(0xFFCBD5E1),
                     fontSize = 12.sp,
                     lineHeight = 17.sp

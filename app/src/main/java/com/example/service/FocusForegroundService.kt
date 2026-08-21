@@ -86,9 +86,17 @@ class FocusForegroundService : Service() {
             sessionManager.checkAutomaticSchedules(repository)
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            var lastScheduleCheckSec = 0L
 
             while (isActive) {
                 sessionManager.updateTick()
+
+                // Check automatic schedules periodically every 2 seconds for real-time synchronization
+                val nowSec = System.currentTimeMillis() / 1000
+                if (nowSec - lastScheduleCheckSec >= 2) {
+                    lastScheduleCheckSec = nowSec
+                    sessionManager.checkAutomaticSchedules(repository)
+                }
 
                 val sessionState = sessionManager.sessionState.value
                 val activeSchedulesState = sessionManager.activeSchedulesState.value

@@ -120,6 +120,7 @@ fun MainAppContent(viewModel: MainViewModel) {
     val isStartSessionOpen by viewModel.isStartSessionDialogOpen.collectAsStateWithLifecycle()
     val isCreateListOpen by viewModel.isCreateListDialogOpen.collectAsStateWithLifecycle()
     val isCreateScheduleOpen by viewModel.isCreateScheduleDialogOpen.collectAsStateWithLifecycle()
+    val scheduleToEdit by viewModel.scheduleToEdit.collectAsStateWithLifecycle()
     val selectedListForAddTarget by viewModel.selectedListForAddTarget.collectAsStateWithLifecycle()
 
     var currentTab by remember { mutableStateOf(AppTab.DASHBOARD) }
@@ -315,6 +316,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 activeSchedulesState = activeSchedulesState,
                                 schedules = allSchedules,
                                 onToggleSchedule = { viewModel.toggleSchedule(it) },
+                                onEditSchedule = { viewModel.openEditScheduleDialog(it) },
                                 onDeleteSchedule = { viewModel.deleteSchedule(it) },
                                 onOpenCreateSchedule = { viewModel.openCreateScheduleDialog() },
                                 onEmergencyUnlock = { viewModel.forceEmergencyUnlock() }
@@ -378,9 +380,11 @@ fun MainAppContent(viewModel: MainViewModel) {
     if (isCreateScheduleOpen) {
         CreateScheduleDialog(
             availableLists = blockLists,
+            scheduleToEdit = scheduleToEdit,
             onDismiss = { viewModel.closeCreateScheduleDialog() },
             onCreateSchedule = { name, startHour, startMinute, endHour, endMinute, daysOfWeek, isStrict, isUltraStrict, activeNames ->
-                viewModel.createSchedule(
+                viewModel.saveOrUpdateSchedule(
+                    existingSchedule = scheduleToEdit,
                     name = name,
                     startHour = startHour,
                     startMinute = startMinute,

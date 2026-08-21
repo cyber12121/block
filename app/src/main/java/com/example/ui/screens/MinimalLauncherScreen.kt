@@ -781,7 +781,7 @@ fun MinimalLauncherScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = formatRemainingTime(strictLockRemainingMillis),
+                                        text = "L${sessionManager.getMinimalStrictLevel()} • ${formatRemainingTime(strictLockRemainingMillis)}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -1581,8 +1581,8 @@ fun MinimalLauncherScreen(
         if (showStrictLockSetupDialog) {
             MinimalStrictLockSetupDialog(
                 onDismiss = { showStrictLockSetupDialog = false },
-                onStartLock = { minutes ->
-                    sessionManager.startMinimalStrictLock(minutes)
+                onStartLock = { minutes, level ->
+                    sessionManager.startMinimalStrictLock(minutes, level)
                     strictLockRemainingMillis = sessionManager.getMinimalStrictLockRemainingMillis()
                     showStrictLockSetupDialog = false
                 }
@@ -1594,6 +1594,7 @@ fun MinimalLauncherScreen(
             MinimalStrictLockStatusDialog(
                 remainingMillis = strictLockRemainingMillis,
                 exitsRemaining = sessionManager.getMinimalStrictExitsRemaining(),
+                strictLevel = sessionManager.getMinimalStrictLevel(),
                 isDeveloper = sessionManager.isDeveloperModeActive(),
                 onDismiss = { showStrictLockStatusDialog = false },
                 onDisarm = {
@@ -1604,11 +1605,12 @@ fun MinimalLauncherScreen(
             )
         }
 
-        // Emergency Exit Dialog (1 Daily Exit) for Minimalist Strict Lock
+        // Emergency Exit Dialog for Minimalist Strict Lock (Level 1: 15s delay, Level 2: 60s delay + daily quota)
         if (showMinimalStrictUseExitDialog) {
             MinimalStrictUseExitDialog(
                 remainingFormatted = formatRemainingTime(strictLockRemainingMillis),
                 exitsRemaining = sessionManager.getMinimalStrictExitsRemaining(),
+                strictLevel = sessionManager.getMinimalStrictLevel(),
                 onDismiss = { showMinimalStrictUseExitDialog = false },
                 onConfirmExit = {
                     val success = sessionManager.useMinimalStrictExit()
@@ -1624,6 +1626,7 @@ fun MinimalLauncherScreen(
         if (showMinimalStrictLockedDialog) {
             MinimalStrictLockedDialog(
                 remainingFormatted = formatRemainingTime(strictLockRemainingMillis),
+                strictLevel = sessionManager.getMinimalStrictLevel(),
                 onDismiss = { showMinimalStrictLockedDialog = false }
             )
         }

@@ -414,7 +414,10 @@ class FocusAccessibilityService : AccessibilityService() {
             val node = queue.removeFirst()
             visited++
             val viewId = try { node.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
-            if (looksLikeUrlField(viewId)) {
+            val isEdit = try { node.isEditable } catch (_: Throwable) { false }
+            val className = try { node.className?.toString() ?: "" } catch (_: Throwable) { "" }
+
+            if (looksLikeUrlField(viewId) || isEdit || className.contains("EditText") || className.contains("AutoCompleteTextView")) {
                 val text = try { node.text?.toString() ?: node.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
                 if (text.isNotBlank()) return text
             }

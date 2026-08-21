@@ -76,6 +76,9 @@ class MainViewModel(
     private val _isCreateScheduleDialogOpen = MutableStateFlow(false)
     val isCreateScheduleDialogOpen: StateFlow<Boolean> = _isCreateScheduleDialogOpen.asStateFlow()
 
+    private val _scheduleToEdit = MutableStateFlow<Schedule?>(null)
+    val scheduleToEdit: StateFlow<Schedule?> = _scheduleToEdit.asStateFlow()
+
     private val _selectedListForAddTarget = MutableStateFlow<BlockList?>(null)
     val selectedListForAddTarget: StateFlow<BlockList?> = _selectedListForAddTarget.asStateFlow()
 
@@ -104,10 +107,17 @@ class MainViewModel(
     }
 
     fun openCreateScheduleDialog() {
+        _scheduleToEdit.value = null
+        _isCreateScheduleDialogOpen.value = true
+    }
+
+    fun openEditScheduleDialog(schedule: Schedule) {
+        _scheduleToEdit.value = schedule
         _isCreateScheduleDialogOpen.value = true
     }
 
     fun closeCreateScheduleDialog() {
+        _scheduleToEdit.value = null
         _isCreateScheduleDialogOpen.value = false
     }
 
@@ -285,11 +295,11 @@ class MainViewModel(
             val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
             sessionManager.checkAutomaticSchedules(repository)
-            sessionManager.refreshBlockedTargetsCache(repository)
         }
     }
 
-    fun createSchedule(
+    fun saveOrUpdateSchedule(
+        existingSchedule: Schedule?,
         name: String,
         startHour: Int,
         startMinute: Int,
@@ -300,9 +310,14 @@ class MainViewModel(
         isUltraStrict: Boolean,
         activeListNames: String
     ) {
+        if (existingSchedule != null && existingSchedule.isEnabled && sessionManager.isAnyBlockingActive()) {
+            // Locked during active session
+            closeCreateScheduleDialog()
+            return
+        }
         viewModelScope.launch {
-            repository.insertSchedule(
-                Schedule(
+            if (existingSchedule != null) {
+                val updated = existingSchedule.copy(
                     name = name.trim(),
                     startHour = startHour,
                     startMinute = startMinute,
@@ -311,24 +326,43 @@ class MainViewModel(
                     daysOfWeek = daysOfWeek,
                     isStrictMode = if (isUltraStrict) false else isStrictMode,
                     isUltraStrict = isUltraStrict,
-                    activeListNames = activeListNames,
-                    isEnabled = true
+                    activeListNames = activeListNames
                 )
-            )
-            // Reschedule alarms for all schedules (new one included)
+                repository.updateSchedule(updated)
+            } else {
+                repository.insertSchedule(
+                    Schedule(
+                        name = name.trim(),
+                        startHour = startHour,
+                        startMinute = startMinute,
+                        endHour = endHour,
+                        endMinute = endMinute,
+                        daysOfWeek = daysOfWeek,
+                        isStrictMode = if (isUltraStrict) false else isStrictMode,
+                        isUltraStrict = isUltraStrict,
+                        activeListNames = activeListNames,
+                        isEnabled = true
+                    )
+                )
+            }
             val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
-            // Immediately start session if this new schedule's window is active right now
             sessionManager.checkAutomaticSchedules(repository)
         }
         closeCreateScheduleDialog()
     }
 
     fun deleteSchedule(schedule: Schedule) {
+        if (schedule.isEnabled && sessionManager.isAnyBlockingActive()) {
+            // Cannot delete active schedule during an active session
+            return
+        }
         viewModelScope.launch {
-            // Cancel this schedule's alarms before deleting it from DB
             ScheduleAlarmManager.cancel(application, schedule)
             repository.deleteSchedule(schedule)
+            val allSchedules = repository.getAllSchedulesOnce()
+            ScheduleAlarmManager.rescheduleAll(application, allSchedules)
+            sessionManager.checkAutomaticSchedules(repository)
         }
     }
 }

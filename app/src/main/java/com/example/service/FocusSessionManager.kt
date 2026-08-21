@@ -423,28 +423,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             for (schedule in enabledSchedules) {
                 if (schedule.id == snoozedId) continue
 
-                val days = schedule.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-                if (days.isEmpty()) continue
-
-                val startMinutes = schedule.startHour * 60 + schedule.startMinute
-                val endMinutes = schedule.endHour * 60 + schedule.endMinute
-
-                val isMatch = if (startMinutes < endMinutes) {
-                    days.contains(currentDay) && (currentTotalMinutes in startMinutes until endMinutes)
-                } else if (startMinutes > endMinutes) {
-                    if (currentTotalMinutes >= startMinutes) {
-                        days.contains(currentDay)
-                    } else if (currentTotalMinutes < endMinutes) {
-                        val yesterdayDay = (currentDay - 2 + 7) % 7 + 1
-                        days.contains(yesterdayDay)
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-
-                if (isMatch) {
+                if (com.example.util.ScheduleUtils.isScheduleActiveAt(schedule, cal)) {
                     activeList.add(schedule)
                     if (schedule.isUltraStrict) {
                         anyUltraStrict = true
@@ -491,7 +470,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             return
         }
 
-        val allLists = repository.getActiveLists()
+        val allLists = repository.getAllListsOnce()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
         val validListIds = mutableSetOf<Long>()
 
@@ -504,13 +483,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             }
 
             if (activeListNamesRaw.isNotBlank()) {
-                val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-                val matched = allLists.filter { it.name in sessionListNames }.map { it.id }.toSet()
-                if (matched.isNotEmpty()) {
-                    validListIds.addAll(matched)
-                } else {
-                    validListIds.addAll(enabledListIds)
-                }
+                val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedByTokens(activeListNamesRaw, it) }.map { it.id }.toSet()
+                validListIds.addAll(matched)
             } else {
                 validListIds.addAll(enabledListIds)
             }
@@ -520,13 +494,8 @@ class FocusSessionManager private constructor(private val context: Context) {
         if (scheduleActive) {
             for (sch in _activeSchedulesState.value.activeSchedules) {
                 if (sch.activeListNames.isNotBlank()) {
-                    val schListNames = sch.activeListNames.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-                    val matched = allLists.filter { it.name in schListNames }.map { it.id }.toSet()
-                    if (matched.isNotEmpty()) {
-                        validListIds.addAll(matched)
-                    } else {
-                        validListIds.addAll(enabledListIds)
-                    }
+                    val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedBySchedule(sch, it) }.map { it.id }.toSet()
+                    validListIds.addAll(matched)
                 } else {
                     validListIds.addAll(enabledListIds)
                 }
@@ -628,7 +597,12 @@ class FocusSessionManager private constructor(private val context: Context) {
             val cleanKw = kw.lowercase().trim()
             if (cleanKw.length >= 2) {
                 val kwRegex = Regex("(^|[^a-z0-9])${Regex.escape(cleanKw)}([^a-z0-9]|$)")
-                if (kwRegex.containsMatchIn(lower) || kwRegex.containsMatchIn(cleanInput)) {
+                // Strip domain TLD if this is a single URL hostname without query spaces, preventing false matches on .in/.us/.me etc.
+                val textToCheck = if (cleanInput.contains(".") && !cleanInput.contains(" ") && !cleanInput.contains("/")) {
+                    cleanInput.substringBeforeLast(".")
+                } else cleanInput
+
+                if (kwRegex.containsMatchIn(textToCheck)) {
                     return Pair(true, kw)
                 }
             }
@@ -841,11 +815,12 @@ class FocusSessionManager private constructor(private val context: Context) {
                 (isMinimalLauncherActive() && sessionState.value.isActive)
     }
 
-    fun startMinimalStrictLock(durationMinutes: Int) {
+    fun startMinimalStrictLock(durationMinutes: Int, level: Int = 2) {
         val endTime = System.currentTimeMillis() + durationMinutes * 60 * 1000L
         prefs.edit()
             .putLong(KEY_MINIMAL_STRICT_END_TIME, endTime)
             .putInt(KEY_MINIMAL_STRICT_DURATION_MINUTES, durationMinutes)
+            .putInt(KEY_MINIMAL_STRICT_LEVEL, level.coerceIn(1, 3))
             .putInt(KEY_MINIMAL_STRICT_EXITS_USED, 0)
             .putBoolean(KEY_MINIMAL_STRICT_USED_EXIT, false)
             .putBoolean(KEY_IS_MINIMAL_ACTIVE, true)
@@ -853,6 +828,10 @@ class FocusSessionManager private constructor(private val context: Context) {
         // BlockIT-style watchdog: keep the lock alive even if the app is killed.
         MinimalStrictLockWatchdogReceiver.schedule(context)
         _minimalStrictLockState.value = true
+    }
+
+    fun getMinimalStrictLevel(): Int {
+        return prefs.getInt(KEY_MINIMAL_STRICT_LEVEL, 2).coerceIn(1, 3)
     }
 
     fun isMinimalStrictLockActive(): Boolean {
@@ -870,6 +849,15 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun getMinimalStrictExitsRemaining(): Int {
+        val level = getMinimalStrictLevel()
+        if (level == 3) {
+            // Level 3: Ultra Strict - No Emergency Exits allowed at all
+            return 0
+        }
+        if (level == 1) {
+            // Level 1: Soft Strict - Flexible exits with 15s reflection timer
+            return 999
+        }
         if (isDeveloperModeActive()) return MAX_MINIMAL_STRICT_EXITS
         return (MAX_MINIMAL_STRICT_EXITS - getMinimalStrictExitsUsed()).coerceAtLeast(0)
     }
@@ -885,10 +873,21 @@ class FocusSessionManager private constructor(private val context: Context) {
     fun useMinimalStrictExit(): Boolean {
         if (isDeveloperModeActive()) {
             stopMinimalStrictLock()
-        setMinimalLauncherActive(false)
-        _minimalStrictLockState.value = isMinimalStrictLockActive()
-        return true
-    }
+            setMinimalLauncherActive(false)
+            _minimalStrictLockState.value = isMinimalStrictLockActive()
+            return true
+        }
+        val level = getMinimalStrictLevel()
+        if (level == 3) {
+            return false // Ultra strict cannot be exited early
+        }
+        if (level == 1) {
+            // Level 1 allows exit after reflection
+            stopMinimalStrictLock()
+            setMinimalLauncherActive(false)
+            _minimalStrictLockState.value = false
+            return true
+        }
         val remaining = getMinimalStrictExitsRemaining()
         if (remaining <= 0) {
             return false
@@ -965,6 +964,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         private const val KEY_SNOOZED_SCHEDULE_ID = "key_snoozed_schedule_id"
         private const val KEY_CUSTOM_ESSENTIAL_APPS = "key_custom_essential_apps"
         private const val MAX_MINIMAL_STRICT_EXITS = 1
+        private const val KEY_MINIMAL_STRICT_LEVEL = "key_minimal_strict_level"
         private const val KEY_MINIMAL_STRICT_EXITS_USED = "key_minimal_strict_exits_used"
         private const val KEY_MINIMAL_STRICT_DURATION_MINUTES = "key_minimal_strict_duration_minutes"
         private const val KEY_MINIMAL_STRICT_END_TIME = "key_minimal_strict_end_time"

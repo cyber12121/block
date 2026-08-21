@@ -77,8 +77,8 @@ fun UsageStatusPersonCard(
     val isBatteryExempt = remember(totalMinutesToday) {
         PermissionUtils.isBatteryOptimizationExempt(context)
     }
-    val isUsageAccessGranted = remember(totalMinutesToday) {
-        PermissionUtils.isUsageAccessGranted(context)
+    val isAccessibilityEnabled = remember(totalMinutesToday) {
+        PermissionUtils.isAccessibilityServiceEnabled(context)
     }
 
     val hours = totalMinutesToday / 60
@@ -179,7 +179,7 @@ fun UsageStatusPersonCard(
                 Spacer(modifier = Modifier.width(6.dp))
 
                 // Overall Status Pill
-                val allGood = isBatteryExempt && isUsageAccessGranted
+                val allGood = isBatteryExempt && isAccessibilityEnabled
                 Surface(
                     color = if (allGood) EmeraldSuccess.copy(alpha = 0.15f) else CrimsonStrict.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(12.dp),
