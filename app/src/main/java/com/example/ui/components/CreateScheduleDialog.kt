@@ -481,7 +481,7 @@ fun CreateScheduleDialog(
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "Locks settings and prevents disabling during the active schedule",
+                                    text = "Enforces session restrictions and prevents disabling during the active schedule",
                                     color = Color(0xFF94A3B8),
                                     fontSize = 10.sp,
                                     lineHeight = 14.sp

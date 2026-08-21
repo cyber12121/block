@@ -536,10 +536,8 @@ fun SessionScreen(
                     Text(
                         text = if (isUltraStrictActive)
                             "ULTRA STRICT LOCKDOWN ACTIVE 🔒"
-                        else if (isDeveloperMode)
-                            "Developer Emergency Unlock (∞ Dev)"
                         else if (canExitStrict)
-                            "Emergency Unlock (10 Exits/Day)"
+                            "Emergency Unlock"
                         else
                             "0 Exits Left (Limit Reached)",
                         fontWeight = FontWeight.Bold
@@ -549,11 +547,9 @@ fun SessionScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = if (isUltraStrictActive)
-                        "Ultra Strict Mode is active! Exiting is strictly disabled under all circumstances (even in Developer Mode) until timer completes."
-                    else if (isDeveloperMode)
-                        "Developer Mode: Unlimited emergency exits enabled (∞)."
-                    else if (dailyExitsLeft > 0)
-                        "Uses 1 of your 10 daily exits ($dailyExitsLeft/10 remaining today). Resets at midnight."
+                        "Ultra Strict Mode is active! Exiting is strictly disabled under all circumstances until timer completes."
+                    else if (canExitStrict)
+                        "Uses 1 of your emergency exits for today ($dailyExitsLeft/10 remaining). Resets at midnight."
                     else
                         "You have reached today's limit of 10 exits. Exits reset at midnight.",
                     fontSize = 11.sp,
@@ -578,10 +574,7 @@ fun SessionScreen(
             },
             text = {
                 Text(
-                    text = if (isDeveloperMode)
-                        "Developer Mode is active: Unlimited exits. This will end the Strict Mode session immediately and return you to the dashboard."
-                    else
-                        "This will use 1 of your 10 emergency exits for today ($dailyExitsLeft/10 remaining). The active Strict Mode block will be cancelled immediately."
+                    text = "This will end the active focus session immediately and unblock all applications and websites."
                 )
             },
             confirmButton = {
@@ -594,7 +587,7 @@ fun SessionScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
                 ) {
-                    Text(if (isDeveloperMode) "Unlock (∞ Dev)" else "Unlock Session")
+                    Text("Unlock Session")
                 }
             },
             dismissButton = {

@@ -183,6 +183,10 @@ class MainViewModel(
     }
 
     fun toggleBlockList(list: BlockList) {
+        if (list.isEnabled && sessionManager.sessionState.value.isActive) {
+            // Cannot disable/unblock active block lists during an active session
+            return
+        }
         viewModelScope.launch {
             repository.updateBlockList(list.copy(isEnabled = !list.isEnabled))
             sessionManager.refreshBlockedTargetsCache(repository)
@@ -190,6 +194,10 @@ class MainViewModel(
     }
 
     fun toggleTarget(target: BlockedTarget) {
+        if (target.isEnabled && sessionManager.sessionState.value.isActive) {
+            // Cannot disable/unblock active target rules during an active session
+            return
+        }
         viewModelScope.launch {
             repository.updateTarget(target.copy(isEnabled = !target.isEnabled))
             sessionManager.refreshBlockedTargetsCache(repository)
@@ -197,6 +205,10 @@ class MainViewModel(
     }
 
     fun updateTarget(target: BlockedTarget) {
+        if (sessionManager.sessionState.value.isActive) {
+            // Cannot alter existing target identifiers during an active session
+            return
+        }
         viewModelScope.launch {
             repository.updateTarget(target)
             sessionManager.refreshBlockedTargetsCache(repository)
@@ -221,6 +233,10 @@ class MainViewModel(
     }
 
     fun deleteTarget(target: BlockedTarget) {
+        if (sessionManager.sessionState.value.isActive) {
+            // Cannot delete targets during an active focus session
+            return
+        }
         viewModelScope.launch {
             repository.deleteTarget(target)
             sessionManager.refreshBlockedTargetsCache(repository)
@@ -244,6 +260,10 @@ class MainViewModel(
     }
 
     fun deleteBlockList(list: BlockList) {
+        if (sessionManager.sessionState.value.isActive) {
+            // Cannot delete block lists during an active focus session
+            return
+        }
         viewModelScope.launch {
             repository.deleteBlockList(list)
             sessionManager.refreshBlockedTargetsCache(repository)

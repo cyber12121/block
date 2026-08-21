@@ -121,7 +121,7 @@ fun AppsScreen(
     var installedApps by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var isLoadingApps by remember { mutableStateOf(true) }
 
-    val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
+    val isSessionActive = sessionState.isActive
 
     val blockedTargetsMap = remember(allTargets) {
         allTargets.filter { it.targetType == TargetType.APP }.associateBy { it.identifier.lowercase() }
@@ -274,13 +274,13 @@ fun AppsScreen(
             }
         }
 
-        // 2. Strict Session Active Banner
-        if (isSessionStrict) {
+        // 2. Active Session Add-Only Banner
+        if (isSessionActive) {
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF221118)),
-                    border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
+                    border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -292,28 +292,29 @@ fun AppsScreen(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(CrimsonStrict.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                                .background(IndigoPrimary.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = CrimsonStrict,
-                                modifier = Modifier.size(18.dp)
+                                tint = CyanAccent,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Strict session active",
+                                text = "Add-Only Focus Protection 🔒",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = Color(0xFFF87171)
+                                color = Color.White
                             )
                             Text(
-                                text = "App rules can't be changed until $endFormatted",
+                                text = "You can block additional apps anytime. Unblocking apps is locked until focus session ends ($endFormatted).",
                                 fontSize = 12.sp,
-                                color = Color(0xFFCBD5E1)
+                                color = Color(0xFFCBD5E1),
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -430,13 +431,11 @@ fun AppsScreen(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.People,
                         label = "Social",
-                        isStrictLocked = isSessionStrict,
+                        isStrictLocked = false,
                         onClick = {
-                            if (!isSessionStrict) {
-                                val pkgs = installedApps.filter { it.category == "Social" }.map { it.packageName }
-                                if (pkgs.isNotEmpty()) {
-                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Social")
-                                }
+                            val pkgs = installedApps.filter { it.category == "Social" }.map { it.packageName }
+                            if (pkgs.isNotEmpty()) {
+                                onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Social")
                             }
                         }
                     )
@@ -444,13 +443,11 @@ fun AppsScreen(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.PlayCircle,
                         label = "Video",
-                        isStrictLocked = isSessionStrict,
+                        isStrictLocked = false,
                         onClick = {
-                            if (!isSessionStrict) {
-                                val pkgs = installedApps.filter { it.category == "Video" }.map { it.packageName }
-                                if (pkgs.isNotEmpty()) {
-                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Video")
-                                }
+                            val pkgs = installedApps.filter { it.category == "Video" }.map { it.packageName }
+                            if (pkgs.isNotEmpty()) {
+                                onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Video")
                             }
                         }
                     )
@@ -458,13 +455,11 @@ fun AppsScreen(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.SportsEsports,
                         label = "Games",
-                        isStrictLocked = isSessionStrict,
+                        isStrictLocked = false,
                         onClick = {
-                            if (!isSessionStrict) {
-                                val pkgs = installedApps.filter { it.category == "Games" }.map { it.packageName }
-                                if (pkgs.isNotEmpty()) {
-                                    onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Games")
-                                }
+                            val pkgs = installedApps.filter { it.category == "Games" }.map { it.packageName }
+                            if (pkgs.isNotEmpty()) {
+                                onAddBulkTargets(defaultListId, TargetType.APP, pkgs, "Games")
                             }
                         }
                     )
@@ -494,14 +489,14 @@ fun AppsScreen(
             AppBlockerRowCard(
                 app = app,
                 isBlocked = isBlocked,
-                isSessionStrict = isSessionStrict,
+                isSessionActive = isSessionActive,
                 onToggle = {
-                    if (!isSessionStrict) {
-                        if (existingTarget != null) {
+                    if (existingTarget != null) {
+                        if (!isSessionActive || !existingTarget.isEnabled) {
                             onToggleTarget(existingTarget)
-                        } else {
-                            onAddBulkTargets(defaultListId, TargetType.APP, listOf(app.packageName), app.category)
                         }
+                    } else {
+                        onAddBulkTargets(defaultListId, TargetType.APP, listOf(app.packageName), app.category)
                     }
                 }
             )
@@ -551,7 +546,7 @@ fun QuickCategoryTile(
 fun AppBlockerRowCard(
     app: InstalledAppItem,
     isBlocked: Boolean,
-    isSessionStrict: Boolean,
+    isSessionActive: Boolean,
     onToggle: () -> Unit
 ) {
     Card(
@@ -559,7 +554,7 @@ fun AppBlockerRowCard(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(
             1.dp,
-            if (isBlocked && isSessionStrict) CrimsonStrict.copy(alpha = 0.3f) else DarkCardBorder
+            if (isBlocked && isSessionActive) CrimsonStrict.copy(alpha = 0.3f) else DarkCardBorder
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -621,10 +616,10 @@ fun AppBlockerRowCard(
 
             // Right lock / switch
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isSessionStrict && isBlocked) {
+                if (isSessionActive && isBlocked) {
                     Icon(
                         imageVector = Icons.Default.Lock,
-                        contentDescription = "Strictly Locked",
+                        contentDescription = "Unblocking Locked",
                         tint = CrimsonStrict,
                         modifier = Modifier.size(16.dp)
                     )
@@ -633,8 +628,10 @@ fun AppBlockerRowCard(
 
                 Switch(
                     checked = isBlocked,
-                    onCheckedChange = { if (!isSessionStrict) onToggle() },
-                    enabled = !isSessionStrict,
+                    onCheckedChange = {
+                        if (!isSessionActive || !isBlocked) onToggle()
+                    },
+                    enabled = !isSessionActive || !isBlocked,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = CyanAccent,

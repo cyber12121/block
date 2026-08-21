@@ -146,91 +146,64 @@ class FocusAccessibilityService : AccessibilityService() {
         // session running so the user can lay it out and pick essential apps; enforcing
         // here as well meant every tap on home or another app bounced them back into the
         // app mid-configuration, with no way to escape short of disabling the service.
-        if (sessionState.isActive) {
-            val isFgApp = targetPkg == applicationContext.packageName
-            val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
+        val isFgApp = targetPkg == applicationContext.packageName
+        val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
+        val isEssential = essentialApps.contains(targetPkg.lowercase())
 
-            // Ultra Strict Protection: Block System Settings & Uninstallation attempts under ALL circumstances
-            if (sessionState.isUltraStrict) {
-                val isSettingsOrInstaller = targetPkg == "com.android.settings" ||
-                        targetPkg.contains("settings") ||
-                        targetPkg.contains("packageinstaller") ||
-                        targetPkg.contains("securitycenter") ||
-                        targetPkg.contains("permission")
-                if (isSettingsOrInstaller) {
-                    triggerBlockShield(
-                        targetName = "System Settings & App Controls",
-                        reason = "Ultra Strict Lockdown Active 🔒: System Settings and App permissions are locked until session end time. Exiting is disabled for all users (including Developer Mode).",
-                        isWebsite = false
-                    )
-                    return
-                }
-            }
+        val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
+        val isStrictSession = sessionState.isActive && sessionState.isStrictMode
+        val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
+        val shouldLockToMinimalist = isMinimalStrictLock || (isStrictSession && isMinimalLauncherActive)
 
-            // Minimalist Strict Lock Protection: Block System Settings & Uninstallation attempts
-            if (sessionManager.isMinimalStrictLockActive() && !sessionManager.isDeveloperModeActive()) {
-                val isSettingsOrInstaller = targetPkg == "com.android.settings" ||
-                        targetPkg.contains("settings") ||
-                        targetPkg.contains("packageinstaller") ||
-                        targetPkg.contains("securitycenter") ||
-                        targetPkg.contains("permission")
-                if (isSettingsOrInstaller) {
-                    triggerBlockShield(
-                        targetName = "System Settings & App Controls",
-                        reason = "Minimalist Strict Lock Active 🔒: System Settings and App permissions are locked during strict lock duration. Only Developer Mode can override.",
-                        isWebsite = false
-                    )
-                    return
-                }
-            }
+        val targetLower = targetPkg.lowercase()
+        val isLauncherOrHome = targetLower.contains("launcher") ||
+                               targetLower.contains("home") ||
+                               targetLower.contains("quickstep") ||
+                               targetLower.contains("nexuslauncher") ||
+                               targetLower.contains("recents")
 
-            // Exact package match only. The previous `targetPkg.contains(essential)`
-            // fallback let anything sharing a prefix through the shield — with
-            // "com.android.dialer" marked essential, "com.android.dialer.spam" (or any
-            // package embedding that string) was silently treated as essential too.
-            val isEssential = essentialApps.contains(targetPkg.lowercase())
-            val isMinimalLauncherHome = sessionManager.isMinimalLauncherActive()
-
-            val isLauncherOrHome = targetPkg.contains("launcher") || targetPkg.contains("home")
-
-            if (!isFgApp && !isEssential) {
-                if (isLauncherOrHome) {
-                    // Home/launcher press during a session or Minimalist Strict Lock:
-                    // - Strict Mode OR Minimalist Strict Lock AND Minimal Launcher is the active screen:
-                    //   bounce back — the user must stay inside the Minimal Launcher.
-                    // - Every other case: allow going home freely. App-blocking still fires
-                    //   when the user opens a blocked app from their system launcher.
-                    if ((sessionState.isStrictMode || sessionManager.isMinimalStrictLockActive()) && isMinimalLauncherHome) {
-                        scope.launch {
-                            kotlinx.coroutines.delay(250)
-                            val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                            }
-                            try {
-                                startActivity(relaunch)
-                            } catch (_: Exception) {}
-                        }
-                        return
+        // 1. Instant Minimalist Mode bounce-back enforcement:
+        // Re-launch Minimalist Launcher instantly (delay 100ms) if the user minimizes or goes home.
+        if (shouldLockToMinimalist && !isFgApp && !isEssential) {
+            if (isLauncherOrHome) {
+                scope.launch {
+                    kotlinx.coroutines.delay(100)
+                    val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     }
-                    // All other cases — let them go home freely.
-                } else if (!isLauncherOrHome && sessionManager.isAppBlocked(targetPkg)) {
-                    // Blocked app opened — show the dedicated block shield overlay
-                    triggerBlockShield(
-                        targetName = getReadableAppName(targetPkg),
-                        reason = "App '$targetPkg' is restricted in your active focus shield.",
-                        isWebsite = false
-                    )
-                    return
+                    try {
+                        startActivity(relaunch)
+                    } catch (_: Exception) {}
                 }
+                return
+            } else if (sessionManager.isAppBlocked(targetPkg)) {
+                triggerBlockShield(
+                    targetName = getReadableAppName(targetPkg),
+                    reason = "App '$targetPkg' is restricted in your active focus shield.",
+                    isWebsite = false
+                )
+                return
             }
         }
 
-        // Skip our own app, keyboards, and core system UI overlay to save CPU
-        if (targetPkg == applicationContext.packageName ||
+        // 2. Regular active session app-blocking
+        if (sessionState.isActive && !isFgApp && !isEssential) {
+            if (sessionManager.isAppBlocked(targetPkg)) {
+                triggerBlockShield(
+                    targetName = getReadableAppName(targetPkg),
+                    reason = "App '$targetPkg' is restricted in your active focus shield.",
+                    isWebsite = false
+                )
+                return
+            }
+        }
+
+        // Skip our own app, keyboards, system UI overlay, and system launcher (when not locking to minimalist) to save CPU
+        if (isFgApp ||
             targetPkg == "com.android.systemui" ||
             targetPkg.contains("inputmethod") ||
             targetPkg.contains("keyboard") ||
-            targetPkg.contains("launcher")
+            (isLauncherOrHome && !shouldLockToMinimalist)
         ) return
 
         val now = System.currentTimeMillis()

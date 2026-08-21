@@ -595,11 +595,9 @@ fun SettingsScreen(
             text = {
                 Text(
                     text = if (isUltraStrictActive)
-                        "Ultra Strict Lockdown Active 🔒: Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
-                    else if (isDeveloperMode)
-                        "Developer Mode active: Unlimited exits (∞). This will immediately terminate the active focus protection session and clear all blocking barriers."
-                    else if (dailyExitsLeft > 0)
-                        "Google Account: Uses 1 of your 10 emergency exits for today ($dailyExitsLeft/10 remaining). All app barriers will be removed immediately."
+                        "Ultra Strict Lockdown Active 🔒: Session cannot be ended or unlocked under ANY circumstance until the session timer expires."
+                    else if (canExit)
+                        "Uses 1 of your emergency exits for today ($dailyExitsLeft/10 remaining). All app barriers will be removed immediately."
                     else
                         "You have reached today's 10-exit limit (0 exits remaining). Exits reset at midnight.",
                     color = Color(0xFFCBD5E1)
@@ -618,7 +616,7 @@ fun SettingsScreen(
                     )
                 ) {
                     Text(
-                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (isDeveloperMode) "End Session (∞ Dev)" else if (canExit) "End Session (1/10)" else "0 Exits Left",
+                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (canExit) "End Session" else "0 Exits Left",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )

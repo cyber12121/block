@@ -276,7 +276,7 @@ fun MandatoryLoginGateScreen(
                 }
             }
 
-            // Google Sign-In / Sign-Up Primary Action Card
+            // Mandatory Google Sign-In / Sign-Up Primary Action Card
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -336,137 +336,6 @@ fun MandatoryLoginGateScreen(
                 }
             }
 
-            if (isDev) {
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Active Developer Control Card
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF06281E)),
-                    border = BorderStroke(1.5.dp, EmeraldSuccess.copy(alpha = 0.6f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("mandatory_developer_mode_card")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(EmeraldSuccess.copy(alpha = 0.2f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Terminal,
-                                        contentDescription = "Developer",
-                                        tint = EmeraldSuccess,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Column {
-                                    Text(
-                                        text = "Developer Mode ACTIVE",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Unlimited Exits • Password Protected",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = EmeraldSuccess
-                                    )
-                                }
-                            }
-                        }
-
-                        Text(
-                            text = "Developer Mode is active on this device. You can lock and hide Developer Mode anytime to return to clean end-user mode.",
-                            fontSize = 11.sp,
-                            color = Color(0xFFA7F3D0),
-                            lineHeight = 15.sp
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = { authManager.lockAndHideDeveloperMode() },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF7F1D1D),
-                                    contentColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Text("Lock & Hide Dev Mode", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            OutlinedButton(
-                                onClick = { showPinChangeDialog = true },
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.5f)),
-                                modifier = Modifier.height(44.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(Icons.Default.Key, contentDescription = null, tint = EmeraldSuccess, modifier = Modifier.size(14.dp))
-                                    Text("PIN", fontSize = 11.sp, color = EmeraldSuccess, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Discreet Footer Trigger for Developer Access
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { showDevPasscodeDialog = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Developer Gate",
-                        tint = Color(0xFF475569),
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = "Developer Access Gate 🔒 (PIN Protected)",
-                        fontSize = 11.sp,
-                        color = Color(0xFF475569),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
@@ -475,7 +344,6 @@ fun MandatoryLoginGateScreen(
 /**
  * Compact Signed-In User Icon / Exit Quota Chip for Top Bars & Headers
  * When user is signed in: prominently displays Google user avatar, Google logo, signed-in check, and remaining exits.
- * When in Dev mode: displays active Dev Mode unlimited badge.
  */
 @Composable
 fun ExitQuotaChip(
@@ -483,17 +351,15 @@ fun ExitQuotaChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val isDev by authManager.isDeveloperMode.collectAsState()
     val remaining by authManager.dailyExitsRemaining.collectAsState()
     val user by authManager.currentUser.collectAsState()
 
     Surface(
-        color = if (isDev) EmeraldSuccess.copy(alpha = 0.15f) else Color(0xFF131D33),
+        color = Color(0xFF131D33),
         shape = RoundedCornerShape(100.dp),
         border = BorderStroke(
             1.dp,
-            if (isDev) EmeraldSuccess.copy(alpha = 0.5f)
-            else if (user != null) EmeraldSuccess.copy(alpha = 0.6f)
+            if (user != null) EmeraldSuccess.copy(alpha = 0.6f)
             else if (remaining <= 2) Color(0xFFEF4444).copy(alpha = 0.5f)
             else IndigoPrimary.copy(alpha = 0.3f)
         ),
@@ -561,19 +427,6 @@ fun ExitQuotaChip(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-            } else if (isDev) {
-                Icon(
-                    imageVector = Icons.Default.Terminal,
-                    contentDescription = "Dev Mode",
-                    tint = EmeraldSuccess,
-                    modifier = Modifier.size(13.dp)
-                )
-                Text(
-                    text = "DEV (∞)",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = EmeraldSuccess
-                )
             } else {
                 GoogleLogoIcon(modifier = Modifier.size(12.dp))
                 Text(
@@ -589,8 +442,8 @@ fun ExitQuotaChip(
 
 /**
  * Account & Auth Card for Settings/Security screen
- * When user is signed in: displays Google profile, verified badge, exits, and sign out (NO developer mode).
- * When user is not signed in: displays Google sign in and developer mode bypass.
+ * When user is signed in: displays Google profile, verified badge, exits, and sign out.
+ * When user is not signed in: displays Google sign in button.
  */
 @Composable
 fun GoogleAuthCard(
@@ -599,7 +452,6 @@ fun GoogleAuthCard(
     onOpenDialog: () -> Unit = {}
 ) {
     val user by authManager.currentUser.collectAsState()
-    val isDev by authManager.isDeveloperMode.collectAsState()
     val remaining by authManager.dailyExitsRemaining.collectAsState()
     val used by authManager.dailyExitsUsed.collectAsState()
 
@@ -609,7 +461,6 @@ fun GoogleAuthCard(
         border = BorderStroke(
             1.dp,
             if (user != null) EmeraldSuccess.copy(alpha = 0.4f)
-            else if (isDev) EmeraldSuccess.copy(alpha = 0.5f)
             else IndigoPrimary.copy(alpha = 0.3f)
         ),
         modifier = modifier.fillMaxWidth()
@@ -633,47 +484,35 @@ fun GoogleAuthCard(
                             .size(38.dp)
                             .background(
                                 if (user != null) EmeraldSuccess.copy(alpha = 0.15f)
-                                else if (isDev) EmeraldSuccess.copy(alpha = 0.15f)
                                 else IndigoPrimary.copy(alpha = 0.15f),
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (user != null) {
-                            GoogleLogoIcon(modifier = Modifier.size(20.dp))
-                        } else if (isDev) {
-                            Icon(
-                                imageVector = Icons.Default.Terminal,
-                                contentDescription = null,
-                                tint = EmeraldSuccess,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            GoogleLogoIcon(modifier = Modifier.size(20.dp))
-                        }
+                        GoogleLogoIcon(modifier = Modifier.size(20.dp))
                     }
 
                     Column {
                         Text(
-                            text = if (user != null) "Google Account (Gmail)" else if (isDev) "Developer Mode (ACTIVE)" else "Google Authentication",
+                            text = if (user != null) "Google Account (Gmail)" else "Google Authentication",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = Color.White
                         )
                         Text(
-                            text = if (user != null) "$remaining/10 exits remaining today" else if (isDev) "Unlimited exits • No restrictions" else "Sign in required",
+                            text = if (user != null) "$remaining/10 exits remaining today" else "Sign in required",
                             fontSize = 12.sp,
-                            color = if (user != null) CyanAccent else if (isDev) EmeraldSuccess else Color(0xFF94A3B8)
+                            color = if (user != null) CyanAccent else Color(0xFF94A3B8)
                         )
                     }
                 }
 
                 Surface(
                     shape = RoundedCornerShape(100.dp),
-                    color = if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.15f) else Color(0xFF1E293B),
+                    color = if (user != null) EmeraldSuccess.copy(alpha = 0.15f) else Color(0xFF1E293B),
                     border = BorderStroke(
                         1.dp,
-                        if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.4f) else DarkCardBorder
+                        if (user != null) EmeraldSuccess.copy(alpha = 0.4f) else DarkCardBorder
                     )
                 ) {
                     Row(
@@ -690,17 +529,16 @@ fun GoogleAuthCard(
                             )
                         }
                         Text(
-                            text = if (user != null) "SIGNED IN" else if (isDev) "DEV MODE ON" else "LOGGED OUT",
+                            text = if (user != null) "SIGNED IN" else "LOGGED OUT",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (user != null || isDev) EmeraldSuccess else CyanAccent
+                            color = if (user != null) EmeraldSuccess else CyanAccent
                         )
                     }
                 }
             }
 
             // If user IS signed in: Display ONLY user details and sign out.
-            // Developer mode is completely removed when signed in!
             if (user != null) {
                 val currentUser = user!!
                 Column(
@@ -818,113 +656,26 @@ fun GoogleAuthCard(
                     }
                 }
             } else {
-                // User is NOT signed in: Display status or Google sign-in
-                if (isDev) {
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF042017)),
-                        border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.6f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("dev_mode_toggle_card")
+                // User is NOT signed in: Google sign in action
+                Button(
+                    onClick = onOpenDialog,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("open_auth_dialog_btn")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(EmeraldSuccess.copy(alpha = 0.2f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Terminal,
-                                            contentDescription = "Dev Mode",
-                                            tint = EmeraldSuccess,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-
-                                    Column {
-                                        Text(
-                                            text = "Developer Mode ACTIVE",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = "Unlimited exits • Password Protected",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = EmeraldSuccess
-                                        )
-                                    }
-                                }
-                            }
-
-                            Button(
-                                onClick = { authManager.lockAndHideDeveloperMode() },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF7F1D1D),
-                                    contentColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(40.dp)
-                                    .testTag("toggle_dev_mode_btn")
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Text(
-                                        text = "Lock & Hide Developer Mode",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // Normal user mode: Google sign in action
-                    Button(
-                        onClick = onOpenDialog,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("open_auth_dialog_btn")
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            GoogleLogoIcon(modifier = Modifier.size(16.dp))
-                            Text(
-                                text = "Sign In / Sign Up with Google",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
+                        GoogleLogoIcon(modifier = Modifier.size(16.dp))
+                        Text(
+                            text = "Sign In / Sign Up with Google",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
