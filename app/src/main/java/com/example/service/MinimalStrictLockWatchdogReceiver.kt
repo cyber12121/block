@@ -79,24 +79,20 @@ class MinimalStrictLockWatchdogReceiver : BroadcastReceiver() {
             return
         }
 
-        // BlockIT-style self-heal: drag the user back into the Minimal Launcher.
-        // Re-launching MainActivity also re-triggers its screen-pinning effect.
-        runCatching {
-            val relaunch = Intent(context, MainActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                            Intent.FLAG_ACTIVITY_NO_ANIMATION
-                )
-                putExtra(MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
-            }
-            context.startActivity(relaunch)
-        }
-
-        // If accessibility reports we're outside FocusGuard/essentials, force-lock the
-        // screen (Device Admin) so the user can't stay away.
+        // Only drag the user back if they escaped FocusGuard AND are not using an essential app
         if (sessionManager.isLockEscaped()) {
+            runCatching {
+                val relaunch = Intent(context, MainActivity::class.java).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    )
+                    putExtra(MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                }
+                context.startActivity(relaunch)
+            }
             com.example.util.PermissionUtils.lockScreen(context)
         }
 
