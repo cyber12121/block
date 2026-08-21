@@ -1480,41 +1480,6 @@ fun MinimalLauncherScreen(
             )
         }
 
-        // Locked Exit Warning Dialog during Active Focus Session
-        if (showExitLockedDialog) {
-            AlertDialog(
-                onDismissRequest = { showExitLockedDialog = false },
-                icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = CrimsonStrict, modifier = Modifier.size(28.dp)) },
-                title = { Text("Focus Session Active", fontWeight = FontWeight.Bold, color = Color.White) },
-                text = {
-                    Text(
-                        "A focus session is currently in progress (${sessionState.remainingSeconds / 60}m remaining). Would you like to stay focused or use an exit?",
-                        color = Color(0xFFCBD5E1),
-                        fontSize = 14.sp
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showExitLockedDialog = false
-                            showEmergencyExitDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
-                    ) {
-                        Text("Exit Launcher (∞)", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(
-                        onClick = { showExitLockedDialog = false }
-                    ) {
-                        Text("Stay Focused", color = Color(0xFFCBD5E1))
-                    }
-                },
-                containerColor = Color(0xFF111A2E)
-            )
-        }
-
         // Blocked App Dialog
         showAppBlockedDialog?.let { appName ->
             AlertDialog(
@@ -1544,22 +1509,6 @@ fun MinimalLauncherScreen(
                     sessionManager.saveCustomEssentialApps(newPkgs)
                     customEssentialPkgs = newPkgs
                     showConfigureEssentialAppsDialog = false
-                }
-            )
-        }
-
-        // Emergency Exit Dialog
-        if (showEmergencyExitDialog) {
-            EmergencyExitDialog(
-                remainingExits = remainingExits,
-                isDeveloper = sessionManager.isDeveloperModeActive(),
-                onDismiss = { showEmergencyExitDialog = false },
-                onConfirmExit = {
-                    if (sessionManager.useEmergencyExit()) {
-                        remainingExits = sessionManager.getRemainingEmergencyExits()
-                        showEmergencyExitDialog = false
-                        onExitLauncher()
-                    }
                 }
             )
         }
