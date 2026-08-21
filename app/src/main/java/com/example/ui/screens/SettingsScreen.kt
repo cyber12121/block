@@ -120,7 +120,7 @@ fun SettingsScreen(
     val grantedCount = permissions.count { it.isGranted }
     val totalCount = permissions.size
 
-    val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
+    val isSessionStrict = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
     val endFormatted = if (sessionState.endTimeMillis > 0) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
     } else ""

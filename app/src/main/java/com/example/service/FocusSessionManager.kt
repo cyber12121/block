@@ -59,6 +59,30 @@ class FocusSessionManager private constructor(private val context: Context) {
     val activeSchedulesStateFlow: StateFlow<ActiveSchedulesState> = _activeSchedulesState.asStateFlow()
     val activeSchedulesState: StateFlow<ActiveSchedulesState> = activeSchedulesStateFlow
 
+    // Reactive flag for the Minimalist Strict Lock so the UI / pinning can react
+    // the instant the lock starts or ends (prefs reads alone are not observable).
+    private val _minimalStrictLockState = MutableStateFlow(isMinimalStrictLockActive())
+    val minimalStrictLockState: StateFlow<Boolean> = _minimalStrictLockState.asStateFlow()
+
+    // Last foreground package reported by the accessibility service; the watchdog uses
+    // it to detect whether the user escaped the Minimalist Strict Lock.
+    @Volatile private var lastSeenForegroundPackage: String? = null
+    @Volatile private var lastSeenForegroundTime: Long = 0L
+
+    fun reportForeground(packageName: String) {
+        lastSeenForegroundPackage = packageName
+        lastSeenForegroundTime = System.currentTimeMillis()
+    }
+
+    fun isLockEscaped(): Boolean {
+        if (!isMinimalStrictLockActive()) return false
+        val pkg = lastSeenForegroundPackage ?: return false
+        if (System.currentTimeMillis() - lastSeenForegroundTime > 10_000) return false // stale
+        val allowed = mutableSetOf(context.packageName.lowercase())
+        allowed += getCustomEssentialApps().map { it.lowercase() }
+        return !allowed.contains(pkg.lowercase())
+    }
+
     fun isAnyBlockingActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
 
     fun isStrictActive(): Boolean = (_sessionState.value.isActive && _sessionState.value.isStrictMode) || (_activeSchedulesState.value.isActive && _activeSchedulesState.value.isStrictMode)
@@ -773,6 +797,17 @@ class FocusSessionManager private constructor(private val context: Context) {
         prefs.edit().putBoolean(KEY_IS_MINIMAL_ACTIVE, active).apply()
     }
 
+    /**
+     * True whenever the user is locked inside the Minimalist experience:
+     * either a time-boxed Minimalist Strict Lock is running, or the Minimal
+     * Launcher is active during an active focus session. Mirrors BlockIT's
+     * "timer lock" so the home screen bounce + screen pinning engage.
+     */
+    fun isMinimalistStrictModeActive(): Boolean {
+        return isMinimalStrictLockActive() ||
+                (isMinimalLauncherActive() && sessionState.value.isActive)
+    }
+
     fun startMinimalStrictLock(durationMinutes: Int) {
         val endTime = System.currentTimeMillis() + durationMinutes * 60 * 1000L
         prefs.edit()
@@ -782,6 +817,9 @@ class FocusSessionManager private constructor(private val context: Context) {
             .putBoolean(KEY_MINIMAL_STRICT_USED_EXIT, false)
             .putBoolean(KEY_IS_MINIMAL_ACTIVE, true)
             .apply()
+        // BlockIT-style watchdog: keep the lock alive even if the app is killed.
+        MinimalStrictLockWatchdogReceiver.schedule(context)
+        _minimalStrictLockState.value = true
     }
 
     fun isMinimalStrictLockActive(): Boolean {
@@ -814,9 +852,10 @@ class FocusSessionManager private constructor(private val context: Context) {
     fun useMinimalStrictExit(): Boolean {
         if (isDeveloperModeActive()) {
             stopMinimalStrictLock()
-            setMinimalLauncherActive(false)
-            return true
-        }
+        setMinimalLauncherActive(false)
+        _minimalStrictLockState.value = isMinimalStrictLockActive()
+        return true
+    }
         val remaining = getMinimalStrictExitsRemaining()
         if (remaining <= 0) {
             return false
@@ -842,6 +881,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             .putBoolean(KEY_MINIMAL_STRICT_USED_EXIT, false)
             .putBoolean(KEY_IS_MINIMAL_ACTIVE, false)
             .apply()
+        MinimalStrictLockWatchdogReceiver.cancel(context)
+        _minimalStrictLockState.value = false
     }
 
     fun getRemainingEmergencyExits(): Int {

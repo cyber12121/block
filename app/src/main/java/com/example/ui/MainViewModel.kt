@@ -273,6 +273,11 @@ class MainViewModel(
     }
 
     fun toggleSchedule(schedule: Schedule) {
+        val st = sessionManager.sessionState.value
+        if (st.isActive && (st.isStrictMode || st.isUltraStrict)) {
+            // Locked: schedules can't be enabled/disabled while a Strict/Ultra session is active.
+            return
+        }
         viewModelScope.launch {
             val updated = schedule.copy(isEnabled = !schedule.isEnabled)
             repository.updateSchedule(updated)

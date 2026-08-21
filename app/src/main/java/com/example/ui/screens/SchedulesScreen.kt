@@ -126,7 +126,7 @@ fun SchedulesScreen(
     val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
 
     var lockedScheduleInfo by remember { mutableStateOf<Schedule?>(null) }
-    val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
+    val isSessionStrict = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
 
     Scaffold(
         floatingActionButton = {

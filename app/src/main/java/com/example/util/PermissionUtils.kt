@@ -76,6 +76,23 @@ object PermissionUtils {
         }
     }
 
+    /**
+     * BlockIT-style hard fallback: force-lock the device screen via Device Admin.
+     * Used when the accessibility bounce-back fails to keep the user inside the
+     * minimalist strict mode. Requires FocusGuard to be an active device admin.
+     */
+    fun lockScreen(context: Context) {
+        try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+            val adminComponent = ComponentName(context, FocusDeviceAdminReceiver::class.java)
+            if (dpm != null && dpm.isAdminActive(adminComponent)) {
+                dpm.lockNow()
+            }
+        } catch (_: Exception) {
+            // ignore - best effort only
+        }
+    }
+
     fun isNotificationGranted(context: Context): Boolean {
         return try {
             NotificationManagerCompat.from(context).areNotificationsEnabled()

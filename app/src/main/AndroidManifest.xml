@@ -119,6 +119,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- BlockIT-style watchdog for the Minimalist Strict Lock only -->
+        <receiver
+            android:name=".service.MinimalStrictLockWatchdogReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
 
 </manifest>

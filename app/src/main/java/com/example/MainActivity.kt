@@ -163,10 +163,12 @@ fun MainAppContent(viewModel: MainViewModel) {
     }
 
     val isStrictActive = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
+    val isMinimalistLock by sessionManager.minimalStrictLockState.collectAsStateWithLifecycle()
+    val pinActive = isStrictActive || isMinimalistLock
 
     val activity = (context as? android.app.Activity)
-    androidx.compose.runtime.LaunchedEffect(isStrictActive) {
-        if (isStrictActive) {
+    androidx.compose.runtime.LaunchedEffect(pinActive) {
+        if (pinActive) {
             try {
                 activity?.startLockTask()
             } catch (_: Throwable) {}

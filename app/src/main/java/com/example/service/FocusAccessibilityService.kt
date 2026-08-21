@@ -8,6 +8,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.example.FocusGuardApp
 import com.example.ui.BlockedOverlayActivity
+import com.example.util.PermissionUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -124,6 +125,8 @@ class FocusAccessibilityService : AccessibilityService() {
         val targetPkg = event.packageName?.toString() ?: return
 
         val sessionManager = FocusSessionManager.getInstance(this)
+        // Feed the current foreground package to the watchdog so it can detect escapes.
+        sessionManager.reportForeground(targetPkg)
         val sessionState = sessionManager.sessionState.value
 
         // Keep the block cache warm WITHOUT hammering the database on every event:
@@ -154,7 +157,11 @@ class FocusAccessibilityService : AccessibilityService() {
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
         val isBlockingActive = sessionManager.isAnyBlockingActive()
         val isStrictSession = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()
-        val shouldLockToMinimalist = isMinimalStrictLock || isStrictSession || (isMinimalLauncherActive && isBlockingActive)
+        // BlockIT-style: also bounce back whenever the Minimal Launcher is locked
+        // during an active focus session (not just a strict lock or active blocking).
+        val minimalistStrictMode = isMinimalStrictLock ||
+                (isMinimalLauncherActive && sessionManager.sessionState.value.isActive)
+        val shouldLockToMinimalist = minimalistStrictMode || isStrictSession || (isMinimalLauncherActive && isBlockingActive)
 
         val targetLower = targetPkg.lowercase()
         val isLauncherOrHome = targetLower.contains("launcher") ||
@@ -166,8 +173,10 @@ class FocusAccessibilityService : AccessibilityService() {
                                targetLower.contains("sec.android.app.launcher") ||
                                targetLower.contains("miui.home")
 
-        // 1. Instant Minimalist Mode bounce-back enforcement:
-        // Re-launch Minimalist Launcher instantly if the user minimizes or goes home.
+        // 1. Minimalist / Strict bounce-back enforcement (BlockIT-style):
+        // Minimalist Strict Lock -> back into the Minimal Launcher.
+        // Normal Strict/Ultra session (incl. schedule) -> bounce to FocusGuard + block
+        // shield; do NOT open the Minimal Launcher for schedule locks.
         if (shouldLockToMinimalist && !isFgApp && !isEssential) {
             if (isLauncherOrHome) {
                 val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
@@ -177,10 +186,15 @@ class FocusAccessibilityService : AccessibilityService() {
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
+                    if (isMinimalLauncherActive) {
+                        putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                    }
                 }
                 try {
                     startActivity(relaunch)
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                    com.example.util.PermissionUtils.lockScreen(this@FocusAccessibilityService)
+                }
                 return
             } else if (sessionManager.isAppBlocked(targetPkg)) {
                 triggerBlockShield(
