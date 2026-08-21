@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.BlockList
 import com.example.data.model.BlockedTarget
 import com.example.data.model.TargetType
+import com.example.service.ActiveSchedulesState
 import com.example.service.ActiveSessionState
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
@@ -79,32 +80,13 @@ import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
+import com.example.util.InstalledAppItem
+import com.example.util.InstalledAppsCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-data class InstalledAppItem(
-    val appName: String,
-    val packageName: String,
-    val iconBitmap: Bitmap?,
-    val category: String,
-    val isSystemApp: Boolean
-)
-
-fun drawableToBitmap(drawable: Drawable): Bitmap {
-    if (drawable is BitmapDrawable && drawable.bitmap != null) {
-        return drawable.bitmap
-    }
-    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
-    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    drawable.setBounds(0, 0, canvas.width, canvas.height)
-    drawable.draw(canvas)
-    return bitmap
-}
 
 @Composable
 fun AppsScreen(
@@ -119,8 +101,8 @@ fun AppsScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
-    var installedApps by remember { mutableStateOf<List<com.example.util.InstalledAppItem>>(com.example.util.InstalledAppsCache.getCachedApps()) }
-    var isLoadingApps by remember { mutableStateOf(!com.example.util.InstalledAppsCache.isReady()) }
+    var installedApps by remember { mutableStateOf<List<InstalledAppItem>>(InstalledAppsCache.getCachedApps()) }
+    var isLoadingApps by remember { mutableStateOf(!InstalledAppsCache.isReady()) }
 
     val isSessionActive = sessionState.isActive || (sessionState.remainingSeconds > 0) || activeSchedulesState.isActive
 
@@ -136,7 +118,7 @@ fun AppsScreen(
     }
 
     LaunchedEffect(Unit) {
-        val apps = com.example.util.InstalledAppsCache.loadApps(context)
+        val apps = InstalledAppsCache.loadApps(context)
         installedApps = apps
         isLoadingApps = false
     }

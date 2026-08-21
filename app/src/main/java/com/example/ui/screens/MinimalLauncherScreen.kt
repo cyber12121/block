@@ -115,6 +115,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.BlockedTarget
 import com.example.data.model.TargetType
 import com.example.service.ActiveSessionState
+import com.example.service.FocusSessionManager
 import com.example.ui.components.DevExitConfirmDialog
 import com.example.ui.components.EditEssentialAppsDialog
 import com.example.ui.components.EmergencyExitDialog

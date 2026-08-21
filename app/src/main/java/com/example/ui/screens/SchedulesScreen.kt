@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.auth.AuthManager
 import com.example.data.model.Schedule
+import com.example.service.ActiveSchedulesState
 import com.example.service.ActiveSessionState
 import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
