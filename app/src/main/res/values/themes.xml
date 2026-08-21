@@ -5,5 +5,7 @@
         <item name="android:windowBackground">@color/focus_guard_bg</item>
         <item name="android:statusBarColor">@color/focus_guard_bg</item>
         <item name="android:navigationBarColor">@color/focus_guard_bg</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowDisablePreview">true</item>
     </style>
 </resources>

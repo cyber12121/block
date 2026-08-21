@@ -164,6 +164,19 @@ fun MainAppContent(viewModel: MainViewModel) {
 
     val isStrictActive = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
 
+    val activity = (context as? android.app.Activity)
+    androidx.compose.runtime.LaunchedEffect(isStrictActive) {
+        if (isStrictActive) {
+            try {
+                activity?.startLockTask()
+            } catch (_: Throwable) {}
+        } else {
+            try {
+                activity?.stopLockTask()
+            } catch (_: Throwable) {}
+        }
+    }
+
     StrictModeInteractionGuard(
         isStrictActive = isStrictActive,
         remainingSeconds = sessionState.remainingSeconds,

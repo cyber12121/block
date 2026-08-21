@@ -171,7 +171,12 @@ class FocusAccessibilityService : AccessibilityService() {
         if (shouldLockToMinimalist && !isFgApp && !isEssential) {
             if (isLauncherOrHome) {
                 val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    )
                 }
                 try {
                     startActivity(relaunch)
@@ -465,7 +470,10 @@ class FocusAccessibilityService : AccessibilityService() {
 
         // Launch full-screen block shield
         val intent = Intent(this, BlockedOverlayActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION
             putExtra(BlockedOverlayActivity.EXTRA_TARGET, targetName)
             putExtra(BlockedOverlayActivity.EXTRA_REASON, reason)
             putExtra(BlockedOverlayActivity.EXTRA_IS_WEBSITE, isWebsite)

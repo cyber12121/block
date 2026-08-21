@@ -74,6 +74,8 @@ class BlockedOverlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
         val target = intent.getStringExtra(EXTRA_TARGET) ?: "Distracting Content"
         val reason = intent.getStringExtra(EXTRA_REASON) ?: "Blocked by active Focus Session"
         val isWebsite = intent.getBooleanExtra(EXTRA_IS_WEBSITE, false)
@@ -135,6 +137,12 @@ class BlockedOverlayActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
     }
 }
 
