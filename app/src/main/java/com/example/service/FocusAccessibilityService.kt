@@ -150,8 +150,7 @@ class FocusAccessibilityService : AccessibilityService() {
         // here as well meant every tap on home or another app bounced them back into the
         // app mid-configuration, with no way to escape short of disabling the service.
         val isFgApp = targetPkg == applicationContext.packageName
-        val essentialApps = sessionManager.getCustomEssentialApps().map { it.lowercase() }
-        val isEssential = essentialApps.contains(targetPkg.lowercase())
+        val isEssential = sessionManager.isEssentialApp(targetPkg)
 
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
@@ -170,10 +169,11 @@ class FocusAccessibilityService : AccessibilityService() {
                                targetLower.contains("sec.android.app.launcher") ||
                                targetLower.contains("miui.home")
 
-        // 1. Minimalist / Strict bounce-back enforcement (BlockIT-style):
-        // Minimalist Strict Lock -> back into the Minimal Launcher.
-        // Normal Strict/Ultra session (incl. schedule) -> bounce to FocusGuard + block
-        // shield; do NOT open the Minimal Launcher for schedule locks.
+        // 1. Minimalist Strict Lock Guardrail:
+        // Essential apps (Phone, SMS, Camera, user-selected essentials) -> ALLOWED freely.
+        // Stock OEM Home Launcher -> Instantly re-launch Minimalist Launcher.
+        // System Settings / App Info -> Instantly trigger Block Shield.
+        // Non-essential / Distracting apps -> Instantly trigger Block Shield.
         if (shouldLockToMinimalist && !isFgApp && !isEssential) {
             if (isLauncherOrHome) {
                 val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
@@ -183,9 +183,7 @@ class FocusAccessibilityService : AccessibilityService() {
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
-                    if (isMinimalLauncherActive) {
-                        putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
-                    }
+                    putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
                 }
                 try {
                     startActivity(relaunch)
@@ -193,10 +191,17 @@ class FocusAccessibilityService : AccessibilityService() {
                     com.example.util.PermissionUtils.lockScreen(this@FocusAccessibilityService)
                 }
                 return
-            } else if (sessionManager.isAppBlocked(targetPkg)) {
+            } else if (systemSettingsPackages.contains(targetPkg)) {
+                triggerBlockShield(
+                    targetName = "Settings Restricted",
+                    reason = "System settings and app controls are restricted during Minimalist Strict Lock.",
+                    isWebsite = false
+                )
+                return
+            } else {
                 triggerBlockShield(
                     targetName = getReadableAppName(targetPkg),
-                    reason = "App '$targetPkg' is restricted in your active focus shield.",
+                    reason = "Only selected essential apps can be opened during Minimalist Mode.",
                     isWebsite = false
                 )
                 return

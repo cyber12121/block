@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -201,7 +202,7 @@ fun AppsScreen(
             }
         }
 
-        // 2. Active Session Add-Only Banner
+        // 2. Active Session Real-Time Protection Banner
         if (isSessionActive) {
             item {
                 Card(
@@ -232,13 +233,13 @@ fun AppsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Add-Only Focus Protection 🔒",
+                                text = "Focus Protection Active 🔒",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = Color.White
                             )
                             Text(
-                                text = "You can block additional apps anytime. Unblocking apps is locked until focus session ends ($endFormatted).",
+                                text = "You can block additional apps anytime. Unblocking or turning off blocked apps is locked until the focus or schedule session ends ($endFormatted).",
                                 fontSize = 12.sp,
                                 color = Color(0xFFCBD5E1),
                                 lineHeight = 16.sp
@@ -443,7 +444,7 @@ fun QuickCategoryTile(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(1.dp, DarkCardBorder),
-        modifier = modifier.clickable(enabled = !isStrictLocked, onClick = onClick)
+        modifier = modifier.clickable(enabled = true, onClick = onClick)
     ) {
         Column(
             modifier = Modifier
@@ -455,7 +456,7 @@ fun QuickCategoryTile(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isStrictLocked) Color(0xFF64748B) else IndigoPrimary,
+                tint = IndigoPrimary,
                 modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -463,7 +464,7 @@ fun QuickCategoryTile(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isStrictLocked) Color(0xFF64748B) else Color.White
+                color = Color.White
             )
         }
     }
@@ -481,7 +482,7 @@ fun AppBlockerRowCard(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(
             1.dp,
-            if (isBlocked && isSessionActive) CrimsonStrict.copy(alpha = 0.3f) else DarkCardBorder
+            if (isBlocked && isSessionActive) CyanAccent.copy(alpha = 0.4f) else DarkCardBorder
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -541,7 +542,7 @@ fun AppBlockerRowCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Right lock / switch
+            // Right switch & lock status
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isSessionActive && isBlocked) {
                     Icon(
@@ -568,7 +569,8 @@ fun AppBlockerRowCard(
                         disabledCheckedTrackColor = CrimsonStrict.copy(alpha = 0.6f),
                         disabledUncheckedThumbColor = Color(0xFF64748B),
                         disabledUncheckedTrackColor = DarkSurfaceVariant.copy(alpha = 0.5f)
-                    )
+                    ),
+                    modifier = Modifier.testTag("toggle_app_${app.packageName}")
                 )
             }
         }

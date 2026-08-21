@@ -164,21 +164,8 @@ fun MainAppContent(viewModel: MainViewModel) {
 
     val isStrictActive = (sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)) ||
             (activeSchedulesState.isActive && (activeSchedulesState.isStrictMode || activeSchedulesState.isUltraStrict))
-    val isMinimalistLock by sessionManager.minimalStrictLockState.collectAsStateWithLifecycle()
-    val pinActive = isStrictActive || isMinimalistLock
-
-    val activity = (context as? android.app.Activity)
-    androidx.compose.runtime.LaunchedEffect(pinActive) {
-        if (pinActive) {
-            try {
-                activity?.startLockTask()
-            } catch (_: Throwable) {}
-        } else {
-            try {
-                activity?.stopLockTask()
-            } catch (_: Throwable) {}
-        }
-    }
+    // Screen pinning has been completely removed across the application.
+    // Protection is handled seamlessly via Default Home Launcher + Accessibility Service + Overlay Guardrail.
 
     StrictModeInteractionGuard(
         isStrictActive = isStrictActive,

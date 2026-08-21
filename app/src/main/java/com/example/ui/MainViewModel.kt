@@ -186,7 +186,7 @@ class MainViewModel(
 
     fun toggleBlockList(list: BlockList) {
         if (list.isEnabled && sessionManager.isAnyBlockingActive()) {
-            // Cannot disable/unblock active block lists during an active focus or schedule session
+            // Cannot disable/unblock active block lists during an active focus or schedule session in any mode
             return
         }
         viewModelScope.launch {
@@ -197,7 +197,7 @@ class MainViewModel(
 
     fun toggleTarget(target: BlockedTarget) {
         if (target.isEnabled && sessionManager.isAnyBlockingActive()) {
-            // Cannot disable/unblock active target rules during an active focus or schedule session
+            // Cannot disable/unblock active target rules during an active focus or schedule session in any mode
             return
         }
         viewModelScope.launch {
@@ -257,6 +257,7 @@ class MainViewModel(
                     isDefault = false
                 )
             )
+            sessionManager.refreshBlockedTargetsCache(repository)
         }
         closeCreateListDialog()
     }
@@ -273,8 +274,8 @@ class MainViewModel(
     }
 
     fun toggleSchedule(schedule: Schedule) {
-        if (sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()) {
-            // Locked: schedules can't be enabled/disabled while a Strict/Ultra session is active.
+        if (schedule.isEnabled && sessionManager.isAnyBlockingActive()) {
+            // Cannot turn off active schedules during an active focus or schedule session in any mode
             return
         }
         viewModelScope.launch {
@@ -284,6 +285,7 @@ class MainViewModel(
             val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
             sessionManager.checkAutomaticSchedules(repository)
+            sessionManager.refreshBlockedTargetsCache(repository)
         }
     }
 

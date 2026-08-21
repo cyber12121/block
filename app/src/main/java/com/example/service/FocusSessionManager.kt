@@ -74,13 +74,46 @@ class FocusSessionManager private constructor(private val context: Context) {
         lastSeenForegroundTime = System.currentTimeMillis()
     }
 
+    fun isEssentialApp(packageName: String): Boolean {
+        val pkg = packageName.lowercase()
+        if (pkg == context.packageName.lowercase()) return true
+
+        // User custom selected essential apps
+        val customEssentials = getCustomEssentialApps().map { it.lowercase() }
+        if (customEssentials.contains(pkg)) return true
+
+        // Core system essentials (Phone, Dialer, In-Call UI, SMS, Camera, Clock, Calculator)
+        val systemEssentials = setOf(
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.android.incallui",
+            "com.google.android.incallui",
+            "com.samsung.android.incallui",
+            "com.android.phone",
+            "com.google.android.apps.messaging",
+            "com.android.mms",
+            "com.samsung.android.messaging",
+            "com.android.camera",
+            "com.android.camera2",
+            "com.google.android.camera",
+            "com.samsung.android.app.camera",
+            "org.codeaurora.snapcam",
+            "com.android.deskclock",
+            "com.google.android.deskclock",
+            "com.sec.android.app.clockpackage",
+            "com.android.calculator2",
+            "com.google.android.calculator",
+            "com.sec.android.app.popupcalculator"
+        )
+        return systemEssentials.contains(pkg)
+    }
+
     fun isLockEscaped(): Boolean {
         if (!isMinimalStrictLockActive()) return false
         val pkg = lastSeenForegroundPackage ?: return false
         if (System.currentTimeMillis() - lastSeenForegroundTime > 10_000) return false // stale
-        val allowed = mutableSetOf(context.packageName.lowercase())
-        allowed += getCustomEssentialApps().map { it.lowercase() }
-        return !allowed.contains(pkg.lowercase())
+        return !isEssentialApp(pkg)
     }
 
     fun isAnyBlockingActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive

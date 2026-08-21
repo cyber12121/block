@@ -179,7 +179,7 @@ fun BlockListsScreen(
             }
         }
 
-        // 2. Active Session Add-Only Banner
+        // 2. Active Session Real-Time Protection Banner
         if (isSessionActive) {
             item {
                 Card(
@@ -201,7 +201,7 @@ fun BlockListsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Shield,
+                                imageVector = Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = CyanAccent,
                                 modifier = Modifier.size(20.dp)
@@ -210,13 +210,13 @@ fun BlockListsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Add-Only Focus Protection 🔒",
+                                text = "Focus Protection Active 🔒",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = Color.White
                             )
                             Text(
-                                text = "You can ADD new websites, apps, or keywords anytime. Deleting or unblocking existing rules is locked until session end ($endFormatted).",
+                                text = "You can ADD new websites, apps, or keywords anytime. Turning off or deleting existing blocked rules is locked until session ends ($endFormatted).",
                                 fontSize = 12.sp,
                                 color = Color(0xFFCBD5E1),
                                 lineHeight = 16.sp
@@ -335,7 +335,8 @@ fun BlockListsScreen(
                                     uncheckedTrackColor = DarkSurfaceVariant,
                                     disabledCheckedThumbColor = Color.White,
                                     disabledCheckedTrackColor = CrimsonStrict.copy(alpha = 0.6f)
-                                )
+                                ),
+                                modifier = Modifier.testTag("toggle_list_${list.id}")
                             )
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -395,6 +396,25 @@ fun BlockListsScreen(
                                         }
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Switch(
+                                                checked = target.isEnabled,
+                                                onCheckedChange = {
+                                                    if (!isSessionActive || !target.isEnabled) {
+                                                        onToggleTarget(target)
+                                                    }
+                                                },
+                                                enabled = !isSessionActive || !target.isEnabled,
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color.White,
+                                                    checkedTrackColor = CyanAccent,
+                                                    uncheckedThumbColor = Color(0xFF94A3B8),
+                                                    uncheckedTrackColor = DarkSurfaceVariant,
+                                                    disabledCheckedThumbColor = Color.White,
+                                                    disabledCheckedTrackColor = CrimsonStrict.copy(alpha = 0.6f)
+                                                ),
+                                                modifier = Modifier.size(width = 44.dp, height = 24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
                                             IconButton(
                                                 onClick = { targetToEdit = target },
                                                 modifier = Modifier.size(28.dp)
