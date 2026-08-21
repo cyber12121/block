@@ -168,6 +168,9 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // 1. Top Bar / App Title
+        val isFocusActive = sessionState.isActive
+        val hasEnabledBlockLists = blockLists.any { it.isEnabled }
+
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -192,9 +195,6 @@ fun DashboardScreen(
                         )
                     }
 
-                    val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
-                    val hasEnabledBlockLists = blockLists.any { it.isEnabled }
-
                     Column {
                         Text(
                             text = "FocusGuard",
@@ -203,7 +203,7 @@ fun DashboardScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (isManualFocusActive) "Session in progress" else if (hasEnabledBlockLists) "Protection is active" else "Protection ready",
+                            text = if (isFocusActive) "Session in progress" else if (hasEnabledBlockLists) "Protection is active" else "Protection ready",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF94A3B8),
                             fontWeight = FontWeight.Normal
@@ -215,9 +215,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
-                    val hasEnabledBlockLists = blockLists.any { it.isEnabled }
-                    if (isManualFocusActive) {
+                    if (isFocusActive) {
                         val isDevModeTop by authManager.isDeveloperMode.collectAsState()
                         val dailyExitsLeftTop by authManager.dailyExitsRemaining.collectAsState()
                         val isUltraStrictActiveTop = sessionState.isUltraStrict && sessionState.isActive
@@ -258,8 +256,8 @@ fun DashboardScreen(
                             else -> EmeraldSuccess
                         }
                         val badgeText = when {
-                            sessionState.isUltraStrict -> "ULTRA STRICT 🔒"
-                            sessionState.isStrictMode -> "STRICT"
+                            sessionState.isUltraStrict -> "STRICT BLOCKER 🔒"
+                            sessionState.isStrictMode -> "NORMAL BLOCKER"
                             else -> "FOCUS TIMER"
                         }
                         Surface(
@@ -380,8 +378,8 @@ fun DashboardScreen(
 
         // 3. Focal Hero Card: Active Session or Clean Ready State
         item {
-            val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
-            if (isManualFocusActive) {
+            val isFocusActive = sessionState.isActive
+            if (isFocusActive) {
                 ActiveSessionDashboardCard(
                     sessionState = sessionState,
                     onOpenSessionView = onOpenSessionView,
@@ -577,7 +575,7 @@ fun DashboardScreen(
             },
             title = {
                 Text(
-                    text = if (isUltraStrictActive) "Ultra Strict Lockdown Active 🔒" else "Exit Active Focus & Timer?",
+                    text = if (isUltraStrictActive) "Strict Blocker Active 🔒" else "Exit Active Focus & Timer?",
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -585,7 +583,7 @@ fun DashboardScreen(
             text = {
                 Text(
                     text = if (isUltraStrictActive)
-                        "Ultra Strict Mode is active! Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
+                        "Strict Blocker is active! Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
                     else if (isDevMode)
                         "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
                     else if (dailyExitsLeft > 0)
@@ -609,7 +607,7 @@ fun DashboardScreen(
                     )
                 ) {
                     Text(
-                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
+                        text = if (isUltraStrictActive) "Locked (Strict Blocker)" else if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -891,7 +889,7 @@ fun ActiveSessionDashboardCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isUltraStrictCard) "Ultra Strict Lock Active 🔒" else "Stop & Exit Focus",
+                        text = if (isUltraStrictCard) "Strict Blocker Active 🔒" else "Stop & Exit Focus",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp

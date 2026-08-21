@@ -203,9 +203,9 @@ fun StartSessionDialog(
                 sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
                 val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
                 onStartSession(
-                    if (title.isBlank()) "Ultra Strict Focus (${effectiveMinutes}m)" else title,
+                    if (title.isBlank()) "Strict Blocker Focus (${effectiveMinutes}m)" else title,
                     effectiveMinutes,
-                    true,
+                    false,
                     activeNames,
                     false,
                     false,
@@ -305,16 +305,16 @@ fun StartSessionDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     ModeTab(
-                        title = "Strict Lock",
+                        title = "Normal Blocker",
                         isSelected = modeType == SessionModeType.STRICT,
-                        selectedColor = CrimsonStrict,
+                        selectedColor = IndigoPrimary,
                         modifier = Modifier.weight(1f),
                         onClick = { modeType = SessionModeType.STRICT }
                     )
                     ModeTab(
-                        title = "Ultra Strict 🔒",
+                        title = "Strict Blocker 🔒",
                         isSelected = modeType == SessionModeType.ULTRA_STRICT,
-                        selectedColor = Color(0xFF991B1B),
+                        selectedColor = CrimsonStrict,
                         modifier = Modifier.weight(1f),
                         onClick = { modeType = SessionModeType.ULTRA_STRICT }
                     )
@@ -965,9 +965,9 @@ fun StartSessionDialog(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (modeType == SessionModeType.ULTRA_STRICT)
-                                    "I understand that Ultra Strict Mode CANNOT be exited or broken under ANY circumstance until $endTimeString (even in Developer Mode)."
+                                    "I understand that Strict Blocker CANNOT be exited or broken under ANY circumstance until $endTimeString (even in Developer Mode)."
                                 else
-                                    "I commit to locking distractions until $endTimeString. Emergency exit uses 1 daily exit.",
+                                    "I commit to Normal Blocker protection until $endTimeString. Emergency exit uses 1 daily exit.",
                                 fontSize = 11.sp,
                                 color = Color.White,
                                 lineHeight = 15.sp
@@ -1027,7 +1027,7 @@ fun StartSessionDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (!isAcknowledged) "Check agreement above" else if (isHolding) "Locking Ultra Strict... (${(holdProgress * 100).toInt()}%)" else "HOLD 3 SECONDS TO LOCK ULTRA STRICT",
+                                text = if (!isAcknowledged) "Check agreement above" else if (isHolding) "Locking Strict Blocker... (${(holdProgress * 100).toInt()}%)" else "HOLD 3 SECONDS TO LOCK STRICT BLOCKER",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = if (isAcknowledged) Color.White else Color(0xFF94A3B8)

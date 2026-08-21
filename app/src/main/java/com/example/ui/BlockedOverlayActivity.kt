@@ -237,7 +237,7 @@ fun BlockedShieldScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isUltraStrict) "ULTRA STRICT LOCKDOWN 🔒" else "STRICT MODE ENFORCED",
+                            text = if (isUltraStrict) "STRICT BLOCKER LOCKDOWN 🔒" else "NORMAL BLOCKER ENFORCED",
                             color = CrimsonStrict,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

@@ -275,7 +275,7 @@ class MainViewModel(
             val updated = schedule.copy(isEnabled = !schedule.isEnabled)
             repository.updateSchedule(updated)
             // Re-arm or cancel the exact alarm for this schedule
-            val allSchedules = repository.getEnabledSchedules()
+            val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
             if (!updated.isEnabled && sessionManager.sessionState.value.isAutoScheduled) {
                 sessionManager.endSession(repository, earlyUnlocked = false)
@@ -305,14 +305,14 @@ class MainViewModel(
                     endHour = endHour,
                     endMinute = endMinute,
                     daysOfWeek = daysOfWeek,
-                    isStrictMode = isStrictMode,
+                    isStrictMode = if (isUltraStrict) false else isStrictMode,
                     isUltraStrict = isUltraStrict,
                     activeListNames = activeListNames,
                     isEnabled = true
                 )
             )
-            // Reschedule alarms for all enabled schedules (new one included)
-            val allSchedules = repository.getEnabledSchedules()
+            // Reschedule alarms for all schedules (new one included)
+            val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
             // Immediately start session if this new schedule's window is active right now
             sessionManager.checkAutomaticSchedules(repository)

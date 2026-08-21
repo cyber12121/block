@@ -151,16 +151,20 @@ class FocusAccessibilityService : AccessibilityService() {
         val isEssential = essentialApps.contains(targetPkg.lowercase())
 
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
-        val isStrictSession = sessionState.isActive && sessionState.isStrictMode
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
-        val shouldLockToMinimalist = isMinimalStrictLock || (isStrictSession && isMinimalLauncherActive)
+        val isSessionActive = sessionState.isActive
+        val isStrictSession = isSessionActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
+        val shouldLockToMinimalist = isMinimalStrictLock || (isMinimalLauncherActive && (isSessionActive || isStrictSession))
 
         val targetLower = targetPkg.lowercase()
         val isLauncherOrHome = targetLower.contains("launcher") ||
                                targetLower.contains("home") ||
                                targetLower.contains("quickstep") ||
                                targetLower.contains("nexuslauncher") ||
-                               targetLower.contains("recents")
+                               targetLower.contains("recents") ||
+                               targetLower.contains("pixellauncher") ||
+                               targetLower.contains("sec.android.app.launcher") ||
+                               targetLower.contains("miui.home")
 
         // 1. Instant Minimalist Mode bounce-back enforcement:
         // Re-launch Minimalist Launcher instantly if the user minimizes or goes home.
@@ -174,6 +178,18 @@ class FocusAccessibilityService : AccessibilityService() {
                 } catch (_: Exception) {}
                 return
             } else if (sessionManager.isAppBlocked(targetPkg)) {
+                triggerBlockShield(
+                    targetName = getReadableAppName(targetPkg),
+                    reason = "App '$targetPkg' is restricted in your active focus shield.",
+                    isWebsite = false
+                )
+                return
+            }
+        }
+
+        // 2. Active Session App-Blocking (Enforced during active focus session or schedule)
+        if (isSessionActive && !isFgApp && !isEssential) {
+            if (sessionManager.isAppBlocked(targetPkg)) {
                 triggerBlockShield(
                     targetName = getReadableAppName(targetPkg),
                     reason = "App '$targetPkg' is restricted in your active focus shield.",
@@ -217,7 +233,7 @@ class FocusAccessibilityService : AccessibilityService() {
                                      fullText.contains("device admin")
 
                 if (isAboutOurApp && (isTamperAction || fullText.contains("app info") || fullText.contains("manage app"))) {
-                    val modeName = if (sessionState.isUltraStrict) "Ultra Strict Mode" else "Strict Mode"
+                    val modeName = if (sessionState.isUltraStrict) "Strict Blocker" else "Normal Blocker"
                     triggerBlockShield(
                         targetName = "Anti-Uninstall Defense",
                         reason = "FocusGuard cannot be uninstalled, force-stopped, or disabled while $modeName is active.",

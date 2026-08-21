@@ -122,6 +122,9 @@ class FocusSessionManager private constructor(private val context: Context) {
             else -> PlantType.SPROUT
         }
     ) {
+        val finalIsUltraStrict = isUltraStrict
+        val finalIsStrictMode = if (finalIsUltraStrict) false else isStrictMode
+        val effectiveStrictMode = finalIsStrictMode || finalIsUltraStrict
         val now = System.currentTimeMillis()
         val endTime = now + (durationMinutes * 60 * 1000L)
         val elapsedRealtime = SystemClock.elapsedRealtime()
@@ -135,7 +138,7 @@ class FocusSessionManager private constructor(private val context: Context) {
                 startTimeMillis = now,
                 scheduledEndTimeMillis = endTime,
                 durationMinutes = durationMinutes,
-                isStrictMode = isStrictMode,
+                isStrictMode = effectiveStrictMode,
                 activeListNames = activeLists.joinToString(", ")
             )
             val id = repository.insertSession(session)
@@ -149,8 +152,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             // a fresh quota of 5 exits for every new session (not a permanent lifetime limit).
             prefs.edit()
                 .putBoolean(KEY_IS_ACTIVE, true)
-                .putBoolean(KEY_IS_STRICT, isStrictMode)
-                .putBoolean(KEY_IS_ULTRA_STRICT, isUltraStrict)
+                .putBoolean(KEY_IS_STRICT, finalIsStrictMode)
+                .putBoolean(KEY_IS_ULTRA_STRICT, finalIsUltraStrict)
                 .putLong(KEY_SESSION_ID, id)
                 .putString(KEY_TITLE, title)
                 .putLong(KEY_START_TIME, now)
@@ -171,8 +174,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             refreshBlockedTargetsCache(repository)
             updateStateFromValues(
                 isActive = true,
-                isStrictMode = isStrictMode,
-                isUltraStrict = isUltraStrict,
+                isStrictMode = finalIsStrictMode,
+                isUltraStrict = finalIsUltraStrict,
                 sessionId = id,
                 title = title,
                 startTime = now,
@@ -429,12 +432,16 @@ class FocusSessionManager private constructor(private val context: Context) {
         val allLists = repository.getActiveLists()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
 
-        val validListIds = if (isSessionActive && activeListNamesRaw.isNotBlank()) {
-            val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-            val matched = allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
-            if (matched.isNotEmpty()) matched else enabledListIds
+        val validListIds = if (isSessionActive) {
+            if (activeListNamesRaw.isNotBlank()) {
+                val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+                val matched = allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
+                if (matched.isNotEmpty()) matched else enabledListIds
+            } else {
+                enabledListIds
+            }
         } else {
-            enabledListIds
+            emptySet()
         }
 
         val targets = repository.getAllEnabledTargets()
@@ -552,8 +559,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             return
         }
 
-        val isStrict = prefs.getBoolean(KEY_IS_STRICT, false)
         val isUltraStrict = prefs.getBoolean(KEY_IS_ULTRA_STRICT, false)
+        val isStrict = if (isUltraStrict) false else prefs.getBoolean(KEY_IS_STRICT, false)
         val id = prefs.getLong(KEY_SESSION_ID, 0L)
         val title = prefs.getString(KEY_TITLE, "Focus Session") ?: "Focus Session"
         val start = prefs.getLong(KEY_START_TIME, 0L)

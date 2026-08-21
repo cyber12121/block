@@ -475,7 +475,7 @@ fun CreateScheduleDialog(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Strict Mode Enforcement",
+                                    text = "Normal Blocker Enforcement",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White
@@ -537,7 +537,7 @@ fun CreateScheduleDialog(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "Ultra Strict Blocker 🔒",
+                                    text = "Strict Blocker 🔒",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White

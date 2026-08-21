@@ -68,6 +68,7 @@ class AppRepository(
 
     // Schedules
     val allSchedules: Flow<List<Schedule>> = scheduleDao.getAllSchedules()
+    suspend fun getAllSchedulesOnce(): List<Schedule> = scheduleDao.getAllSchedulesOnce()
     suspend fun getEnabledSchedules(): List<Schedule> = scheduleDao.getEnabledSchedules()
     suspend fun insertSchedule(schedule: Schedule): Long = scheduleDao.insertSchedule(schedule)
     suspend fun updateSchedule(schedule: Schedule) = scheduleDao.updateSchedule(schedule)

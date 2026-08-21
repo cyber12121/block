@@ -687,7 +687,7 @@ fun MinimalLauncherScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
+                val isFocusActive = sessionState.isActive
                 // ──────────────────────────────────────────
                 // 1. TOP BAR: Balanced Status & Actions (No Clutter)
                 // ──────────────────────────────────────────
@@ -698,18 +698,18 @@ fun MinimalLauncherScreen(
                 ) {
                     // Status Badge (Left)
                     Surface(
-                        color = if (isManualFocusActive) {
+                        color = if (isFocusActive) {
                             if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.12f) else IndigoPrimary.copy(alpha = 0.12f)
                         } else Color(0xFF10172A),
                         shape = RoundedCornerShape(100.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (isManualFocusActive) {
+                            if (isFocusActive) {
                                 if (sessionState.isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else IndigoPrimary.copy(alpha = 0.4f)
                             } else Color(0xFF1E293B)
                         ),
                         modifier = Modifier.clickable {
-                            if (isManualFocusActive) onStartFocusSession()
+                            if (isFocusActive) onStartFocusSession()
                         }
                     ) {
                         Row(
@@ -720,7 +720,7 @@ fun MinimalLauncherScreen(
                                 modifier = Modifier
                                     .size(7.dp)
                                     .background(
-                                        if (isManualFocusActive) {
+                                        if (isFocusActive) {
                                             if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
                                         } else EmeraldSuccess,
                                         CircleShape
@@ -728,13 +728,13 @@ fun MinimalLauncherScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isManualFocusActive) {
-                                    if (sessionState.isStrictMode) "STRICT FOCUS" else "FOCUS ACTIVE"
+                                text = if (isFocusActive) {
+                                    if (sessionState.isUltraStrict) "STRICT BLOCKER 🔒" else if (sessionState.isStrictMode) "NORMAL BLOCKER" else "FOCUS ACTIVE"
                                 } else "MINIMAL",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
-                                color = if (isManualFocusActive) {
+                                color = if (isFocusActive) {
                                     if (sessionState.isStrictMode) CrimsonStrict else IndigoPrimary
                                 } else EmeraldSuccess
                             )
@@ -893,7 +893,7 @@ fun MinimalLauncherScreen(
                     )
 
                     // ── Active Session Sleek Countdown Strip (Single Source of Truth) ──
-                    if (isManualFocusActive) {
+                    if (isFocusActive) {
                         val mins = sessionState.remainingSeconds / 60
                         val secs = sessionState.remainingSeconds % 60
                         val totalDurationSec = (sessionState.durationMinutes * 60).coerceAtLeast(1)

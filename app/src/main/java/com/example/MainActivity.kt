@@ -161,7 +161,7 @@ fun MainAppContent(viewModel: MainViewModel) {
         return
     }
 
-    val isStrictActive = sessionState.isActive && sessionState.isStrictMode && !sessionState.isAutoScheduled
+    val isStrictActive = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
 
     StrictModeInteractionGuard(
         isStrictActive = isStrictActive,

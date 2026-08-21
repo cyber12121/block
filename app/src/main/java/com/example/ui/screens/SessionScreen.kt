@@ -224,7 +224,7 @@ fun SessionScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (sessionState.isUltraStrict) "ULTRA STRICT LOCKDOWN ACTIVE 🔒" else "STRICT MODE ACTIVE",
+                        text = if (sessionState.isUltraStrict) "STRICT BLOCKER ACTIVE 🔒" else "NORMAL BLOCKER ACTIVE",
                         color = CrimsonStrict,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -535,7 +535,7 @@ fun SessionScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (isUltraStrictActive)
-                            "ULTRA STRICT LOCKDOWN ACTIVE 🔒"
+                            "STRICT BLOCKER ACTIVE 🔒"
                         else if (canExitStrict)
                             "Emergency Unlock"
                         else
@@ -547,7 +547,7 @@ fun SessionScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = if (isUltraStrictActive)
-                        "Ultra Strict Mode is active! Exiting is strictly disabled under all circumstances until timer completes."
+                        "Strict Blocker is active! Exiting is strictly disabled under all circumstances until timer completes."
                     else if (canExitStrict)
                         "Uses 1 of your emergency exits for today ($dailyExitsLeft/10 remaining). Resets at midnight."
                     else

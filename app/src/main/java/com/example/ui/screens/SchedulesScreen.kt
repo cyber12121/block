@@ -121,29 +121,27 @@ fun SchedulesScreen(
 
     Scaffold(
         floatingActionButton = {
-            if (!isSessionStrict) {
-                ExtendedFloatingActionButton(
-                    onClick = onOpenCreateSchedule,
-                    containerColor = IndigoPrimary,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(6.dp),
-                    modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .testTag("add_schedule_fab")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "New Schedule",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "New Schedule",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
+            ExtendedFloatingActionButton(
+                onClick = onOpenCreateSchedule,
+                containerColor = IndigoPrimary,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(6.dp),
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .testTag("add_schedule_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "New Schedule",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "New Schedule",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
             }
         },
         floatingActionButtonPosition = FabPosition.End,
@@ -275,7 +273,7 @@ fun SchedulesScreen(
                                             shape = RoundedCornerShape(4.dp)
                                         ) {
                                             Text(
-                                                text = if (sessionState.isUltraStrict) "ULTRA STRICT 🔒" else if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
+                                                text = if (sessionState.isUltraStrict) "STRICT BLOCKER 🔒" else if (sessionState.isStrictMode) "NORMAL BLOCKER" else "ACTIVE",
                                                 color = CrimsonStrict,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,
@@ -319,7 +317,7 @@ fun SchedulesScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (isUltraStrictActive)
-                                        "Locked in Ultra Strict Mode 🔒"
+                                        "Locked in Strict Blocker Mode 🔒"
                                     else if (isDevMode)
                                         "Stop Active Schedule / Timer (∞)"
                                     else
@@ -519,7 +517,7 @@ fun ScheduleCard(
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        text = "ULTRA STRICT 🔒",
+                                        text = "STRICT BLOCKER 🔒",
                                         color = Color.White,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -611,7 +609,7 @@ fun ScheduleCard(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "ULTRA STRICT 🔒",
+                                text = "STRICT BLOCKER 🔒",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White,
@@ -624,7 +622,7 @@ fun ScheduleCard(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "STRICT",
+                                text = "NORMAL BLOCKER",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                                 color = CrimsonStrict,
