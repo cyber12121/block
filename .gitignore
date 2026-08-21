@@ -29,12 +29,12 @@ release/
 *.dex
 *.class
 
-# Signing keys & Keystores (Never commit security keys)
+# Signing keys & Keystores (Never commit production release keys)
 *.jks
-*.keystore
+my-upload-key.*
 keystore.properties
 signing.properties
-!debug.keystore.example
+!debug.keystore
 
 # Profiling, Logs & Heap Dumps
 *.hprof
@@ -53,6 +53,11 @@ obj/
 lint-results*.html
 lint-results*.xml
 reports/
+
+# Local helper scripts
+b.bat
+i.bat
+run.bat
 
 # OS-specific files
 Thumbs.db

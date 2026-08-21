@@ -154,7 +154,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
         val isBlockingActive = sessionManager.isAnyBlockingActive()
         val isStrictSession = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()
-        val shouldLockToMinimalist = isMinimalStrictLock || (isMinimalLauncherActive && (isBlockingActive || isStrictSession))
+        val shouldLockToMinimalist = isMinimalStrictLock || isStrictSession || (isMinimalLauncherActive && isBlockingActive)
 
         val targetLower = targetPkg.lowercase()
         val isLauncherOrHome = targetLower.contains("launcher") ||
