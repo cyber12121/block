@@ -138,6 +138,30 @@ class FocusSessionManager private constructor(private val context: Context) {
         editor.apply()
     }
 
+    /**
+     * Resets all sessions, locks, schedules cache, and internal SharedPreferences back to defaults,
+     * while preserving Android system permissions (which are managed by the Android OS).
+     */
+    suspend fun resetAllStateToDefaults(repository: AppRepository) {
+        // Stop any active session / locks
+        clearSessionPrefs()
+        stopMinimalStrictLock()
+        setMinimalLauncherActive(false)
+        clearSnooze()
+        prefs.edit().remove(KEY_SCHEDULE_BASELINE_STATES).apply()
+
+        _sessionState.value = ActiveSessionState()
+        _activeSchedulesState.value = ActiveSchedulesState()
+
+        // Reset database tables and re-seed defaults
+        repository.resetDatabaseToDefaults()
+
+        // Refresh memory cache
+        refreshBlockedTargetsCache(repository)
+        ScheduleAlarmManager.rescheduleAll(context, repository.getAllSchedulesOnce())
+        FocusTileService.requestTileUpdate(context)
+    }
+
     // Guards against the expiry path running more than once. updateTick() is driven by
     // both FocusForegroundService and MainViewModel (once per second each), so without
     // this the session would be "completed" repeatedly, double-recording stats.

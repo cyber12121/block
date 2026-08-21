@@ -126,4 +126,22 @@ class AppRepository(
         // Atomic: INSERT OR IGNORE ensures row exists, then updates both columns
         dailyStatDao.atomicRecordCompletedSession(today, minutes)
     }
+
+    suspend fun resetDatabaseToDefaults() {
+        // Clear all user created tables
+        blockedTargetDao.clearAll()
+        blockListDao.clearAll()
+        scheduleDao.clearAll()
+        focusSessionDao.clearAll()
+        dailyStatDao.clearAll()
+        gardenPlantDao.clearGarden()
+
+        // Re-seed original default lists, targets, schedules, and garden
+        DefaultData.seedInto(
+            listDao = blockListDao,
+            targetDao = blockedTargetDao,
+            scheduleDao = scheduleDao,
+            gardenDao = gardenPlantDao
+        )
+    }
 }

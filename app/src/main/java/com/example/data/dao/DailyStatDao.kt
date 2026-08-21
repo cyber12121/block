@@ -45,4 +45,7 @@ interface DailyStatDao {
         insertRowIfMissing(dateString)
         incrementSessionStats(dateString, minutes)
     }
+
+    @Query("DELETE FROM daily_stats")
+    suspend fun clearAll()
 }

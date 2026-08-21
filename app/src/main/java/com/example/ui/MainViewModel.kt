@@ -194,6 +194,13 @@ class MainViewModel(
         sessionManager.forceUnlockSession(repository, earlyUnlocked = true)
     }
 
+    fun resetAppDataToDefaults(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            sessionManager.resetAllStateToDefaults(repository)
+            onComplete()
+        }
+    }
+
     fun toggleBlockList(list: BlockList) {
         if (list.isEnabled && sessionManager.isSessionOrScheduleActive()) {
             // Cannot disable/unblock active block lists during an active focus or schedule session in any mode

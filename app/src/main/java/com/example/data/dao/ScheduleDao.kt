@@ -35,4 +35,7 @@ interface ScheduleDao {
 
     @Delete
     suspend fun deleteSchedule(schedule: Schedule)
+
+    @Query("DELETE FROM schedules")
+    suspend fun clearAll()
 }

@@ -38,4 +38,7 @@ interface BlockedTargetDao {
 
     @Query("SELECT COUNT(*) FROM blocked_targets WHERE targetType = :targetType")
     fun countByType(targetType: TargetType): Flow<Int>
+
+    @Query("DELETE FROM blocked_targets")
+    suspend fun clearAll()
 }

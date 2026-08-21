@@ -31,4 +31,7 @@ interface BlockListDao {
 
     @Delete
     suspend fun deleteList(blockList: BlockList)
+
+    @Query("DELETE FROM block_lists")
+    suspend fun clearAll()
 }

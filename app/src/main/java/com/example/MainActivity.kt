@@ -335,7 +335,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 sessionState = sessionState,
                                 activeSchedulesState = activeSchedulesState,
                                 onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
-                                onOpenSessionView = { isLiveSessionFullscreen = true }
+                                onOpenSessionView = { isLiveSessionFullscreen = true },
+                                onResetDatabase = { viewModel.resetAppDataToDefaults() }
                             )
                         }
                     }

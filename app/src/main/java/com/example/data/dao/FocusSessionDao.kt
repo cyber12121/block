@@ -33,4 +33,7 @@ interface FocusSessionDao {
 
     @Query("SELECT SUM(blockedAttemptsCount) FROM focus_sessions")
     fun getTotalBlockedAttempts(): Flow<Int?>
+
+    @Query("DELETE FROM focus_sessions")
+    suspend fun clearAll()
 }
