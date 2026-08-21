@@ -185,8 +185,8 @@ class MainViewModel(
     }
 
     fun toggleBlockList(list: BlockList) {
-        if (list.isEnabled && sessionManager.sessionState.value.isActive) {
-            // Cannot disable/unblock active block lists during an active session
+        if (list.isEnabled && sessionManager.isAnyBlockingActive()) {
+            // Cannot disable/unblock active block lists during an active focus or schedule session
             return
         }
         viewModelScope.launch {
@@ -196,8 +196,8 @@ class MainViewModel(
     }
 
     fun toggleTarget(target: BlockedTarget) {
-        if (target.isEnabled && sessionManager.sessionState.value.isActive) {
-            // Cannot disable/unblock active target rules during an active session
+        if (target.isEnabled && sessionManager.isAnyBlockingActive()) {
+            // Cannot disable/unblock active target rules during an active focus or schedule session
             return
         }
         viewModelScope.launch {
@@ -207,8 +207,8 @@ class MainViewModel(
     }
 
     fun updateTarget(target: BlockedTarget) {
-        if (sessionManager.sessionState.value.isActive) {
-            // Cannot alter existing target identifiers during an active session
+        if (sessionManager.isAnyBlockingActive()) {
+            // Cannot alter existing target identifiers during an active focus or schedule session
             return
         }
         viewModelScope.launch {
@@ -235,8 +235,8 @@ class MainViewModel(
     }
 
     fun deleteTarget(target: BlockedTarget) {
-        if (sessionManager.sessionState.value.isActive) {
-            // Cannot delete targets during an active focus session
+        if (sessionManager.isAnyBlockingActive()) {
+            // Cannot delete targets during an active focus or schedule session
             return
         }
         viewModelScope.launch {
@@ -262,8 +262,8 @@ class MainViewModel(
     }
 
     fun deleteBlockList(list: BlockList) {
-        if (sessionManager.sessionState.value.isActive) {
-            // Cannot delete block lists during an active focus session
+        if (sessionManager.isAnyBlockingActive()) {
+            // Cannot delete block lists during an active focus or schedule session
             return
         }
         viewModelScope.launch {
@@ -273,8 +273,7 @@ class MainViewModel(
     }
 
     fun toggleSchedule(schedule: Schedule) {
-        val st = sessionManager.sessionState.value
-        if (st.isActive && (st.isStrictMode || st.isUltraStrict)) {
+        if (sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()) {
             // Locked: schedules can't be enabled/disabled while a Strict/Ultra session is active.
             return
         }
