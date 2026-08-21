@@ -1,68 +1,65 @@
-#
-
-*.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-.env
-debug.keystore
-
-# Build outputs
+# Built-in Gradle / Android Cache
+.gradle/
+.kotlin/
 build/
+app/build/
 out/
+bin/
+gen/
+
+# Local machine SDK & Environment configs (Crucial for AI Studio / Web environments)
+local.properties
+/local.properties
+.env
+.env.*
+!.env.example
+
+# IDE / Android Studio / Antigravity workspace caches
+*.iml
+.idea/
+.vscode/
+.DS_Store
+
+# Build outputs (APKs, AABs, DEX files)
 release/
+/app/release/
 *.apk
 *.aab
 *.ap_
 *.dex
 *.class
-gen/
-bin/
 
-# Signing material — never commit these
+# Signing keys & Keystores (Never commit security keys)
 *.jks
 *.keystore
 keystore.properties
 signing.properties
 !debug.keystore.example
 
-# Heap dumps / profiling
+# Profiling, Logs & Heap Dumps
 *.hprof
 *.trace
 heapdump*
+*.log
+captures/
+/captures
 
-# NDK / native build artifacts
+# NDK / Native artifacts
 obj/
 .externalNativeBuild/
 .cxx/
 
-# Lint / test reports
+# Lint & Test Reports
 lint-results*.html
 lint-results*.xml
-/app/release/
 reports/
 
-# Windows
+# OS-specific files
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 desktop.ini
 $RECYCLE.BIN/
 *.lnk
-
-# Editors / misc
-*.log
-*.swp
 *~
+*.swp
