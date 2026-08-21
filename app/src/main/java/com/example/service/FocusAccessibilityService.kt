@@ -156,12 +156,9 @@ class FocusAccessibilityService : AccessibilityService() {
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
         val isBlockingActive = sessionManager.isAnyBlockingActive()
-        val isStrictSession = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()
-        // BlockIT-style: also bounce back whenever the Minimal Launcher is locked
-        // during an active focus session (not just a strict lock or active blocking).
-        val minimalistStrictMode = isMinimalStrictLock ||
-                (isMinimalLauncherActive && sessionManager.sessionState.value.isActive)
-        val shouldLockToMinimalist = minimalistStrictMode || isStrictSession || (isMinimalLauncherActive && isBlockingActive)
+
+        // Minimalist Space bounce-back only applies when Minimalist Strict Lock is active
+        val shouldLockToMinimalist = isMinimalStrictLock
 
         val targetLower = targetPkg.lowercase()
         val isLauncherOrHome = targetLower.contains("launcher") ||

@@ -379,19 +379,20 @@ fun SchedulesScreen(
             } else {
                 items(schedules, key = { it.id }) { schedule ->
                     val isCurrentlyActive = isScheduleActiveNow(schedule)
+                    val isLocked = (isCurrentlyActive && (schedule.isStrictMode || schedule.isUltraStrict)) || isSessionStrict
                     ScheduleCard(
                         schedule = schedule,
                         isActiveNow = isCurrentlyActive,
-                        isGlobalStrict = isSessionStrict,
+                        isGlobalStrict = isLocked,
                         onToggle = {
-                            if ((isCurrentlyActive || isSessionStrict) && (schedule.isStrictMode || isSessionStrict)) {
+                            if (isLocked) {
                                 lockedScheduleInfo = schedule
                             } else {
                                 onToggleSchedule(schedule)
                             }
                         },
                         onDelete = {
-                            if ((isCurrentlyActive || isSessionStrict) && (schedule.isStrictMode || isSessionStrict)) {
+                            if (isLocked) {
                                 lockedScheduleInfo = schedule
                             } else {
                                 onDeleteSchedule(schedule)
