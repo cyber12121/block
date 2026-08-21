@@ -20,9 +20,11 @@ class FocusDeviceAdminReceiver : DeviceAdminReceiver() {
         val app = context.applicationContext as? FocusGuardApp
         val sessionState = app?.sessionManager?.sessionStateFlow?.value
 
-        if (sessionState?.isActive == true && sessionState.isStrictMode) {
+        val isStrictActive = sessionState?.isActive == true && (sessionState.isStrictMode || sessionState.isUltraStrict)
+        if (isStrictActive) {
             val remainingMins = (sessionState.remainingSeconds / 60).coerceAtLeast(1)
-            return "STRICT MODE LOCK: FocusGuard uninstallation and deactivation is strictly prohibited until the active focus timer concludes ($remainingMins min remaining)."
+            val modeName = if (sessionState.isUltraStrict) "STRICT BLOCKER" else "NORMAL BLOCKER"
+            return "$modeName LOCK: FocusGuard uninstallation and deactivation is strictly prohibited until the active focus timer concludes ($remainingMins min remaining)."
         }
         return null
     }

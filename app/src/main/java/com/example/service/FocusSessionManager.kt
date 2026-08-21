@@ -169,7 +169,7 @@ class FocusSessionManager private constructor(private val context: Context) {
                 .putString(KEY_PLANT_TYPE, plantType.name)
                 .putLong(KEY_SCHEDULE_ID, if (isAutoScheduled) scheduleId else -1L)
                 .remove(KEY_SNOOZED_SCHEDULE_ID) // clear any lingering snooze on new session start
-                .apply()
+                .commit()
 
             refreshBlockedTargetsCache(repository)
             updateStateFromValues(
@@ -204,8 +204,8 @@ class FocusSessionManager private constructor(private val context: Context) {
         val currentState = _sessionState.value
         if (!currentState.isActive) return
 
-        // In Strict Mode, if remaining time is > 0 and not forced earlyUnlocked, refuse unlock
-        if (currentState.isStrictMode && !earlyUnlocked && getRemainingSeconds() > 0) {
+        // In Normal or Strict Blocker mode, if remaining time is > 0 and not forced earlyUnlocked, refuse unlock
+        if ((currentState.isStrictMode || currentState.isUltraStrict) && !earlyUnlocked && getRemainingSeconds() > 0) {
             return
         }
 
@@ -216,9 +216,9 @@ class FocusSessionManager private constructor(private val context: Context) {
         val currentState = _sessionState.value
         val now = System.currentTimeMillis()
 
-        // Ultra Strict Lockdown Enforcement:
-        // If Ultra Strict Mode is active and remaining time > 0, exit is strictly forbidden under ALL circumstances (even in Developer Mode).
-        if (earlyUnlocked && currentState.isUltraStrict && getRemainingSeconds() > 0) {
+        // Strict Blocker Lockdown Enforcement:
+        // If Strict Blocker (isUltraStrict) is active and remaining time > 0, exit is strictly forbidden under ALL circumstances.
+        if (currentState.isUltraStrict && getRemainingSeconds() > 0) {
             return false
         }
 
@@ -424,21 +424,33 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     suspend fun refreshBlockedTargetsCache(repository: AppRepository) {
-        val isSessionActive = prefs.getBoolean(KEY_IS_ACTIVE, false)
-        val activeListNamesRaw = prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
+        val isSessionActive = _sessionState.value.isActive || prefs.getBoolean(KEY_IS_ACTIVE, false)
+        val activeListNamesRaw = if (_sessionState.value.isActive) {
+            _sessionState.value.activeListNames
+        } else {
+            prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
+        }
 
         // Build the set of list IDs whose targets should be enforced.
-        // During a session: use the session's selected lists (by name). If none match
+        // During a session: use the session's selected lists (by name).
         val allLists = repository.getActiveLists()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
 
         val validListIds = if (isSessionActive) {
             if (activeListNamesRaw.isNotBlank()) {
                 val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-                val matched = allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
-                if (matched.isNotEmpty()) matched else enabledListIds
-            } else {
+                val matched = allLists.filter { it.name in sessionListNames }.map { it.id }.toSet()
+                if (matched.isNotEmpty()) {
+                    matched
+                } else if (enabledListIds.isNotEmpty()) {
+                    enabledListIds
+                } else {
+                    allLists.map { it.id }.toSet()
+                }
+            } else if (enabledListIds.isNotEmpty()) {
                 enabledListIds
+            } else {
+                allLists.map { it.id }.toSet()
             }
         } else {
             emptySet()

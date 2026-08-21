@@ -216,7 +216,7 @@ class FocusAccessibilityService : AccessibilityService() {
         lastInspectedTime = now
 
         // 1. Strict Mode Anti-Uninstall & Settings Tamper Protection
-        if (sessionState.isStrictMode && systemSettingsPackages.contains(targetPkg)) {
+        if ((sessionState.isStrictMode || sessionState.isUltraStrict) && systemSettingsPackages.contains(targetPkg)) {
             val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
             if (rootNode != null) {
                 val fullText = extractAllText(rootNode, maxDepth = 6, visitedCount = intArrayOf(0)).lowercase()
