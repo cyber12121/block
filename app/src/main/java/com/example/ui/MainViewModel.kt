@@ -195,7 +195,7 @@ class MainViewModel(
     }
 
     fun toggleBlockList(list: BlockList) {
-        if (list.isEnabled && sessionManager.isAnyBlockingActive()) {
+        if (list.isEnabled && sessionManager.isSessionOrScheduleActive()) {
             // Cannot disable/unblock active block lists during an active focus or schedule session in any mode
             return
         }
@@ -206,7 +206,7 @@ class MainViewModel(
     }
 
     fun toggleTarget(target: BlockedTarget) {
-        if (target.isEnabled && sessionManager.isAnyBlockingActive()) {
+        if (target.isEnabled && sessionManager.isSessionOrScheduleActive()) {
             // Cannot disable/unblock active target rules during an active focus or schedule session in any mode
             return
         }
@@ -217,7 +217,7 @@ class MainViewModel(
     }
 
     fun updateTarget(target: BlockedTarget) {
-        if (sessionManager.isAnyBlockingActive()) {
+        if (sessionManager.isSessionOrScheduleActive()) {
             // Cannot alter existing target identifiers during an active focus or schedule session
             return
         }
@@ -245,7 +245,7 @@ class MainViewModel(
     }
 
     fun deleteTarget(target: BlockedTarget) {
-        if (sessionManager.isAnyBlockingActive()) {
+        if (sessionManager.isSessionOrScheduleActive()) {
             // Cannot delete targets during an active focus or schedule session
             return
         }

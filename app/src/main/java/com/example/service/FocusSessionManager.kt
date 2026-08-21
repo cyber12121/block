@@ -116,7 +116,9 @@ class FocusSessionManager private constructor(private val context: Context) {
         return !isEssentialApp(pkg)
     }
 
-    fun isAnyBlockingActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
+    fun isSessionOrScheduleActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
+
+    fun isAnyBlockingActive(): Boolean = isSessionOrScheduleActive() || cachedBlockedPackages.isNotEmpty() || cachedBlockedDomains.isNotEmpty() || cachedBlockedKeywords.isNotEmpty()
 
     fun isStrictActive(): Boolean = (_sessionState.value.isActive && _sessionState.value.isStrictMode) || (_activeSchedulesState.value.isActive && _activeSchedulesState.value.isStrictMode)
 
@@ -350,7 +352,8 @@ class FocusSessionManager private constructor(private val context: Context) {
             // of the current window so checkAutomaticSchedules() won't immediately
             // re-start it.
             if (!earlyUnlocked && currentState.isAutoScheduled && scheduledSessionId >= 0) {
-                prefs.edit().putLong(KEY_SNOOZED_SCHEDULE_ID, scheduledSessionId).apply()
+                val snoozeUntil = System.currentTimeMillis() + 30 * 60 * 1000L
+                prefs.edit().putLong("${KEY_SNOOZED_SCHEDULE_ID}_$scheduledSessionId", snoozeUntil).apply()
                 val allSchedules = repository.getEnabledSchedules()
                 ScheduleAlarmManager.rescheduleAll(context, allSchedules)
             }
@@ -418,10 +421,11 @@ class FocusSessionManager private constructor(private val context: Context) {
         var anyUltraStrict = false
 
         if (enabledSchedules.isNotEmpty()) {
-            val snoozedId = prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L)
+            val nowMs = System.currentTimeMillis()
 
             for (schedule in enabledSchedules) {
-                if (schedule.id == snoozedId) continue
+                val snoozedUntil = prefs.getLong("${KEY_SNOOZED_SCHEDULE_ID}_${schedule.id}", 0L)
+                if (nowMs < snoozedUntil) continue
 
                 if (com.example.util.ScheduleUtils.isScheduleActiveAt(schedule, cal)) {
                     activeList.add(schedule)
@@ -434,16 +438,52 @@ class FocusSessionManager private constructor(private val context: Context) {
             }
         }
 
-        if (activeList.isEmpty() && prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L) >= 0) {
-            prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
-        }
-
+        val isNowActive = activeList.isNotEmpty()
         _activeSchedulesState.value = ActiveSchedulesState(
-            isActive = activeList.isNotEmpty(),
+            isActive = isNowActive,
             activeSchedules = activeList,
             isStrictMode = if (anyUltraStrict) false else anyStrict,
             isUltraStrict = anyUltraStrict
         )
+
+        // SYNCHRONIZE BLOCK LISTS WITH ACTIVE SCHEDULE:
+        // When one or more schedules are actively running, calculate the union of all active schedules.
+        // We preserve user's baseline state before entering schedule mode, and restore it once all schedules end.
+        val allLists = repository.getAllListsOnce()
+        if (isNowActive) {
+            if (!prefs.contains(KEY_SCHEDULE_BASELINE_STATES)) {
+                val baseline = allLists.joinToString(";") { "${it.id}:${it.isEnabled}" }
+                prefs.edit().putString(KEY_SCHEDULE_BASELINE_STATES, baseline).apply()
+            }
+            for (list in allLists) {
+                val shouldBeEnabled = activeList.any { sch ->
+                    if (sch.activeListNames.isBlank()) true
+                    else com.example.util.ScheduleUtils.isListGuardedByTokens(sch.activeListNames, list, checkListEnabled = false)
+                }
+                if (list.isEnabled != shouldBeEnabled) {
+                    repository.updateBlockList(list.copy(isEnabled = shouldBeEnabled))
+                }
+            }
+        } else {
+            // All schedules ended! Restore user's baseline block list states if saved
+            val baseline = prefs.getString(KEY_SCHEDULE_BASELINE_STATES, null)
+            if (baseline != null) {
+                val savedMap = baseline.split(";").mapNotNull { entry ->
+                    val parts = entry.split(":")
+                    if (parts.size == 2) {
+                        parts[0].toLongOrNull()?.let { id -> id to parts[1].toBoolean() }
+                    } else null
+                }.toMap()
+
+                for (list in allLists) {
+                    val originalState = savedMap[list.id]
+                    if (originalState != null && list.isEnabled != originalState) {
+                        repository.updateBlockList(list.copy(isEnabled = originalState))
+                    }
+                }
+                prefs.edit().remove(KEY_SCHEDULE_BASELINE_STATES).apply()
+            }
+        }
 
         refreshBlockedTargetsCache(repository)
         FocusTileService.requestTileUpdate(context)
@@ -463,15 +503,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         val manualSessionActive = _sessionState.value.isActive || prefs.getBoolean(KEY_IS_ACTIVE, false)
         val scheduleActive = _activeSchedulesState.value.isActive
 
-        if (!manualSessionActive && !scheduleActive) {
-            cachedBlockedPackages = emptySet()
-            cachedBlockedDomains = emptySet()
-            cachedBlockedKeywords = emptySet()
-            return
-        }
-
         val allLists = repository.getAllListsOnce()
-        val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
         val validListIds = mutableSetOf<Long>()
 
         // 1. Manual Focus Session List IDs
@@ -483,23 +515,28 @@ class FocusSessionManager private constructor(private val context: Context) {
             }
 
             if (activeListNamesRaw.isNotBlank()) {
-                val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedByTokens(activeListNamesRaw, it) }.map { it.id }.toSet()
+                val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedByTokens(activeListNamesRaw, it, checkListEnabled = false) }.map { it.id }.toSet()
                 validListIds.addAll(matched)
             } else {
-                validListIds.addAll(enabledListIds)
+                validListIds.addAll(allLists.filter { it.isEnabled }.map { it.id })
             }
         }
 
-        // 2. Active Automated Schedule List IDs
+        // 2. Active Automated Schedule List IDs (Union of all concurrent schedules)
         if (scheduleActive) {
             for (sch in _activeSchedulesState.value.activeSchedules) {
                 if (sch.activeListNames.isNotBlank()) {
-                    val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedBySchedule(sch, it) }.map { it.id }.toSet()
+                    val matched = allLists.filter { com.example.util.ScheduleUtils.isListGuardedByTokens(sch.activeListNames, it, checkListEnabled = false) }.map { it.id }.toSet()
                     validListIds.addAll(matched)
                 } else {
-                    validListIds.addAll(enabledListIds)
+                    validListIds.addAll(allLists.map { it.id })
                 }
             }
+        }
+
+        // 3. Always-on 24/7 background guard when no manual session or schedule is actively overriding
+        if (!manualSessionActive && !scheduleActive) {
+            validListIds.addAll(allLists.filter { it.isEnabled }.map { it.id })
         }
 
         val targets = repository.getAllEnabledTargets()
@@ -962,6 +999,7 @@ class FocusSessionManager private constructor(private val context: Context) {
         private const val KEY_PLANT_TYPE = "key_plant_type"
         private const val KEY_SCHEDULE_ID = "key_schedule_id"
         private const val KEY_SNOOZED_SCHEDULE_ID = "key_snoozed_schedule_id"
+        private const val KEY_SCHEDULE_BASELINE_STATES = "key_schedule_baseline_states"
         private const val KEY_CUSTOM_ESSENTIAL_APPS = "key_custom_essential_apps"
         private const val MAX_MINIMAL_STRICT_EXITS = 1
         private const val KEY_MINIMAL_STRICT_LEVEL = "key_minimal_strict_level"

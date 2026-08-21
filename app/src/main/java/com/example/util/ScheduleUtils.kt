@@ -69,22 +69,24 @@ object ScheduleUtils {
     /**
      * Checks if a [blockList] matches the schedule's active guards.
      * Matches by:
-     * 1. Strict toggle check: if the list is disabled (isEnabled = false), it is NEVER active
-     * 2. Exact list ID (e.g., "1, 2, 5")
-     * 3. Exact list name (case-insensitive)
-     * 4. Normalized keyword matching (e.g., "Adult Content" matches "Adult & NSFW Blocker")
+     * 1. Exact list ID (e.g., "1, 2, 5")
+     * 2. Exact list name (case-insensitive)
+     * 3. Normalized keyword matching (e.g., "Adult Content" matches "Adult & NSFW Blocker")
      */
     fun isListGuardedBySchedule(schedule: Schedule, blockList: BlockList): Boolean {
-        if (!blockList.isEnabled) return false
-        return isListGuardedByTokens(schedule.activeListNames, blockList)
+        return isListGuardedByTokens(schedule.activeListNames, blockList, checkListEnabled = false)
     }
 
     /**
      * Checks if a [blockList] matches a raw active list token string (from schedule or session).
      */
-    fun isListGuardedByTokens(activeTokensRaw: String, blockList: BlockList): Boolean {
-        if (!blockList.isEnabled) return false
-        if (activeTokensRaw.isBlank()) return true // default: all enabled lists
+    fun isListGuardedByTokens(
+        activeTokensRaw: String,
+        blockList: BlockList,
+        checkListEnabled: Boolean = false
+    ): Boolean {
+        if (checkListEnabled && !blockList.isEnabled) return false
+        if (activeTokensRaw.isBlank()) return true // default: all lists
         val tokens = activeTokensRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }
         if (tokens.isEmpty()) return true
 

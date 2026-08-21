@@ -300,28 +300,40 @@ class FocusAccessibilityService : AccessibilityService() {
                 return
             }
 
-            // Fire URL scan on window state or content changes — when page navigates.
-            // Do NOT scan on TYPE_VIEW_TEXT_CHANGED, which fires on every keystroke
-            // and catches inline autocomplete suggestions while typing.
+            // Fire URL scan on window state, content changes, text changes or focus
             val isRelevantBrowserEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                    event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                    event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
+                    event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
+                    event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
 
             if (isRelevantBrowserEvent) {
-                // For CONTENT_CHANGED, throttle the tree walk to avoid CPU hammering.
-                // For STATE_CHANGED fire immediately on page navigation.
-                val isContentChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-                val shouldScan = !isContentChanged ||
-                        (now - lastBrowserUrlScanTime) > BROWSER_SCAN_THROTTLE_MS
+                val shouldScan = (now - lastBrowserUrlScanTime) > BROWSER_SCAN_THROTTLE_MS
 
                 if (shouldScan) {
                     lastBrowserUrlScanTime = now
-                    val urlText = findUrlBarText(targetPkg)
+                    var urlText = ""
+
+                    // 1. Direct event source check (fastest when typing in address bar)
+                    val eventSource = try { event.source } catch (_: Throwable) { null }
+                    if (eventSource != null) {
+                        val viewId = try { eventSource.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
+                        if (looksLikeUrlField(viewId) || eventSource.isEditable) {
+                            urlText = try { eventSource.text?.toString() ?: eventSource.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
+                        }
+                    }
+
+                    // 2. Comprehensive URL bar search
+                    if (urlText.isBlank()) {
+                        urlText = findUrlBarText(targetPkg)
+                    }
+
                     if (urlText.isNotBlank()) {
                         val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
                         if (isBlocked) {
                             triggerBlockShield(
                                 targetName = matchedRule,
-                                reason = "Website '$matchedRule' is restricted.",
+                                reason = "Website '$matchedRule' is restricted in your active focus shield.",
                                 isWebsite = true,
                                 browserPkg = targetPkg
                             )
