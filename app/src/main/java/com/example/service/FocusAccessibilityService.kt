@@ -150,82 +150,36 @@ class FocusAccessibilityService : AccessibilityService() {
         // here as well meant every tap on home or another app bounced them back into the
         // app mid-configuration, with no way to escape short of disabling the service.
         val isFgApp = targetPkg == applicationContext.packageName
-        val isEssential = sessionManager.isEssentialApp(targetPkg)
+        if (isFgApp) return // Never block our own app or overlays
 
+        val isLauncherOrHome = sessionManager.isOemLauncher(targetPkg)
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
-        val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
-        val isBlockingActive = sessionManager.isAnyBlockingActive()
-
-        // Minimalist Space bounce-back only applies when Minimalist Strict Lock is active
         val shouldLockToMinimalist = isMinimalStrictLock
 
-        val targetLower = targetPkg.lowercase()
-        val isLauncherOrHome = targetLower.contains("launcher") ||
-                               targetLower.contains("home") ||
-                               targetLower.contains("quickstep") ||
-                               targetLower.contains("nexuslauncher") ||
-                               targetLower.contains("recents") ||
-                               targetLower.contains("pixellauncher") ||
-                               targetLower.contains("sec.android.app.launcher") ||
-                               targetLower.contains("miui.home")
-
-        // 1. Minimalist Strict Lock Guardrail:
-        // Essential apps (Phone, SMS, Camera, user-selected essentials) -> ALLOWED freely.
-        // Stock OEM Home Launcher -> Instantly re-launch Minimalist Launcher.
-        // System Settings / App Info -> Instantly trigger Block Shield.
-        // Non-essential / Distracting apps -> Instantly trigger Block Shield.
-        if (shouldLockToMinimalist && !isFgApp && !isEssential) {
-            if (isLauncherOrHome) {
+        // 1. Home Launcher Detection & Strict Bounce-Back
+        if (isLauncherOrHome) {
+            if (shouldLockToMinimalist) {
+                // Instantly re-open Minimalist Launcher when user lands on OEM Home / Minus Screen
                 val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
                     putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
                 }
                 try {
                     startActivity(relaunch)
-                } catch (_: Exception) {
-                    com.example.util.PermissionUtils.lockScreen(this@FocusAccessibilityService)
-                }
-                return
-            } else if (systemSettingsPackages.contains(targetPkg)) {
-                triggerBlockShield(
-                    targetName = "Settings Restricted",
-                    reason = "System settings and app controls are restricted during Minimalist Strict Lock.",
-                    isWebsite = false
-                )
-                return
-            } else {
-                triggerBlockShield(
-                    targetName = getReadableAppName(targetPkg),
-                    reason = "Only selected essential apps can be opened during Minimalist Mode.",
-                    isWebsite = false
-                )
-                return
+                } catch (_: Exception) {}
             }
+            return
         }
 
-        // 2. Active Session App-Blocking (Enforced during active focus session or schedule)
-        // Skip this section if Minimalist Strict Lock is active — section 1 above already
-        // handled all enforcement and returned.  Without this guard, isAnyBlockingActive()
-        // (which is true even in background-only guard mode) would double-trigger the
-        // block shield for apps that section 1 already dealt with.
-        if (!shouldLockToMinimalist && isBlockingActive && !isFgApp && !isEssential) {
-            if (sessionManager.isAppBlocked(targetPkg)) {
-                triggerBlockShield(
-                    targetName = getReadableAppName(targetPkg),
-                    reason = "App '$targetPkg' is restricted in your active focus shield.",
-                    isWebsite = false
-                )
-                return
-            }
-        }
-
-        // Intercept System UI tampering (Quick Settings cog, Airplane toggle) during Ultra Strict Mode
-        if (targetPkg == "com.android.systemui") {
-            if (sessionManager.isUltraStrictActive()) {
+        // 2. Core OS System Components, Keyboards & System Dialogs (Always allowed, never blocked)
+        if (sessionManager.isSystemComponentOrKeyboard(targetPkg)) {
+            // Ultra Strict tamper interception for Quick Settings cog / Airplane mode
+            if (targetPkg == "com.android.systemui" && sessionManager.isUltraStrictActive()) {
                 val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
                 if (rootNode != null) {
                     val fullText = extractAllText(rootNode, maxDepth = 4, visitedCount = intArrayOf(0)).lowercase()
@@ -237,12 +191,30 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Skip our own app, keyboards, and system launcher (when not locking to minimalist) to save CPU
-        if (isFgApp ||
-            targetPkg.contains("inputmethod") ||
-            targetPkg.contains("keyboard") ||
-            (isLauncherOrHome && !shouldLockToMinimalist)
-        ) return
+        // 3. Essential Apps (User-selected custom essentials + Phone, SMS, Camera, Clock, Calculator)
+        val isEssential = sessionManager.isEssentialApp(targetPkg)
+        if (isEssential) {
+            return // Freely allowed without restriction
+        }
+
+        // 4. Minimalist Strict Lock Guardrail (Any non-essential app opened during lock)
+        if (shouldLockToMinimalist) {
+            if (systemSettingsPackages.contains(targetPkg)) {
+                triggerBlockShield(
+                    targetName = "Settings Restricted",
+                    reason = "System settings and app controls are restricted during Minimalist Strict Lock.",
+                    isWebsite = false
+                )
+            } else {
+                triggerBlockShield(
+                    targetName = getReadableAppName(targetPkg),
+                    reason = "Only selected essential apps can be opened during Minimalist Mode.",
+                    isWebsite = false
+                )
+            }
+            return
+        }
+
 
         val now = System.currentTimeMillis()
         // Throttle rapid sub-second identical window events

@@ -79,67 +79,117 @@ class FocusSessionManager private constructor(private val context: Context) {
         val pkg = packageName.lowercase()
         if (pkg == context.packageName.lowercase()) return true
 
-        // User custom selected essential apps
+        // User custom selected essential apps (match exact or sub-package)
         val customEssentials = getCustomEssentialApps().map { it.lowercase() }
-        if (customEssentials.contains(pkg)) return true
+        if (customEssentials.any { pkg == it || pkg.startsWith("$it.") || it.startsWith("$pkg.") }) return true
 
-        // Core system essentials (Phone, Dialer, In-Call UI, SMS, Camera, Clock, Calculator)
+        // Core system essentials across OEMs (Google, Xiaomi/MIUI, Samsung, OnePlus/Oppo, Vivo)
         val systemEssentials = setOf(
+            // Phone, Dialers, Contacts & In-Call UIs
             "com.android.dialer",
             "com.google.android.dialer",
             "com.samsung.android.dialer",
             "com.android.incallui",
             "com.google.android.incallui",
             "com.samsung.android.incallui",
+            "com.miui.incallui",
             "com.android.phone",
+            "com.android.server.telecom",
+            "com.android.contacts",
+            "com.google.android.contacts",
+            "com.samsung.android.contacts",
+            "com.oplus.dialer",
+            "com.coloros.dialer",
+            "com.vivo.upslide",
+
+            // Messaging / SMS
             "com.google.android.apps.messaging",
             "com.android.mms",
             "com.samsung.android.messaging",
+            "com.miui.mms",
+            "com.miui.mms.message",
+
+            // Camera
             "com.android.camera",
             "com.android.camera2",
             "com.google.android.camera",
             "com.samsung.android.app.camera",
+            "com.sec.android.app.camera",
             "org.codeaurora.snapcam",
+            "com.miui.camera",
+            "com.oplus.camera",
+            "com.coloros.camera",
+
+            // Clock & Alarms
             "com.android.deskclock",
             "com.google.android.deskclock",
             "com.sec.android.app.clockpackage",
+            "com.miui.deskclock",
+            "com.coloros.alarmclock",
+            "com.android.bbkclock",
+
+            // Calculator
             "com.android.calculator2",
             "com.google.android.calculator",
-            "com.sec.android.app.popupcalculator"
+            "com.sec.android.app.popupcalculator",
+            "com.miui.calculator",
+            "com.coloros.calculator",
+            "com.android.bbkcalculator",
+            "com.vivo.calculator"
         )
         return systemEssentials.contains(pkg)
     }
 
     /**
+     * Checks if a package is core OS system chrome, a keyboard/IME, or a system dialog
+     * that must never be blocked or trigger an overlay.
+     */
+    fun isSystemComponentOrKeyboard(packageName: String): Boolean {
+        val pkg = packageName.lowercase()
+        if (pkg == "android" || pkg == "com.android.systemui" || pkg == "com.android.system.ui") return true
+        if (pkg.contains("systemui") || pkg.contains("system.ui")) return true
+        if (pkg.contains("inputmethod") || pkg.contains("keyboard") || pkg.contains("gboard") || pkg.contains("swiftkey") || pkg.contains("latin") || pkg.contains("ime")) return true
+        if (pkg == "com.android.server.telecom" || pkg == "com.android.incallui" || pkg == "com.miui.incallui") return true
+        if (pkg == "com.miui.securitycenter" || pkg == "com.miui.screenrecorder") return true
+        return false
+    }
+
+    /**
      * Returns true only when the user is genuinely outside both FocusGuard and the
-     * allowed-app set.  The OEM home launcher is intentionally excluded: pressing
-     * Home is not an "escape" — the accessibility service will bounce the user back
-     * to the Minimalist Launcher within ~1 second.  Treating the launcher as an
-     * escape caused lockScreen() to fire every 5 s just for pressing Home.
-     *
-     * The stale threshold is 15 s (was 10 s) to tolerate accessibility-event delays
-     * on busy / low-end devices.
+     * allowed-app set.  The OEM home launcher, keyboards, and system UI components
+     * are intentionally excluded: pressing Home is not an "escape" — the accessibility
+     * service will bounce the user back to the Minimalist Launcher.
      */
     fun isLockEscaped(): Boolean {
         if (!isMinimalStrictLockActive()) return false
         val pkg = lastSeenForegroundPackage ?: return false
         if (System.currentTimeMillis() - lastSeenForegroundTime > 15_000) return false // stale
-        // OEM launcher = user just pressed Home; accessibility bounces them back — not an escape
         if (isOemLauncher(pkg)) return false
+        if (isSystemComponentOrKeyboard(pkg)) return false
         return !isEssentialApp(pkg)
     }
 
-    /** Mirrors the launcher-detection logic in FocusAccessibilityService. */
-    private fun isOemLauncher(pkg: String): Boolean {
+    /** Mirrors the launcher-detection logic for all major OEM launchers. */
+    fun isOemLauncher(pkg: String): Boolean {
         val lower = pkg.lowercase()
         return lower.contains("launcher") ||
-               lower.contains("home") ||
+               lower.contains(".home") ||
+               lower == "com.miui.home" ||
+               lower.contains("miui.home") ||
+               lower.contains("minusscreen") ||
                lower.contains("quickstep") ||
                lower.contains("nexuslauncher") ||
                lower.contains("recents") ||
                lower.contains("pixellauncher") ||
                lower.contains("sec.android.app.launcher") ||
-               lower.contains("miui.home")
+               lower.contains("coloros.launcher") ||
+               lower.contains("oneplus.launcher") ||
+               lower.contains("oppo.launcher") ||
+               lower.contains("vivo.launcher") ||
+               lower.contains("realme.launcher") ||
+               lower.contains("transsion.launcher") ||
+               lower.contains("huawei.android.launcher") ||
+               lower.contains("emui.home")
     }
 
     fun isSessionOrScheduleActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
