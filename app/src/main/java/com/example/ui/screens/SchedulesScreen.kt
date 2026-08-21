@@ -377,14 +377,14 @@ fun SchedulesScreen(
                         isActiveNow = isCurrentlyActive,
                         isGlobalStrict = isSessionStrict,
                         onToggle = {
-                            if (isCurrentlyActive || isSessionStrict) {
+                            if ((isCurrentlyActive || isSessionStrict) && (schedule.isStrictMode || isSessionStrict)) {
                                 lockedScheduleInfo = schedule
                             } else {
                                 onToggleSchedule(schedule)
                             }
                         },
                         onDelete = {
-                            if (isCurrentlyActive || isSessionStrict) {
+                            if ((isCurrentlyActive || isSessionStrict) && (schedule.isStrictMode || isSessionStrict)) {
                                 lockedScheduleInfo = schedule
                             } else {
                                 onDeleteSchedule(schedule)

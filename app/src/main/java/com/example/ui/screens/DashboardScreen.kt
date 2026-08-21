@@ -243,11 +243,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-<<<<<<< HEAD
                                     text = if (isUltraStrictActiveTop) "Locked 🔒" else if (isDevModeTop) "Exit (∞)" else "Exit ($dailyExitsLeftTop/10)",
-=======
-                                    text = "Exit",
->>>>>>> 462690c1d5e2fe8eaf8c49ef52392b09d25be829
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -578,17 +574,12 @@ fun DashboardScreen(
             },
             text = {
                 Text(
-<<<<<<< HEAD
                     text = if (isUltraStrictActive)
                         "Ultra Strict Mode is active! Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
                     else if (isDevMode)
                         "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
                     else if (dailyExitsLeft > 0)
                         "Google Account: You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will use 1 exit (resets at midnight)."
-=======
-                    text = if (canExit)
-                        "You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will stop the running timer and unblock all apps."
->>>>>>> 462690c1d5e2fe8eaf8c49ef52392b09d25be829
                     else
                         "Daily exit limit reached (0/10 exits remaining today). Focus session cannot be exited early until tomorrow.",
                     color = Color(0xFFCBD5E1),

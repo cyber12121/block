@@ -270,7 +270,6 @@ class MainViewModel(
         }
     }
 
-    // Schedule operations
     fun toggleSchedule(schedule: Schedule) {
         viewModelScope.launch {
             val updated = schedule.copy(isEnabled = !schedule.isEnabled)
@@ -278,8 +277,11 @@ class MainViewModel(
             // Re-arm or cancel the exact alarm for this schedule
             val allSchedules = repository.getEnabledSchedules()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
-            // Also run an immediate check in case we just enabled a window that's active now
-            sessionManager.checkAutomaticSchedules(repository)
+            if (!updated.isEnabled && sessionManager.sessionState.value.isAutoScheduled) {
+                sessionManager.endSession(repository, earlyUnlocked = false)
+            } else {
+                sessionManager.checkAutomaticSchedules(repository)
+            }
         }
     }
 

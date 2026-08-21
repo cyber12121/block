@@ -220,7 +220,7 @@ object DefaultData {
             daysOfWeek = "2,3,4,5,6", // Mon-Fri
             isStrictMode = false,
             activeListNames = "Social Media, Entertainment & Video, Gaming & Esports, Adult & NSFW Blocker",
-            isEnabled = true
+            isEnabled = false
         ),
         Schedule(
             id = 2L,

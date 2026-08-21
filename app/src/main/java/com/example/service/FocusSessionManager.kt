@@ -427,21 +427,15 @@ class FocusSessionManager private constructor(private val context: Context) {
 
         // Build the set of list IDs whose targets should be enforced.
         // During a session: use the session's selected lists (by name). If none match
-        // Active session / schedule blocking scope:
-        // Only load targets from lists associated with the active session/schedule.
-        // Outside an active session/schedule, do not block anything by default.
         val allLists = repository.getActiveLists()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
 
-        val validListIds = if (isSessionActive) {
-            if (activeListNamesRaw.isNotBlank()) {
-                val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
-                allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
-            } else {
-                enabledListIds
-            }
+        val validListIds = if (isSessionActive && activeListNamesRaw.isNotBlank()) {
+            val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+            val matched = allLists.filter { it.name in sessionListNames && it.isEnabled }.map { it.id }.toSet()
+            if (matched.isNotEmpty()) matched else enabledListIds
         } else {
-            emptySet()
+            enabledListIds
         }
 
         val targets = repository.getAllEnabledTargets()

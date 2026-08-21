@@ -163,32 +163,17 @@ class FocusAccessibilityService : AccessibilityService() {
                                targetLower.contains("recents")
 
         // 1. Instant Minimalist Mode bounce-back enforcement:
-        // Re-launch Minimalist Launcher instantly (delay 100ms) if the user minimizes or goes home.
+        // Re-launch Minimalist Launcher instantly if the user minimizes or goes home.
         if (shouldLockToMinimalist && !isFgApp && !isEssential) {
             if (isLauncherOrHome) {
-                scope.launch {
-                    kotlinx.coroutines.delay(100)
-                    val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    }
-                    try {
-                        startActivity(relaunch)
-                    } catch (_: Exception) {}
+                val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 }
+                try {
+                    startActivity(relaunch)
+                } catch (_: Exception) {}
                 return
             } else if (sessionManager.isAppBlocked(targetPkg)) {
-                triggerBlockShield(
-                    targetName = getReadableAppName(targetPkg),
-                    reason = "App '$targetPkg' is restricted in your active focus shield.",
-                    isWebsite = false
-                )
-                return
-            }
-        }
-
-        // 2. Regular active session app-blocking
-        if (sessionState.isActive && !isFgApp && !isEssential) {
-            if (sessionManager.isAppBlocked(targetPkg)) {
                 triggerBlockShield(
                     targetName = getReadableAppName(targetPkg),
                     reason = "App '$targetPkg' is restricted in your active focus shield.",
@@ -361,12 +346,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (nodes.isNullOrEmpty()) continue
             var found = ""
             for (n in nodes) {
-                // If the user is actively typing in the address bar (field is focused),
-                // skip reading inline autocomplete text to avoid false redirects while typing.
-                val isFocused = try { n.isFocused || n.isAccessibilityFocused } catch (_: Throwable) { false }
-                if (isFocused) return ""
-
-                val text = try { n.text?.toString() ?: "" } catch (_: Throwable) { "" }
+                val text = try { n.text?.toString() ?: n.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
                 if (found.isBlank() && text.isNotBlank()) found = text
             }
             if (found.isNotBlank()) return found
@@ -384,7 +364,7 @@ class FocusAccessibilityService : AccessibilityService() {
             visited++
             val viewId = try { node.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
             if (looksLikeUrlField(viewId)) {
-                val text = try { node.text?.toString() ?: "" } catch (_: Throwable) { "" }
+                val text = try { node.text?.toString() ?: node.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
                 if (text.isNotBlank()) return text
             }
             val childCount = try { node.childCount } catch (_: Throwable) { 0 }
@@ -428,8 +408,7 @@ class FocusAccessibilityService : AccessibilityService() {
         lastBlockedTimestamp = now
         lastBlockedTarget = targetName
 
-        // ALWAYS push the user away from the blocked content — even on rapid
-        // repeat triggers.
+        // ALWAYS push the user away from the blocked content — even on rapid repeat triggers.
         if (isWebsite) {
             if (!browserPkg.isNullOrBlank()) {
                 lastCleanBrowserRedirectTime = now
@@ -454,10 +433,6 @@ class FocusAccessibilityService : AccessibilityService() {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                 } catch (_: Exception) {}
             }
-        } else {
-            try {
-                performGlobalAction(GLOBAL_ACTION_HOME)
-            } catch (_: Exception) {}
         }
 
         // Only skip the overlay + stat recording on rapid repeats, to avoid spam
