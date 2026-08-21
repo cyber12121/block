@@ -166,7 +166,6 @@ class FocusSessionManager private constructor(private val context: Context) {
                 .putString(KEY_PLANT_TYPE, plantType.name)
                 .putLong(KEY_SCHEDULE_ID, if (isAutoScheduled) scheduleId else -1L)
                 .remove(KEY_SNOOZED_SCHEDULE_ID) // clear any lingering snooze on new session start
-                .putInt(KEY_EMERGENCY_EXITS_USED, 0) // reset per-session exit quota
                 .apply()
 
             refreshBlockedTargetsCache(repository)
@@ -831,8 +830,6 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     companion object {
-        private const val MAX_EMERGENCY_EXITS = 5
-        private const val KEY_EMERGENCY_EXITS_USED = "key_emergency_exits_used"
         private const val KEY_IS_MINIMAL_ACTIVE = "key_is_minimal_active"
         private const val PREFS_NAME = "focus_guard_secure_state"
         private const val KEY_IS_ACTIVE = "key_is_active"

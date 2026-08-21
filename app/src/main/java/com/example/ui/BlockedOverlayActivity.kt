@@ -90,6 +90,7 @@ class BlockedOverlayActivity : ComponentActivity() {
                     reason = reason,
                     isWebsite = isWebsite,
                     isStrictMode = sessionState.isStrictMode,
+                    isUltraStrict = sessionState.isUltraStrict,
                     remainingSeconds = sessionState.remainingSeconds,
                     endTimeMillis = sessionState.endTimeMillis,
                     onPrimaryAction = {
@@ -143,6 +144,7 @@ fun BlockedShieldScreen(
     reason: String,
     isWebsite: Boolean,
     isStrictMode: Boolean,
+    isUltraStrict: Boolean = false,
     remainingSeconds: Long,
     endTimeMillis: Long,
     onPrimaryAction: () -> Unit,
@@ -182,7 +184,7 @@ fun BlockedShieldScreen(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         Color(0xFF0B1120),
-                        if (isStrictMode) Color(0xFF2E1424) else Color(0xFF111A2E),
+                        if (isUltraStrict || isStrictMode) Color(0xFF2E1424) else Color(0xFF111A2E),
                         Color(0xFF0B1120)
                     )
                 )
@@ -201,15 +203,15 @@ fun BlockedShieldScreen(
                     .size(120.dp)
                     .scale(pulseScale)
                     .background(
-                        color = if (isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
+                        color = if (isUltraStrict || isStrictMode) CrimsonStrict.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (isStrictMode) Icons.Default.Lock else (if (isWebsite) Icons.Default.WebAsset else Icons.Default.Shield),
+                    imageVector = if (isUltraStrict || isStrictMode) Icons.Default.Lock else (if (isWebsite) Icons.Default.WebAsset else Icons.Default.Shield),
                     contentDescription = "Focus Shield",
-                    tint = if (isStrictMode) CrimsonStrict else IndigoPrimary,
+                    tint = if (isUltraStrict || isStrictMode) CrimsonStrict else IndigoPrimary,
                     modifier = Modifier.size(64.dp)
                 )
             }
@@ -217,7 +219,7 @@ fun BlockedShieldScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Strict Mode Badge
-            if (isStrictMode) {
+            if (isUltraStrict || isStrictMode) {
                 Surface(
                     color = CrimsonStrict.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(100.dp),
@@ -235,7 +237,7 @@ fun BlockedShieldScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "STRICT MODE ENFORCED",
+                            text = if (isUltraStrict) "ULTRA STRICT LOCKDOWN 🔒" else "STRICT MODE ENFORCED",
                             color = CrimsonStrict,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

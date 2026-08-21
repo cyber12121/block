@@ -252,12 +252,22 @@ fun DashboardScreen(
                         }
 
                         // Strict / Active Status Badge
+                        val badgeColor = when {
+                            sessionState.isUltraStrict -> CrimsonStrict
+                            sessionState.isStrictMode -> CrimsonStrict
+                            else -> EmeraldSuccess
+                        }
+                        val badgeText = when {
+                            sessionState.isUltraStrict -> "ULTRA STRICT 🔒"
+                            sessionState.isStrictMode -> "STRICT"
+                            else -> "FOCUS TIMER"
+                        }
                         Surface(
-                            color = if (sessionState.isStrictMode) CrimsonStrict else EmeraldSuccess,
+                            color = badgeColor,
                             shape = RoundedCornerShape(100.dp)
                         ) {
                             Text(
-                                text = if (sessionState.isStrictMode) "STRICT" else "FOCUS TIMER",
+                                text = badgeText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,

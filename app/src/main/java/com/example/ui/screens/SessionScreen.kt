@@ -224,7 +224,7 @@ fun SessionScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "STRICT MODE ACTIVE",
+                        text = if (sessionState.isUltraStrict) "ULTRA STRICT LOCKDOWN ACTIVE 🔒" else "STRICT MODE ACTIVE",
                         color = CrimsonStrict,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold,

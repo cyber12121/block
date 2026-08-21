@@ -275,7 +275,7 @@ fun SchedulesScreen(
                                             shape = RoundedCornerShape(4.dp)
                                         ) {
                                             Text(
-                                                text = if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
+                                                text = if (sessionState.isUltraStrict) "ULTRA STRICT 🔒" else if (sessionState.isStrictMode) "STRICT" else "ACTIVE",
                                                 color = CrimsonStrict,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,

@@ -217,9 +217,10 @@ class FocusAccessibilityService : AccessibilityService() {
                                      fullText.contains("device admin")
 
                 if (isAboutOurApp && (isTamperAction || fullText.contains("app info") || fullText.contains("manage app"))) {
+                    val modeName = if (sessionState.isUltraStrict) "Ultra Strict Mode" else "Strict Mode"
                     triggerBlockShield(
                         targetName = "Anti-Uninstall Defense",
-                        reason = "FocusGuard cannot be uninstalled, force-stopped, or disabled while Strict Mode is active.",
+                        reason = "FocusGuard cannot be uninstalled, force-stopped, or disabled while $modeName is active.",
                         isWebsite = false
                     )
                     return

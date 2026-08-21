@@ -491,7 +491,12 @@ fun CreateScheduleDialog(
 
                         Switch(
                             checked = isStrictMode,
-                            onCheckedChange = { isStrictMode = it },
+                            onCheckedChange = { checked ->
+                                isStrictMode = checked
+                                if (!checked) {
+                                    isUltraStrict = false
+                                }
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = CrimsonStrict,
@@ -554,7 +559,12 @@ fun CreateScheduleDialog(
 
                             Switch(
                                 checked = isUltraStrict,
-                                onCheckedChange = { isUltraStrict = it },
+                                onCheckedChange = { checked ->
+                                    isUltraStrict = checked
+                                    if (checked) {
+                                        isStrictMode = true
+                                    }
+                                },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = CrimsonStrict,
@@ -564,7 +574,7 @@ fun CreateScheduleDialog(
                         }
 
                         Text(
-                            text = "Automated Schedule only: Cannot be exited during the locked window. Unlocks ONLY when window opens or in Developer Mode.",
+                            text = "Automated Schedule only: Cannot be exited during the locked window under ANY circumstance. Unlocks ONLY when the schedule window expires.",
                             color = Color(0xFFCBD5E1),
                             fontSize = 11.sp,
                             lineHeight = 15.sp
