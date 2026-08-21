@@ -572,63 +572,16 @@ fun DashboardScreen(
         val isDevMode by authManager.isDeveloperMode.collectAsState()
         val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
         val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
-        val canExit = !isUltraStrictActive && (isDevMode || dailyExitsLeft > 0)
 
-        AlertDialog(
-            onDismissRequest = { showEmergencyUnlockConfirmDialog = false },
-            icon = {
-                Icon(
-                    imageVector = if (isUltraStrictActive) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = null,
-                    tint = CrimsonStrict,
-                    modifier = Modifier.size(28.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = if (isUltraStrictActive) "Strict Blocker Active 🔒" else "Exit Active Focus & Timer?",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Text(
-                    text = if (isUltraStrictActive)
-                        "Strict Blocker is active! Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
-                    else if (isDevMode)
-                        "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
-                    else if (dailyExitsLeft > 0)
-                        "Google Account: You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will use 1 exit (resets at midnight)."
-                    else
-                        "Daily exit limit reached (0/10 exits remaining today). Focus session cannot be exited early until tomorrow.",
-                    color = Color(0xFFCBD5E1),
-                    fontSize = 14.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showEmergencyUnlockConfirmDialog = false
-                        onEmergencyUnlock()
-                    },
-                    enabled = canExit,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CrimsonStrict,
-                        disabledContainerColor = Color(0xFF334155)
-                    )
-                ) {
-                    Text(
-                        text = if (isUltraStrictActive) "Locked (Strict Blocker)" else if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEmergencyUnlockConfirmDialog = false }) {
-                    Text("Keep Focusing", color = Color(0xFF94A3B8))
-                }
-            },
-            containerColor = Color(0xFF111A2E)
+        com.example.ui.components.EmergencyUnlockDialog(
+            isUltraStrictActive = isUltraStrictActive,
+            isDevMode = isDevMode,
+            dailyExitsLeft = dailyExitsLeft,
+            onDismiss = { showEmergencyUnlockConfirmDialog = false },
+            onConfirmUnlock = {
+                showEmergencyUnlockConfirmDialog = false
+                onEmergencyUnlock()
+            }
         )
     }
 

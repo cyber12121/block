@@ -46,6 +46,9 @@ class FocusGuardApp : Application() {
                 repository.ensureDefaultData()
             } catch (_: Exception) {}
             sessionManager.refreshBlockedTargetsCache(repository)
+            try {
+                com.example.util.InstalledAppsCache.loadApps(this@FocusGuardApp)
+            } catch (_: Exception) {}
         }
     }
 }

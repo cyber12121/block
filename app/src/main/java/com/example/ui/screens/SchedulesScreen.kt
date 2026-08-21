@@ -113,6 +113,7 @@ fun isScheduleActiveNow(schedule: Schedule): Boolean {
 @Composable
 fun SchedulesScreen(
     sessionState: ActiveSessionState,
+    activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     schedules: List<Schedule>,
     onToggleSchedule: (Schedule) -> Unit,
     onDeleteSchedule: (Schedule) -> Unit,
@@ -123,10 +124,12 @@ fun SchedulesScreen(
     val authManager = remember { AuthManager.getInstance(context) }
     val isDevMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
+    val isUltraStrictActive = (sessionState.isUltraStrict && sessionState.isActive) || (activeSchedulesState.isUltraStrict && activeSchedulesState.isActive)
 
     var lockedScheduleInfo by remember { mutableStateOf<Schedule?>(null) }
-    val isSessionStrict = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
+    var showUnlockConfirmDialog by remember { mutableStateOf(false) }
+    val isSessionStrict = (sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)) ||
+            (activeSchedulesState.isActive && (activeSchedulesState.isStrictMode || activeSchedulesState.isUltraStrict))
 
     Scaffold(
         floatingActionButton = {
@@ -221,8 +224,8 @@ fun SchedulesScreen(
 
             // Active Scheduled Status Info Card
             item {
-                val isAutoActive = sessionState.isActive && sessionState.isAutoScheduled
-                val isAnyActive = sessionState.isActive
+                val isAutoActive = activeSchedulesState.isActive || (sessionState.isActive && sessionState.isAutoScheduled)
+                val isAnyActive = sessionState.isActive || activeSchedulesState.isActive
                 val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                 val pulseAlpha by infiniteTransition.animateFloat(
                     initialValue = 0.6f,
@@ -277,12 +280,14 @@ fun SchedulesScreen(
                                     )
                                     if (isAnyActive) {
                                         Spacer(modifier = Modifier.width(6.dp))
+                                        val isUltra = (sessionState.isActive && sessionState.isUltraStrict) || (activeSchedulesState.isActive && activeSchedulesState.isUltraStrict)
+                                        val isStrict = (sessionState.isActive && sessionState.isStrictMode) || (activeSchedulesState.isActive && activeSchedulesState.isStrictMode)
                                         Surface(
                                             color = CrimsonStrict.copy(alpha = 0.2f),
                                             shape = RoundedCornerShape(4.dp)
                                         ) {
                                             Text(
-                                                text = if (sessionState.isUltraStrict) "STRICT BLOCKER 🔒" else if (sessionState.isStrictMode) "NORMAL BLOCKER" else "ACTIVE",
+                                                text = if (isUltra) "STRICT BLOCKER 🔒" else if (isStrict) "NORMAL BLOCKER" else "ACTIVE",
                                                 color = CrimsonStrict,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,
@@ -291,8 +296,11 @@ fun SchedulesScreen(
                                         }
                                     }
                                 }
+                                val activeScheduleNames = activeSchedulesState.activeSchedules.joinToString(", ") { it.name }
                                 Text(
-                                    text = if (isAnyActive)
+                                    text = if (activeSchedulesState.isActive)
+                                        "Automated schedule “$activeScheduleNames” is actively enforcing focus blocks."
+                                    else if (sessionState.isActive)
                                         "Focus block “${sessionState.title}” is active (${sessionState.remainingSeconds / 60}m remaining)."
                                     else
                                         "Schedules engage automatically when their clock time window arrives.",
@@ -305,7 +313,7 @@ fun SchedulesScreen(
                         if (isAnyActive) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
-                                onClick = onEmergencyUnlock,
+                                onClick = { showUnlockConfirmDialog = true },
                                 enabled = !isUltraStrictActive,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = CrimsonStrict,
@@ -424,6 +432,19 @@ fun SchedulesScreen(
                 ) {
                     Text("Understood")
                 }
+            }
+        )
+    }
+
+    if (showUnlockConfirmDialog) {
+        com.example.ui.components.EmergencyUnlockDialog(
+            isUltraStrictActive = isUltraStrictActive,
+            isDevMode = isDevMode,
+            dailyExitsLeft = dailyExitsLeft,
+            onDismiss = { showUnlockConfirmDialog = false },
+            onConfirmUnlock = {
+                showUnlockConfirmDialog = false
+                onEmergencyUnlock()
             }
         )
     }

@@ -249,7 +249,56 @@ object PermissionUtils {
                 isGranted = isNotif,
                 actionLabel = if (isNotif) "Enabled" else "Allow Alerts",
                 intentAction = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+            ),
+            PermissionStatus(
+                id = "autostart",
+                title = "Auto-Start & Background Protection",
+                description = "Ensures MIUI, ColorOS and OEM battery savers do not terminate the blocker",
+                isGranted = isBatteryExempt,
+                actionLabel = "Configure OEM",
+                intentAction = "ACTION_OEM_AUTOSTART"
             )
         )
+    }
+
+    fun openOemAutostartSettings(context: Context): Boolean {
+        val autostartIntents = listOf(
+            // Xiaomi / MIUI / HyperOS
+            Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+            Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")),
+            // Huawei / Honor
+            Intent().setComponent(ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")),
+            Intent().setComponent(ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")),
+            // Oppo / Realme / ColorOS
+            Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+            Intent().setComponent(ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")),
+            Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")),
+            // Vivo
+            Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")),
+            Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")),
+            // Samsung
+            Intent().setComponent(ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+            Intent().setComponent(ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity"))
+        )
+
+        for (intent in autostartIntents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+
+        // Fallback to standard app details
+        return try {
+            val appDetails = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(appDetails)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }

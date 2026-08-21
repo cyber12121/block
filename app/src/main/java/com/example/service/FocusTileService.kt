@@ -55,12 +55,19 @@ class FocusTileService : TileService() {
         val tile = qsTile ?: return
         val app = application as? FocusGuardApp ?: return
         val sessionState = app.sessionManager.sessionStateFlow.value
+        val activeSchedulesState = app.sessionManager.activeSchedulesStateFlow.value
 
         if (sessionState.isActive) {
             tile.state = Tile.STATE_ACTIVE
             tile.label = "Focus: ${sessionState.remainingSeconds / 60}m"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = if (sessionState.isStrictMode) "Strict Shield" else "Active Focus"
+                tile.subtitle = if (sessionState.isUltraStrict) "Strict Lock 🔒" else if (sessionState.isStrictMode) "Strict Shield" else "Active Focus"
+            }
+        } else if (activeSchedulesState.isActive) {
+            tile.state = Tile.STATE_ACTIVE
+            tile.label = "Schedule Running"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tile.subtitle = if (activeSchedulesState.isUltraStrict) "Strict Block 🔒" else "Schedule Shield"
             }
         } else {
             tile.state = Tile.STATE_INACTIVE

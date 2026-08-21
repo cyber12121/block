@@ -162,7 +162,8 @@ fun MainAppContent(viewModel: MainViewModel) {
         return
     }
 
-    val isStrictActive = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
+    val isStrictActive = (sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)) ||
+            (activeSchedulesState.isActive && (activeSchedulesState.isStrictMode || activeSchedulesState.isUltraStrict))
     val isMinimalistLock by sessionManager.minimalStrictLockState.collectAsStateWithLifecycle()
     val pinActive = isStrictActive || isMinimalistLock
 
@@ -296,6 +297,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.APPS -> {
                             AppsScreen(
                                 sessionState = sessionState,
+                                activeSchedulesState = activeSchedulesState,
                                 blockLists = blockLists,
                                 allTargets = allTargets,
                                 onToggleTarget = { viewModel.toggleTarget(it) },
@@ -308,6 +310,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.BLOCK_LISTS -> {
                             BlockListsScreen(
                                 sessionState = sessionState,
+                                activeSchedulesState = activeSchedulesState,
                                 blockLists = blockLists,
                                 allTargets = allTargets,
                                 onToggleList = { viewModel.toggleBlockList(it) },
@@ -322,6 +325,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.SCHEDULES -> {
                             SchedulesScreen(
                                 sessionState = sessionState,
+                                activeSchedulesState = activeSchedulesState,
                                 schedules = allSchedules,
                                 onToggleSchedule = { viewModel.toggleSchedule(it) },
                                 onDeleteSchedule = { viewModel.deleteSchedule(it) },
@@ -340,6 +344,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.SETTINGS -> {
                             SettingsScreen(
                                 sessionState = sessionState,
+                                activeSchedulesState = activeSchedulesState,
                                 onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
                                 onOpenSessionView = { isLiveSessionFullscreen = true }
                             )

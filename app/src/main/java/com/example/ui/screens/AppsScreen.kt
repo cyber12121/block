@@ -109,6 +109,7 @@ fun drawableToBitmap(drawable: Drawable): Bitmap {
 @Composable
 fun AppsScreen(
     sessionState: ActiveSessionState,
+    activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     blockLists: List<BlockList>,
     allTargets: List<BlockedTarget>,
     onToggleTarget: (BlockedTarget) -> Unit,
@@ -118,10 +119,10 @@ fun AppsScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
-    var installedApps by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
-    var isLoadingApps by remember { mutableStateOf(true) }
+    var installedApps by remember { mutableStateOf<List<com.example.util.InstalledAppItem>>(com.example.util.InstalledAppsCache.getCachedApps()) }
+    var isLoadingApps by remember { mutableStateOf(!com.example.util.InstalledAppsCache.isReady()) }
 
-    val isSessionActive = sessionState.isActive
+    val isSessionActive = sessionState.isActive || (sessionState.remainingSeconds > 0) || activeSchedulesState.isActive
 
     val blockedTargetsMap = remember(allTargets) {
         allTargets.filter { it.targetType == TargetType.APP }.associateBy { it.identifier.lowercase() }
@@ -135,65 +136,9 @@ fun AppsScreen(
     }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val pm = context.packageManager
-            val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-            val resolveInfos = pm.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
-            val apps = mutableListOf<InstalledAppItem>()
-            val seenPackages = mutableSetOf<String>()
-
-            for (info in resolveInfos) {
-                val pkg = info.activityInfo.packageName
-                if (pkg == context.packageName || seenPackages.contains(pkg)) continue
-                seenPackages.add(pkg)
-
-                val name = info.loadLabel(pm).toString()
-                val iconDrawable = try {
-                    info.loadIcon(pm)
-                } catch (_: Exception) {
-                    null
-                }
-                val bitmap = iconDrawable?.let { drawableToBitmap(it) }
-
-                var category = "Other"
-                val pkgLower = pkg.lowercase()
-                val nameLower = name.lowercase()
-
-                if (pkgLower.contains("instagram") || pkgLower.contains("facebook") || pkgLower.contains("twitter") ||
-                    pkgLower.contains("tiktok") || pkgLower.contains("snapchat") || pkgLower.contains("reddit") ||
-                    pkgLower.contains("discord") || pkgLower.contains("telegram") || pkgLower.contains("whatsapp") ||
-                    nameLower.contains("social") || nameLower.contains("chat")
-                ) {
-                    category = "Social"
-                } else if (pkgLower.contains("youtube") || pkgLower.contains("netflix") || pkgLower.contains("spotify") ||
-                    pkgLower.contains("twitch") || pkgLower.contains("disney") || pkgLower.contains("hulu") ||
-                    pkgLower.contains("primevideo") || nameLower.contains("stream") || nameLower.contains("video")
-                ) {
-                    category = "Video"
-                } else if (pkgLower.contains("game") || nameLower.contains("game") ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && info.activityInfo.applicationInfo.category == ApplicationInfo.CATEGORY_GAME)
-                ) {
-                    category = "Games"
-                } else if (pkgLower.contains("amazon") || pkgLower.contains("ebay") || pkgLower.contains("shopping") ||
-                    pkgLower.contains("shein") || pkgLower.contains("temu") || pkgLower.contains("aliexpress")
-                ) {
-                    category = "Shopping"
-                } else if (pkgLower.contains("chrome") || pkgLower.contains("browser") || pkgLower.contains("firefox") ||
-                    pkgLower.contains("opera") || pkgLower.contains("edge")
-                ) {
-                    category = "Browsers"
-                }
-
-                val isSys = (info.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                apps.add(InstalledAppItem(name, pkg, bitmap, category, isSys))
-            }
-
-            apps.sortBy { it.appName.lowercase() }
-            installedApps = apps
-            isLoadingApps = false
-        }
+        val apps = com.example.util.InstalledAppsCache.loadApps(context)
+        installedApps = apps
+        isLoadingApps = false
     }
 
     val filteredApps = remember(installedApps, searchQuery, selectedCategory, blockedTargetsMap) {

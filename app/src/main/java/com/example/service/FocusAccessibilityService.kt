@@ -215,9 +215,22 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Skip our own app, keyboards, system UI overlay, and system launcher (when not locking to minimalist) to save CPU
+        // Intercept System UI tampering (Quick Settings cog, Airplane toggle) during Ultra Strict Mode
+        if (targetPkg == "com.android.systemui") {
+            if (sessionManager.isUltraStrictActive()) {
+                val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
+                if (rootNode != null) {
+                    val fullText = extractAllText(rootNode, maxDepth = 4, visitedCount = intArrayOf(0)).lowercase()
+                    if (fullText.contains("settings") || fullText.contains("airplane") || fullText.contains("turn off focus")) {
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    }
+                }
+            }
+            return
+        }
+
+        // Skip our own app, keyboards, and system launcher (when not locking to minimalist) to save CPU
         if (isFgApp ||
-            targetPkg == "com.android.systemui" ||
             targetPkg.contains("inputmethod") ||
             targetPkg.contains("keyboard") ||
             (isLauncherOrHome && !shouldLockToMinimalist)
@@ -385,7 +398,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (found.isNotBlank()) return found
         }
 
-        return scanForUrlField(root, maxNodes = 250)
+        return scanForUrlField(root, maxNodes = 60)
     }
 
     private fun scanForUrlField(root: AccessibilityNodeInfo, maxNodes: Int): String {

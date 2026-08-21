@@ -91,6 +91,7 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     sessionState: ActiveSessionState,
+    activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     onEmergencyUnlock: () -> Unit,
     onOpenSessionView: () -> Unit = {}
 ) {
@@ -120,14 +121,19 @@ fun SettingsScreen(
     val grantedCount = permissions.count { it.isGranted }
     val totalCount = permissions.size
 
-    val isSessionStrict = sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
+    val isSessionStrict = (sessionState.isActive && (sessionState.isStrictMode || sessionState.isUltraStrict)) ||
+            (activeSchedulesState.isActive && (activeSchedulesState.isStrictMode || activeSchedulesState.isUltraStrict))
     val endFormatted = if (sessionState.endTimeMillis > 0) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
-    } else ""
+    } else if (activeSchedulesState.isActive) "schedule window end" else ""
 
     val hours = sessionState.remainingSeconds / 3600
     val minutes = (sessionState.remainingSeconds % 3600) / 60
-    val remainingFormatted = if (hours > 0) "${hours}h ${minutes}m remaining" else "${minutes}m remaining"
+    val remainingFormatted = if (sessionState.isActive) {
+        if (hours > 0) "${hours}h ${minutes}m remaining" else "${minutes}m remaining"
+    } else if (activeSchedulesState.isActive) {
+        "Active Schedule Enforced"
+    } else ""
 
     LazyColumn(
         modifier = Modifier
@@ -348,6 +354,8 @@ fun SettingsScreen(
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(intent)
+                } else if (perm.id == "autostart") {
+                    PermissionUtils.openOemAutostartSettings(context)
                 } else if (perm.id == "overlay") {
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -528,7 +536,7 @@ fun SettingsScreen(
         }
 
         // 6. Emergency Unlock (if active)
-        if (sessionState.isActive) {
+        if (sessionState.isActive || activeSchedulesState.isActive) {
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -579,55 +587,19 @@ fun SettingsScreen(
 
     val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
-    val canExit = !isUltraStrictActive && (isDeveloperMode || dailyExitsLeft > 0)
+    val isUltraStrictActive = (sessionState.isUltraStrict && sessionState.isActive) ||
+            (activeSchedulesState.isUltraStrict && activeSchedulesState.isActive)
 
     if (showUnlockConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showUnlockConfirmDialog = false },
-            title = {
-                Text(
-                    text = "Force Emergency Unlock?",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Text(
-                    text = if (isUltraStrictActive)
-                        "Ultra Strict Lockdown Active 🔒: Session cannot be ended or unlocked under ANY circumstance until the session timer expires."
-                    else if (canExit)
-                        "Uses 1 of your emergency exits for today ($dailyExitsLeft/10 remaining). All app barriers will be removed immediately."
-                    else
-                        "You have reached today's 10-exit limit (0 exits remaining). Exits reset at midnight.",
-                    color = Color(0xFFCBD5E1)
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showUnlockConfirmDialog = false
-                        onEmergencyUnlock()
-                    },
-                    enabled = canExit,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CrimsonStrict,
-                        disabledContainerColor = Color(0xFF334155)
-                    )
-                ) {
-                    Text(
-                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (canExit) "End Session" else "0 Exits Left",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUnlockConfirmDialog = false }) {
-                    Text("Cancel", color = Color(0xFF94A3B8))
-                }
-            },
-            containerColor = DarkSurface
+        com.example.ui.components.EmergencyUnlockDialog(
+            isUltraStrictActive = isUltraStrictActive,
+            isDevMode = isDeveloperMode,
+            dailyExitsLeft = dailyExitsLeft,
+            onDismiss = { showUnlockConfirmDialog = false },
+            onConfirmUnlock = {
+                showUnlockConfirmDialog = false
+                onEmergencyUnlock()
+            }
         )
     }
 

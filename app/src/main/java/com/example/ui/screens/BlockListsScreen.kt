@@ -79,6 +79,7 @@ import java.util.Locale
 @Composable
 fun BlockListsScreen(
     sessionState: ActiveSessionState,
+    activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     blockLists: List<BlockList>,
     allTargets: List<BlockedTarget>,
     onToggleList: (BlockList) -> Unit,
@@ -91,11 +92,11 @@ fun BlockListsScreen(
 ) {
     val expandedMap = remember { mutableStateMapOf<Long, Boolean>() }
     var targetToEdit by remember { mutableStateOf<BlockedTarget?>(null) }
-    val isSessionActive = sessionState.isActive || (sessionState.remainingSeconds > 0)
+    val isSessionActive = sessionState.isActive || (sessionState.remainingSeconds > 0) || activeSchedulesState.isActive
 
     val endFormatted = if (sessionState.endTimeMillis > 0) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(sessionState.endTimeMillis))
-    } else ""
+    } else if (activeSchedulesState.isActive) "schedule window end" else ""
 
     LazyColumn(
         modifier = Modifier

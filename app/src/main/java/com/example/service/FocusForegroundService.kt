@@ -91,12 +91,13 @@ class FocusForegroundService : Service() {
                 sessionManager.updateTick()
 
                 val sessionState = sessionManager.sessionState.value
+                val activeSchedulesState = sessionManager.activeSchedulesState.value
                 val now = System.currentTimeMillis()
 
                 if (sessionState.isActive) {
                     val minutes = sessionState.remainingSeconds / 60
                     val seconds = sessionState.remainingSeconds % 60
-                    val mode = if (sessionState.isStrictMode) "Strict Lock" else if (sessionState.isPomodoro) "Pomodoro" else "Focus Active"
+                    val mode = if (sessionState.isUltraStrict) "Strict Lock 🔒" else if (sessionState.isStrictMode) "Normal Lock" else if (sessionState.isPomodoro) "Pomodoro" else "Focus Active"
                     val content = "${sessionState.title} • $mode • ${String.format("%02d:%02d", minutes, seconds)} remaining"
 
                     // Only update notification if remaining time changes by minutes, or in last 30 seconds, or every 10s
@@ -104,6 +105,15 @@ class FocusForegroundService : Service() {
                         lastNotificationText = content
                         lastNotificationUpdateTime = now
                         notificationManager.notify(NOTIFICATION_ID, buildNotification("FocusGuard Enforced", content))
+                    }
+                } else if (activeSchedulesState.isActive) {
+                    val names = activeSchedulesState.activeSchedules.joinToString(", ") { it.name }
+                    val mode = if (activeSchedulesState.isUltraStrict) "Strict Schedule 🔒" else if (activeSchedulesState.isStrictMode) "Schedule Shield" else "Auto Schedule"
+                    val content = "$names • $mode Active"
+                    if (content != lastNotificationText) {
+                        lastNotificationText = content
+                        lastNotificationUpdateTime = now
+                        notificationManager.notify(NOTIFICATION_ID, buildNotification("FocusGuard Schedule Running", content))
                     }
                 } else {
                     val idleText = "Shield standby • 0 distractions"
