@@ -218,6 +218,10 @@ fun DashboardScreen(
                     val isManualFocusActive = sessionState.isActive && !sessionState.isAutoScheduled
                     val hasEnabledBlockLists = blockLists.any { it.isEnabled }
                     if (isManualFocusActive) {
+                        val isDevModeTop by authManager.isDeveloperMode.collectAsState()
+                        val dailyExitsLeftTop by authManager.dailyExitsRemaining.collectAsState()
+                        val isUltraStrictActiveTop = sessionState.isUltraStrict && sessionState.isActive
+
                         // Developer / User Quick Exit Button
                         Surface(
                             color = Color(0xFF111A2E),
@@ -232,14 +236,14 @@ fun DashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LockOpen,
+                                    imageVector = if (isUltraStrictActiveTop) Icons.Default.Lock else Icons.Default.LockOpen,
                                     contentDescription = "Stop Active Session",
                                     tint = CrimsonStrict,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Exit (∞)",
+                                    text = if (isUltraStrictActiveTop) "Locked 🔒" else if (isDevModeTop) "Exit (∞)" else "Exit ($dailyExitsLeftTop/10)",
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -548,24 +552,31 @@ fun DashboardScreen(
     if (showEmergencyUnlockConfirmDialog) {
         val isDevMode by authManager.isDeveloperMode.collectAsState()
         val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
-        val canExit = isDevMode || dailyExitsLeft > 0
+        val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
+        val canExit = !isUltraStrictActive && (isDevMode || dailyExitsLeft > 0)
 
         AlertDialog(
             onDismissRequest = { showEmergencyUnlockConfirmDialog = false },
             icon = {
                 Icon(
-                    imageVector = Icons.Default.LockOpen,
+                    imageVector = if (isUltraStrictActive) Icons.Default.Lock else Icons.Default.LockOpen,
                     contentDescription = null,
                     tint = CrimsonStrict,
                     modifier = Modifier.size(28.dp)
                 )
             },
             title = {
-                Text("Exit Active Focus & Timer?", fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = if (isUltraStrictActive) "Ultra Strict Lockdown Active 🔒" else "Exit Active Focus & Timer?",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             },
             text = {
                 Text(
-                    text = if (isDevMode)
+                    text = if (isUltraStrictActive)
+                        "Ultra Strict Mode is active! Session cannot be ended or unlocked under ANY circumstance (even in Developer Mode) until the session timer expires."
+                    else if (isDevMode)
                         "Developer Mode is active: Unlimited exits (∞). Ending the session now will stop the running timer and unblock all apps."
                     else if (dailyExitsLeft > 0)
                         "Google Account: You have $dailyExitsLeft / 10 emergency exits left today. Unlocking now will use 1 exit (resets at midnight)."
@@ -588,7 +599,7 @@ fun DashboardScreen(
                     )
                 ) {
                     Text(
-                        text = if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
+                        text = if (isUltraStrictActive) "Locked (Ultra Strict)" else if (isDevMode) "Stop & Exit (∞)" else if (canExit) "Stop & Exit (Uses 1/10)" else "0 Exits Left",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -848,18 +859,33 @@ fun ActiveSessionDashboardCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             if (sessionState.isStrictMode) {
+                val isUltraStrictCard = sessionState.isUltraStrict
                 Button(
                     onClick = onEmergencyUnlock,
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                    enabled = !isUltraStrictCard,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CrimsonStrict,
+                        disabledContainerColor = Color(0xFF334155)
+                    ),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp)
                         .testTag("dashboard_strict_unlock_button")
                 ) {
-                    Icon(imageVector = Icons.Default.LockOpen, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(
+                        imageVector = if (isUltraStrictCard) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Stop & Exit Focus (∞)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(
+                        text = if (isUltraStrictCard) "Ultra Strict Lock Active 🔒" else "Stop & Exit Focus",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
             } else {
                 Button(
@@ -874,7 +900,7 @@ fun ActiveSessionDashboardCard(
                 ) {
                     Icon(imageVector = Icons.Default.Stop, contentDescription = null, tint = CrimsonStrict, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "End Session (∞)", color = CrimsonStrict, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(text = "End Session", color = CrimsonStrict, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

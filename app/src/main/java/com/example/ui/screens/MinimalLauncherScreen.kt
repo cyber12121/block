@@ -185,16 +185,6 @@ fun MinimalLauncherScreen(
         mutableStateOf(prefs.getString("scratchpad_notes", "") ?: "")
     }
 
-    // Exit lock state during active session
-    var showExitLockedDialog by remember { mutableStateOf(false) }
-    var showEmergencyExitDialog by remember { mutableStateOf(false) }
-    // Refresh the counter whenever the active-session state changes (session start, end,
-    // Pomodoro transition) so the display is never stale after a re-composition.
-    var remainingExits by remember { mutableStateOf(sessionManager.getRemainingEmergencyExits()) }
-    LaunchedEffect(sessionState.isActive) {
-        remainingExits = sessionManager.getRemainingEmergencyExits()
-    }
-
     // Minimalist Strict Lock state
     var showStrictLockSetupDialog by remember { mutableStateOf(false) }
     var showStrictLockStatusDialog by remember { mutableStateOf(false) }
@@ -319,14 +309,6 @@ fun MinimalLauncherScreen(
         showConfigureEssentialAppsDialog = false
     }
 
-    BackHandler(enabled = showEmergencyExitDialog) {
-        showEmergencyExitDialog = false
-    }
-
-    BackHandler(enabled = showExitLockedDialog) {
-        showExitLockedDialog = false
-    }
-
     BackHandler(enabled = showScratchpadDialog) {
         showScratchpadDialog = false
     }
@@ -361,7 +343,7 @@ fun MinimalLauncherScreen(
         isAppDrawerOpen = false
     }
 
-    BackHandler(enabled = !isAppDrawerOpen && !showConfigureEssentialAppsDialog && !showEmergencyExitDialog && !showExitLockedDialog && !showScratchpadDialog && !showPreferencesDialog && !showStrictLockSetupDialog && !showStrictLockStatusDialog && !showMinimalStrictLockedDialog && !showMinimalStrictUseExitDialog && !showDevExitConfirmDialog) {
+    BackHandler(enabled = !isAppDrawerOpen && !showConfigureEssentialAppsDialog && !showScratchpadDialog && !showPreferencesDialog && !showStrictLockSetupDialog && !showStrictLockStatusDialog && !showMinimalStrictLockedDialog && !showMinimalStrictUseExitDialog && !showDevExitConfirmDialog) {
         handleExitRequest()
     }
 

@@ -54,6 +54,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,11 +64,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.auth.AuthManager
 import com.example.data.model.Schedule
 import com.example.service.ActiveSessionState
 import com.example.ui.theme.CrimsonStrict
@@ -107,6 +110,12 @@ fun SchedulesScreen(
     onOpenCreateSchedule: () -> Unit,
     onEmergencyUnlock: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+    val isDevMode by authManager.isDeveloperMode.collectAsState()
+    val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
+    val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
+
     var lockedScheduleInfo by remember { mutableStateOf<Schedule?>(null) }
     val isSessionStrict = sessionState.isActive && sessionState.isStrictMode
 
@@ -183,14 +192,14 @@ fun SchedulesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LockOpen,
+                                    imageVector = if (isUltraStrictActive) Icons.Default.Lock else Icons.Default.LockOpen,
                                     contentDescription = "Stop Active Session",
                                     tint = CrimsonStrict,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Exit (∞)",
+                                    text = if (isUltraStrictActive) "Locked 🔒" else if (isDevMode) "Exit (∞)" else "Exit ($dailyExitsLeft/10)",
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -290,7 +299,11 @@ fun SchedulesScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = onEmergencyUnlock,
-                                colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
+                                enabled = !isUltraStrictActive,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CrimsonStrict,
+                                    disabledContainerColor = Color(0xFF334155)
+                                ),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -298,14 +311,19 @@ fun SchedulesScreen(
                                     .testTag("schedules_stop_active_button")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LockOpen,
+                                    imageVector = if (isUltraStrictActive) Icons.Default.Lock else Icons.Default.LockOpen,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Stop Active Schedule / Timer (∞)",
+                                    text = if (isUltraStrictActive)
+                                        "Locked in Ultra Strict Mode 🔒"
+                                    else if (isDevMode)
+                                        "Stop Active Schedule / Timer (∞)"
+                                    else
+                                        "Stop Active Schedule / Timer ($dailyExitsLeft/10)",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp
@@ -587,7 +605,20 @@ fun ScheduleCard(
                         )
                     }
 
-                    if (schedule.isStrictMode) {
+                    if (schedule.isUltraStrict) {
+                        Surface(
+                            color = CrimsonStrict,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "ULTRA STRICT 🔒",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    } else if (schedule.isStrictMode) {
                         Surface(
                             color = CrimsonStrict.copy(alpha = 0.2f),
                             shape = RoundedCornerShape(6.dp)

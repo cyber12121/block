@@ -76,6 +76,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                                 title          = "Schedule: ${schedule.name}",
                                 durationMinutes = remainingMins,
                                 isStrictMode   = schedule.isStrictMode,
+                                isUltraStrict  = schedule.isUltraStrict,
                                 activeLists    = activeLists,
                                 isAutoScheduled = true,
                                 scheduleId     = schedule.id,
