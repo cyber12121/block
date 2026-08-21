@@ -41,56 +41,8 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 val schedule = schedules.firstOrNull { it.id == scheduleId }
 
                 when (action) {
-                    ACTION_SCHEDULE_START -> {
-                        // Only start if no session is already running
-                        if (!sessionManager.sessionState.value.isActive && schedule != null) {
-                            val activeLists = if (schedule.activeListNames.isNotBlank()) {
-                                schedule.activeListNames.split(",").map { it.trim() }
-                            } else {
-                                repository.getActiveLists().map { it.name }
-                            }
-
-                            // Compute remaining minutes until end of this window
-                            val windowPair = ScheduleAlarmManager.computeNextWindow(schedule)
-                            val remainingMins = if (windowPair != null) {
-                                val remainMs = windowPair.second - System.currentTimeMillis()
-                                (remainMs / 60_000L).toInt().coerceAtLeast(1)
-                            } else {
-                                // Fallback: full window duration
-                                val start = schedule.startHour * 60 + schedule.startMinute
-                                val end = schedule.endHour * 60 + schedule.endMinute
-                                if (end > start) end - start else (1440 - start) + end
-                            }
-
-                            val plant = when {
-                                remainingMins >= 120 -> PlantType.ANCIENT_REDWOOD
-                                remainingMins >= 90  -> PlantType.GOLDEN_LOTUS
-                                remainingMins >= 60  -> PlantType.OAK_TREE
-                                remainingMins >= 45  -> PlantType.CHERRY_BLOSSOM
-                                remainingMins >= 25  -> PlantType.SUCCULENT
-                                else                 -> PlantType.SPROUT
-                            }
-
-                            sessionManager.startSession(
-                                repository     = repository,
-                                title          = "Schedule: ${schedule.name}",
-                                durationMinutes = remainingMins,
-                                isStrictMode   = schedule.isStrictMode,
-                                isUltraStrict  = schedule.isUltraStrict,
-                                activeLists    = activeLists,
-                                isAutoScheduled = true,
-                                scheduleId     = schedule.id,
-                                plantType      = plant
-                            )
-                        }
-                    }
-
-                    ACTION_SCHEDULE_END -> {
-                        // End session only if it was auto-scheduled
-                        val state = sessionManager.sessionState.value
-                        if (state.isActive && state.isAutoScheduled) {
-                            sessionManager.endSession(repository, earlyUnlocked = false)
-                        }
+                    ACTION_SCHEDULE_START, ACTION_SCHEDULE_END -> {
+                        sessionManager.checkAutomaticSchedules(repository)
                     }
                 }
 

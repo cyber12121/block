@@ -39,6 +39,13 @@ data class ActiveSessionState(
     val plantType: PlantType = PlantType.SPROUT
 )
 
+data class ActiveSchedulesState(
+    val isActive: Boolean = false,
+    val activeSchedules: List<Schedule> = emptyList(),
+    val isStrictMode: Boolean = false,
+    val isUltraStrict: Boolean = false
+)
+
 class FocusSessionManager private constructor(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -47,6 +54,20 @@ class FocusSessionManager private constructor(private val context: Context) {
     private val _sessionState = MutableStateFlow(ActiveSessionState())
     val sessionStateFlow: StateFlow<ActiveSessionState> = _sessionState.asStateFlow()
     val sessionState: StateFlow<ActiveSessionState> = sessionStateFlow
+
+    private val _activeSchedulesState = MutableStateFlow(ActiveSchedulesState())
+    val activeSchedulesStateFlow: StateFlow<ActiveSchedulesState> = _activeSchedulesState.asStateFlow()
+    val activeSchedulesState: StateFlow<ActiveSchedulesState> = activeSchedulesStateFlow
+
+    fun isAnyBlockingActive(): Boolean = _sessionState.value.isActive || _activeSchedulesState.value.isActive
+
+    fun isStrictActive(): Boolean = (_sessionState.value.isActive && _sessionState.value.isStrictMode) || (_activeSchedulesState.value.isActive && _activeSchedulesState.value.isStrictMode)
+
+    fun isUltraStrictActive(): Boolean = (_sessionState.value.isActive && _sessionState.value.isUltraStrict) || (_activeSchedulesState.value.isActive && _activeSchedulesState.value.isUltraStrict)
+
+    fun clearSnooze() {
+        prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
+    }
 
     // Guards against the expiry path running more than once. updateTick() is driven by
     // both FocusForegroundService and MainViewModel (once per second each), so without
@@ -329,88 +350,67 @@ class FocusSessionManager private constructor(private val context: Context) {
 
     suspend fun checkAutomaticSchedules(repository: AppRepository) {
         val enabledSchedules = repository.getEnabledSchedules()
-        if (enabledSchedules.isEmpty()) return
-
         val cal = Calendar.getInstance()
         val currentDay = cal.get(Calendar.DAY_OF_WEEK) // 1=Sun, 2=Mon ... 7=Sat
         val currentHour = cal.get(Calendar.HOUR_OF_DAY)
         val currentMinute = cal.get(Calendar.MINUTE)
         val currentTotalMinutes = currentHour * 60 + currentMinute
 
-        var activeScheduleFound: Schedule? = null
-        var calculatedRemainingMins = 0
+        val activeList = mutableListOf<Schedule>()
+        var anyStrict = false
+        var anyUltraStrict = false
 
-        for (schedule in enabledSchedules) {
-            val days = schedule.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-            if (!days.contains(currentDay)) continue
-
-            val startMinutes = schedule.startHour * 60 + schedule.startMinute
-            val endMinutes = schedule.endHour * 60 + schedule.endMinute
-
-            val isMatch = if (startMinutes < endMinutes) {
-                // Same day window (e.g. 09:00 to 17:00 or 08:00 to 20:00)
-                currentTotalMinutes in startMinutes until endMinutes
-            } else {
-                // Overnight window (e.g. 22:00 to 06:00)
-                currentTotalMinutes >= startMinutes || currentTotalMinutes < endMinutes
-            }
-
-            if (isMatch) {
-                val remainingMins = if (startMinutes < endMinutes) {
-                    endMinutes - currentTotalMinutes
-                } else {
-                    if (currentTotalMinutes >= startMinutes) {
-                        (1440 - currentTotalMinutes) + endMinutes
-                    } else {
-                        endMinutes - currentTotalMinutes
-                    }
-                }.coerceAtLeast(1)
-
-                activeScheduleFound = schedule
-                calculatedRemainingMins = remainingMins
-                break
-            }
-        }
-
-        if (activeScheduleFound != null) {
-            val schedule = activeScheduleFound
-            // If the user manually ended this schedule's session, skip re-triggering
-            // for the rest of the current window. The snooze is cleared once the
-            // window passes (see the else branch below).
+        if (enabledSchedules.isNotEmpty()) {
             val snoozedId = prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L)
-            if (schedule.id == snoozedId) return
-            if (!_sessionState.value.isActive) {
-                val activeLists = if (schedule.activeListNames.isNotBlank()) {
-                    schedule.activeListNames.split(",").map { it.trim() }
+
+            for (schedule in enabledSchedules) {
+                if (schedule.id == snoozedId) continue
+
+                val days = schedule.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
+                if (days.isEmpty()) continue
+
+                val startMinutes = schedule.startHour * 60 + schedule.startMinute
+                val endMinutes = schedule.endHour * 60 + schedule.endMinute
+
+                val isMatch = if (startMinutes < endMinutes) {
+                    days.contains(currentDay) && (currentTotalMinutes in startMinutes until endMinutes)
+                } else if (startMinutes > endMinutes) {
+                    if (currentTotalMinutes >= startMinutes) {
+                        days.contains(currentDay)
+                    } else if (currentTotalMinutes < endMinutes) {
+                        val yesterdayDay = (currentDay - 2 + 7) % 7 + 1
+                        days.contains(yesterdayDay)
+                    } else {
+                        false
+                    }
                 } else {
-                    repository.getActiveLists().map { it.name }
+                    false
                 }
 
-                startSession(
-                    repository = repository,
-                    title = "Schedule: ${schedule.name}",
-                    durationMinutes = calculatedRemainingMins,
-                    isStrictMode = schedule.isStrictMode,
-                    isUltraStrict = schedule.isUltraStrict,
-                    activeLists = activeLists,
-                    isAutoScheduled = true,
-                    scheduleId = schedule.id
-                )
-            }
-        } else {
-            // No active schedule window: clear any lingering snooze so the next
-            // scheduled window fires correctly.
-            if (prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L) >= 0) {
-                prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
-            }
-            if (_sessionState.value.isAutoScheduled) {
-                // Auto-scheduled window has passed
-                val remaining = getRemainingSeconds()
-                if (remaining <= 0) {
-                    endSession(repository, earlyUnlocked = false)
+                if (isMatch) {
+                    activeList.add(schedule)
+                    if (schedule.isUltraStrict) {
+                        anyUltraStrict = true
+                    } else if (schedule.isStrictMode) {
+                        anyStrict = true
+                    }
                 }
             }
         }
+
+        if (activeList.isEmpty() && prefs.getLong(KEY_SNOOZED_SCHEDULE_ID, -1L) >= 0) {
+            prefs.edit().remove(KEY_SNOOZED_SCHEDULE_ID).apply()
+        }
+
+        _activeSchedulesState.value = ActiveSchedulesState(
+            isActive = activeList.isNotEmpty(),
+            activeSchedules = activeList,
+            isStrictMode = if (anyUltraStrict) false else anyStrict,
+            isUltraStrict = anyUltraStrict
+        )
+
+        refreshBlockedTargetsCache(repository)
+        FocusTileService.requestTileUpdate(context)
     }
 
     private fun getRemainingSeconds(): Long {
@@ -424,36 +424,56 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     suspend fun refreshBlockedTargetsCache(repository: AppRepository) {
-        val isSessionActive = _sessionState.value.isActive || prefs.getBoolean(KEY_IS_ACTIVE, false)
-        val activeListNamesRaw = if (_sessionState.value.isActive) {
-            _sessionState.value.activeListNames
-        } else {
-            prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
+        val manualSessionActive = _sessionState.value.isActive || prefs.getBoolean(KEY_IS_ACTIVE, false)
+        val scheduleActive = _activeSchedulesState.value.isActive
+
+        if (!manualSessionActive && !scheduleActive) {
+            cachedBlockedPackages = emptySet()
+            cachedBlockedDomains = emptySet()
+            cachedBlockedKeywords = emptySet()
+            return
         }
 
-        // Build the set of list IDs whose targets should be enforced.
-        // During a session: use the session's selected lists (by name).
         val allLists = repository.getActiveLists()
         val enabledListIds = allLists.filter { it.isEnabled }.map { it.id }.toSet()
+        val validListIds = mutableSetOf<Long>()
 
-        val validListIds = if (isSessionActive) {
+        // 1. Manual Focus Session List IDs
+        if (manualSessionActive) {
+            val activeListNamesRaw = if (_sessionState.value.isActive) {
+                _sessionState.value.activeListNames
+            } else {
+                prefs.getString(KEY_ACTIVE_LISTS, "") ?: ""
+            }
+
             if (activeListNamesRaw.isNotBlank()) {
                 val sessionListNames = activeListNamesRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
                 val matched = allLists.filter { it.name in sessionListNames }.map { it.id }.toSet()
                 if (matched.isNotEmpty()) {
-                    matched
-                } else if (enabledListIds.isNotEmpty()) {
-                    enabledListIds
+                    validListIds.addAll(matched)
                 } else {
-                    allLists.map { it.id }.toSet()
+                    validListIds.addAll(enabledListIds)
                 }
-            } else if (enabledListIds.isNotEmpty()) {
-                enabledListIds
             } else {
-                allLists.map { it.id }.toSet()
+                validListIds.addAll(enabledListIds)
             }
-        } else {
-            emptySet()
+        }
+
+        // 2. Active Automated Schedule List IDs
+        if (scheduleActive) {
+            for (sch in _activeSchedulesState.value.activeSchedules) {
+                if (sch.activeListNames.isNotBlank()) {
+                    val schListNames = sch.activeListNames.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet()
+                    val matched = allLists.filter { it.name in schListNames }.map { it.id }.toSet()
+                    if (matched.isNotEmpty()) {
+                        validListIds.addAll(matched)
+                    } else {
+                        validListIds.addAll(enabledListIds)
+                    }
+                } else {
+                    validListIds.addAll(enabledListIds)
+                }
+            }
         }
 
         val targets = repository.getAllEnabledTargets()

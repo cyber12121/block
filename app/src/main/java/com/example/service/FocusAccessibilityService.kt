@@ -152,9 +152,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
         val isMinimalLauncherActive = sessionManager.isMinimalLauncherActive()
-        val isSessionActive = sessionState.isActive
-        val isStrictSession = isSessionActive && (sessionState.isStrictMode || sessionState.isUltraStrict)
-        val shouldLockToMinimalist = isMinimalStrictLock || (isMinimalLauncherActive && (isSessionActive || isStrictSession))
+        val isBlockingActive = sessionManager.isAnyBlockingActive()
+        val isStrictSession = sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()
+        val shouldLockToMinimalist = isMinimalStrictLock || (isMinimalLauncherActive && (isBlockingActive || isStrictSession))
 
         val targetLower = targetPkg.lowercase()
         val isLauncherOrHome = targetLower.contains("launcher") ||
@@ -188,7 +188,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         // 2. Active Session App-Blocking (Enforced during active focus session or schedule)
-        if (isSessionActive && !isFgApp && !isEssential) {
+        if (isBlockingActive && !isFgApp && !isEssential) {
             if (sessionManager.isAppBlocked(targetPkg)) {
                 triggerBlockShield(
                     targetName = getReadableAppName(targetPkg),
@@ -216,7 +216,7 @@ class FocusAccessibilityService : AccessibilityService() {
         lastInspectedTime = now
 
         // 1. Strict Mode Anti-Uninstall & Settings Tamper Protection
-        if ((sessionState.isStrictMode || sessionState.isUltraStrict) && systemSettingsPackages.contains(targetPkg)) {
+        if ((sessionManager.isStrictActive() || sessionManager.isUltraStrictActive()) && systemSettingsPackages.contains(targetPkg)) {
             val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
             if (rootNode != null) {
                 val fullText = extractAllText(rootNode, maxDepth = 6, visitedCount = intArrayOf(0)).lowercase()
@@ -233,7 +233,7 @@ class FocusAccessibilityService : AccessibilityService() {
                                      fullText.contains("device admin")
 
                 if (isAboutOurApp && (isTamperAction || fullText.contains("app info") || fullText.contains("manage app"))) {
-                    val modeName = if (sessionState.isUltraStrict) "Strict Blocker" else "Normal Blocker"
+                    val modeName = if (sessionManager.isUltraStrictActive()) "Strict Blocker" else "Normal Blocker"
                     triggerBlockShield(
                         targetName = "Anti-Uninstall Defense",
                         reason = "FocusGuard cannot be uninstalled, force-stopped, or disabled while $modeName is active.",

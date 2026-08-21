@@ -88,15 +88,24 @@ fun isScheduleActiveNow(schedule: Schedule): Boolean {
     val currentTotalMinutes = currentHour * 60 + currentMinute
 
     val days = schedule.daysOfWeek.split(",").mapNotNull { it.trim().toIntOrNull() }
-    if (!days.contains(currentDay)) return false
+    if (days.isEmpty()) return false
 
     val startMinutes = schedule.startHour * 60 + schedule.startMinute
     val endMinutes = schedule.endHour * 60 + schedule.endMinute
 
     return if (startMinutes < endMinutes) {
-        currentTotalMinutes in startMinutes until endMinutes
+        days.contains(currentDay) && (currentTotalMinutes in startMinutes until endMinutes)
+    } else if (startMinutes > endMinutes) {
+        if (currentTotalMinutes >= startMinutes) {
+            days.contains(currentDay)
+        } else if (currentTotalMinutes < endMinutes) {
+            val yesterdayDay = (currentDay - 2 + 7) % 7 + 1
+            days.contains(yesterdayDay)
+        } else {
+            false
+        }
     } else {
-        currentTotalMinutes >= startMinutes || currentTotalMinutes < endMinutes
+        false
     }
 }
 

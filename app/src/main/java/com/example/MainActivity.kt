@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppContent(viewModel: MainViewModel) {
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+    val activeSchedulesState by viewModel.activeSchedulesState.collectAsStateWithLifecycle()
     val blockLists by viewModel.blockLists.collectAsStateWithLifecycle()
     val allTargets by viewModel.allTargets.collectAsStateWithLifecycle()
     val allSchedules by viewModel.allSchedules.collectAsStateWithLifecycle()
@@ -251,6 +252,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                         AppTab.DASHBOARD -> {
                             DashboardScreen(
                                 sessionState = sessionState,
+                                activeSchedulesState = activeSchedulesState,
                                 blockLists = blockLists,
                                 allTargets = allTargets,
                                 totalMinutesToday = recentStats.firstOrNull()?.totalFocusMinutes ?: (totalMinutes ?: 0),

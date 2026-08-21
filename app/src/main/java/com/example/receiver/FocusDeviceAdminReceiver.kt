@@ -18,13 +18,13 @@ class FocusDeviceAdminReceiver : DeviceAdminReceiver() {
 
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence? {
         val app = context.applicationContext as? FocusGuardApp
-        val sessionState = app?.sessionManager?.sessionStateFlow?.value
+        val sessionManager = app?.sessionManager
 
-        val isStrictActive = sessionState?.isActive == true && (sessionState.isStrictMode || sessionState.isUltraStrict)
+        val isStrictActive = sessionManager?.let { it.isStrictActive() || it.isUltraStrictActive() } ?: false
         if (isStrictActive) {
-            val remainingMins = (sessionState.remainingSeconds / 60).coerceAtLeast(1)
-            val modeName = if (sessionState.isUltraStrict) "STRICT BLOCKER" else "NORMAL BLOCKER"
-            return "$modeName LOCK: FocusGuard uninstallation and deactivation is strictly prohibited until the active focus timer concludes ($remainingMins min remaining)."
+            val isUltra = sessionManager?.isUltraStrictActive() == true
+            val modeName = if (isUltra) "STRICT BLOCKER" else "NORMAL BLOCKER"
+            return "$modeName LOCK: FocusGuard uninstallation and deactivation is strictly prohibited while focus enforcement is active."
         }
         return null
     }

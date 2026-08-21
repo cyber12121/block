@@ -12,6 +12,7 @@ import com.example.data.model.GardenPlant
 import com.example.data.model.PlantType
 import com.example.data.model.Schedule
 import com.example.data.model.TargetType
+import com.example.service.ActiveSchedulesState
 import com.example.service.ActiveSessionState
 import com.example.service.FocusSessionManager
 import com.example.service.ScheduleAlarmManager
@@ -29,6 +30,7 @@ class MainViewModel(
 ) : ViewModel() {
 
     val sessionState: StateFlow<ActiveSessionState> = sessionManager.sessionState
+    val activeSchedulesState: StateFlow<ActiveSchedulesState> = sessionManager.activeSchedulesState
 
     val blockLists: StateFlow<List<BlockList>> = repository.allBlockLists
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -274,14 +276,10 @@ class MainViewModel(
         viewModelScope.launch {
             val updated = schedule.copy(isEnabled = !schedule.isEnabled)
             repository.updateSchedule(updated)
-            // Re-arm or cancel the exact alarm for this schedule
+            sessionManager.clearSnooze()
             val allSchedules = repository.getAllSchedulesOnce()
             ScheduleAlarmManager.rescheduleAll(application, allSchedules)
-            if (!updated.isEnabled && sessionManager.sessionState.value.isAutoScheduled) {
-                sessionManager.endSession(repository, earlyUnlocked = false)
-            } else {
-                sessionManager.checkAutomaticSchedules(repository)
-            }
+            sessionManager.checkAutomaticSchedules(repository)
         }
     }
 

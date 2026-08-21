@@ -108,9 +108,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.example.service.ActiveSchedulesState
+import androidx.compose.material.icons.filled.Schedule
+
 @Composable
 fun DashboardScreen(
     sessionState: ActiveSessionState,
+    activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     blockLists: List<BlockList>,
     allTargets: List<BlockedTarget>,
     totalMinutesToday: Int,
@@ -373,6 +377,13 @@ fun DashboardScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // 2.5 Active Automated Schedule Card
+        if (activeSchedulesState.isActive) {
+            item {
+                ActiveScheduleDashboardCard(scheduleState = activeSchedulesState)
             }
         }
 
@@ -1460,6 +1471,107 @@ fun WeeklyFocusGoalCard(
                     trackColor = DarkSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun ActiveScheduleDashboardCard(
+    scheduleState: ActiveSchedulesState
+) {
+    val schedules = scheduleState.activeSchedules
+    if (schedules.isEmpty()) return
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(
+            1.5.dp,
+            if (scheduleState.isUltraStrict || scheduleState.isStrictMode) CrimsonStrict else IndigoPrimary
+        ),
+        modifier = Modifier.fillMaxWidth().testTag("active_schedule_card")
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    if (scheduleState.isUltraStrict || scheduleState.isStrictMode) {
+                        Brush.verticalGradient(listOf(Color(0xFF2E1424), DarkSurface))
+                    } else {
+                        Brush.verticalGradient(listOf(Color(0xFF161E38), DarkSurface))
+                    }
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = if (scheduleState.isUltraStrict || scheduleState.isStrictMode) CrimsonStrict else IndigoPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "AUTOMATED SCHEDULE ACTIVE",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Surface(
+                    color = if (scheduleState.isUltraStrict || scheduleState.isStrictMode) CrimsonStrict else EmeraldSuccess,
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text(
+                        text = if (scheduleState.isUltraStrict) "STRICT BLOCKER 🔒" else if (scheduleState.isStrictMode) "NORMAL BLOCKER" else "ACTIVE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            schedules.forEach { sch ->
+                val startFmt = String.format(Locale.US, "%02d:%02d", sch.startHour, sch.startMinute)
+                val endFmt = String.format(Locale.US, "%02d:%02d", sch.endHour, sch.endMinute)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📅 ${sch.name}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "$startFmt - $endFmt",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Scheduled focus protection is enforcing your block lists automatically during this window.",
+                fontSize = 12.sp,
+                color = Color(0xFFCBD5E1)
+            )
         }
     }
 }
