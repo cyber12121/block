@@ -289,8 +289,6 @@ class FocusAccessibilityService : AccessibilityService() {
 
         // 4. Essential Apps (User-selected custom essentials + Phone, SMS, Camera, Clock, Calculator)
         val isEssential = sessionManager.isEssentialApp(targetPkg)
-        // Diagnostic log — remove after confirming essential apps work correctly
-        Log.d("FocusGuard", "PKG=$targetPkg | essential=$isEssential | strictLock=$shouldLockToMinimalist | customs=${sessionManager.getCustomEssentialApps()}")
         if (isEssential) {
             return // Freely allowed without restriction
         }

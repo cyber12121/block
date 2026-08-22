@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DataUsage
@@ -46,9 +47,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -96,8 +99,11 @@ fun SettingsScreen(
     sessionState: ActiveSessionState,
     activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     onEmergencyUnlock: () -> Unit,
-    onOpenSessionView: () -> Unit = {}
+    onOpenSessionView: () -> Unit = {},
+    onNavigateBack: () -> Unit = {}
 ) {
+    androidx.activity.compose.BackHandler { onNavigateBack() }
+
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -145,20 +151,30 @@ fun SettingsScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Header
+        // 1. Header with Back button
         item {
-            Column {
-                Text(
-                    text = "Security & Account",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "Google sync, permissions, and anti-bypass protection",
-                    fontSize = 13.sp,
-                    color = Color(0xFF94A3B8)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Column {
+                    Text(
+                        text = "Security & Settings",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Permissions, Do Not Disturb, and protection",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
             }
         }
 
@@ -453,7 +469,106 @@ fun SettingsScreen(
             }
         }
 
-        // 5. Anti-Bypass Section
+        // 5. Focus Flow & Wellbeing Section
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Focus Flow & Wellbeing",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                // Auto DND Card
+                var isAutoDnd by remember { mutableStateOf(com.example.util.DndManager.isAutoDndEnabled(context)) }
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, DarkCardBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Auto Do Not Disturb (DND)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Silences incoming pings & social alerts during Pomodoro sprints",
+                                fontSize = 12.sp,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
+                        Switch(
+                            checked = isAutoDnd,
+                            onCheckedChange = {
+                                if (it && !com.example.util.DndManager.hasDndPermission(context)) {
+                                    com.example.util.DndManager.openDndSettings(context)
+                                } else {
+                                    isAutoDnd = it
+                                    com.example.util.DndManager.setAutoDndEnabled(context, it)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Grayscale Wind-Down Card
+                var isBedtimeGrayscale by remember { mutableStateOf(com.example.util.GrayscaleManager.isBedtimeGrayscaleEnabled(context)) }
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, DarkCardBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Bedtime Grayscale Wind-Down",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Reduces dopamine triggers by muting vibrant display colors",
+                                fontSize = 12.sp,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { com.example.util.GrayscaleManager.openColorCorrectionSettings(context) },
+                            border = BorderStroke(1.dp, CyanAccent),
+                            shape = RoundedCornerShape(100.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = "Display Mode",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyanAccent
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Anti-Bypass Section
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(

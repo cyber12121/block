@@ -165,7 +165,17 @@ class FocusSessionManager private constructor(private val context: Context) {
         val pkg = packageName.lowercase()
         if (pkg == "android" || pkg == "com.android.systemui" || pkg == "com.android.system.ui") return true
         if (pkg.contains("systemui") || pkg.contains("system.ui")) return true
-        if (pkg.contains("inputmethod") || pkg.contains("keyboard") || pkg.contains("gboard") || pkg.contains("swiftkey") || pkg.contains("latin") || pkg.contains("ime")) return true
+        // IMPORTANT: a bare substring "ime" is unsafe — it over-matches real apps whose
+        // package names merely contain "ime" (e.g. "com.amazon.primevideo" → "prime",
+        // "...timeline" → "time", "sublime", "chime", "crime"). Such apps must remain
+        // blockable, so only treat genuine IME/keyboard packages as non-blockable.
+        if (pkg.contains("inputmethod") ||
+            pkg.contains(".ime") ||
+            pkg.contains("keyboard") ||
+            pkg.contains("gboard") ||
+            pkg.contains("swiftkey") ||
+            pkg.contains("inputmethod.latin")
+        ) return true
         if (pkg == "com.android.server.telecom" || pkg == "com.android.incallui" || pkg == "com.miui.incallui") return true
         if (pkg == "com.miui.securitycenter" || pkg == "com.miui.screenrecorder") return true
         return false
@@ -351,6 +361,9 @@ class FocusSessionManager private constructor(private val context: Context) {
 
             if (!isPomodoroBreak) {
                 repository.plantSeed(plantType, durationMinutes, title)
+                com.example.util.DndManager.enablePriorityDnd(context)
+            } else {
+                com.example.util.DndManager.restoreDnd(context)
             }
 
             // Save to prefs with tamper-evident markers.
@@ -468,7 +481,9 @@ class FocusSessionManager private constructor(private val context: Context) {
                 repository.disableAllSchedules()
             }
 
-            // Clear prefs
+            // Clear prefs, restore DND, and stop ambient sounds
+            com.example.util.DndManager.restoreDnd(context)
+            com.example.service.sound.FocusSoundEngine.stop()
             clearSessionPrefs()
             stopMinimalStrictLock()
             setMinimalLauncherActive(false)

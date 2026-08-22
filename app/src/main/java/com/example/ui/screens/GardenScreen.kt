@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -31,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Info
@@ -84,8 +86,11 @@ fun GardenScreen(
     bloomedCount: Int,
     witheredCount: Int,
     totalMinutes: Int,
-    onStartPlantingClick: () -> Unit
+    onStartPlantingClick: () -> Unit,
+    onBack: () -> Unit = {}
 ) {
+    androidx.activity.compose.BackHandler { onBack() }
+
     var selectedPlantDetail by remember { mutableStateOf<GardenPlant?>(null) }
     var showGardenGuide by remember { mutableStateOf(false) }
 
@@ -109,18 +114,28 @@ fun GardenScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Focus Garden",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Every uninterrupted minute cultivates rare species",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column {
+                        Text(
+                            text = "Focus Garden",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Every uninterrupted minute cultivates rare species",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
                 }
 
                 IconButton(onClick = { showGardenGuide = true }) {
@@ -310,31 +325,111 @@ fun GardenScreen(
 
         // Garden Stats & Streaks
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatPill(
-                    icon = Icons.Default.EmojiEvents,
-                    label = "Bloomed",
-                    value = "$bloomedCount 🌳",
-                    color = EmeraldSuccess,
-                    modifier = Modifier.weight(1f)
-                )
-                StatPill(
-                    icon = Icons.Default.Shield,
-                    label = "Zen Streak",
-                    value = "$streakDays Days 🔥",
-                    color = CyanAccent,
-                    modifier = Modifier.weight(1f)
-                )
-                StatPill(
-                    icon = Icons.Default.Timer,
-                    label = "Pure Focus",
-                    value = "${totalMinutes}m",
-                    color = IndigoPrimary,
-                    modifier = Modifier.weight(1f)
-                )
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatPill(
+                        icon = Icons.Default.EmojiEvents,
+                        label = "Bloomed",
+                        value = "$bloomedCount 🌳",
+                        color = EmeraldSuccess,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatPill(
+                        icon = Icons.Default.Shield,
+                        label = "Zen Streak",
+                        value = "$streakDays Days 🔥",
+                        color = CyanAccent,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatPill(
+                        icon = Icons.Default.Timer,
+                        label = "Pure Focus",
+                        value = "${totalMinutes}m",
+                        color = IndigoPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Milestone Badges Carousel
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131D33)),
+                    border = BorderStroke(1.dp, Color(0xFF1E293B)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🏆 Focus Milestones",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+
+                            Button(
+                                onClick = {
+                                    val shareText = "🌿 FocusGuard Forest Report 🌿\n" +
+                                            "🔥 Streak: $streakDays Days\n" +
+                                            "🌳 Bloomed Trees: $bloomedCount\n" +
+                                            "⏱️ Pure Focus Time: ${totalMinutes} minutes\n\n" +
+                                            "Cultivating mental clarity and crushing distractions with FocusGuard!"
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Focus Forest"))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CyanAccent.copy(alpha = 0.15f)),
+                                border = BorderStroke(1.dp, CyanAccent.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(100.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("Share ↗", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CyanAccent)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            MilestoneBadge(
+                                emoji = "🌱",
+                                title = "Novice",
+                                isUnlocked = bloomedCount >= 1,
+                                subtitle = "1 Tree"
+                            )
+                            MilestoneBadge(
+                                emoji = "🌿",
+                                title = "Sprout",
+                                isUnlocked = bloomedCount >= 3,
+                                subtitle = "3 Trees"
+                            )
+                            MilestoneBadge(
+                                emoji = "🌲",
+                                title = "Ranger",
+                                isUnlocked = streakDays >= 7,
+                                subtitle = "7d Streak"
+                            )
+                            MilestoneBadge(
+                                emoji = "👑",
+                                title = "Legend",
+                                isUnlocked = streakDays >= 14 || bloomedCount >= 20,
+                                subtitle = "14d Master"
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -578,5 +673,47 @@ fun StatPill(
             Text(text = value, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
             Text(text = label, fontSize = 10.sp, color = Color(0xFF94A3B8))
         }
+    }
+}
+
+@Composable
+fun MilestoneBadge(
+    emoji: String,
+    title: String,
+    isUnlocked: Boolean,
+    subtitle: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(68.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(
+                    if (isUnlocked) EmeraldSuccess.copy(alpha = 0.2f) else Color(0xFF1E293B),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = emoji,
+                fontSize = 20.sp,
+                color = if (isUnlocked) Color.Unspecified else Color.Gray.copy(alpha = 0.5f)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = title,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isUnlocked) Color.White else Color(0xFF64748B),
+            maxLines = 1
+        )
+        Text(
+            text = subtitle,
+            fontSize = 9.sp,
+            color = if (isUnlocked) CyanAccent else Color(0xFF475569)
+        )
     }
 }

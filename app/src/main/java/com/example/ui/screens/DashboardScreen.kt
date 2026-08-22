@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stop
@@ -129,7 +130,8 @@ fun DashboardScreen(
     onNavigateToApps: () -> Unit = {},
     onNavigateToSchedules: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
-    onOpenMinimalLauncher: () -> Unit = {}
+    onOpenMinimalLauncher: () -> Unit = {},
+    onOpenGarden: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
@@ -302,11 +304,24 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Google Account / Developer Mode Chip
+                    // Google Account Exit Quota Chip
                     ExitQuotaChip(
                         authManager = authManager,
                         onClick = { showGoogleAuthDialog = true }
                     )
+
+                    // Settings Shortcut Button
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -562,6 +577,53 @@ fun DashboardScreen(
                             lineHeight = 15.sp
                         )
                     }
+                }
+            }
+        }
+
+        // 6. Focus Garden Portal Card
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0D2818)),
+                border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.3f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenGarden() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = "🌿", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Focus Forest & Streaks",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "View bloomed flora, zen streaks & milestones",
+                                fontSize = 12.sp,
+                                color = Color(0xFF6EE7B7)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Open ↗",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldSuccess
+                    )
                 }
             }
         }

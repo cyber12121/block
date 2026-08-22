@@ -42,7 +42,6 @@ import com.example.ui.components.CreateListDialog
 import com.example.ui.components.CreateScheduleDialog
 import com.example.ui.components.StartSessionDialog
 import com.example.ui.components.StrictModeInteractionGuard
-import com.example.ui.screens.AppsScreen
 import com.example.ui.screens.BlockListsScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.GardenScreen
@@ -60,11 +59,9 @@ import com.example.ui.theme.IndigoPrimary
 
 enum class AppTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     DASHBOARD("Home", Icons.Default.Home),
-    APPS("Apps", Icons.Default.Apps),
-    BLOCK_LISTS("Lists", Icons.Default.Language),
+    BLOCK_LISTS("Shield", Icons.Default.Shield),
     SCHEDULES("Schedules", Icons.Default.CalendarMonth),
-    INSIGHTS("Insights", Icons.Default.BarChart),
-    SETTINGS("Security", Icons.Default.Shield)
+    INSIGHTS("Progress", Icons.Default.BarChart)
 }
 
 class MainActivity : ComponentActivity() {
@@ -144,6 +141,8 @@ fun MainAppContent(viewModel: MainViewModel) {
 
     var currentTab by remember { mutableStateOf(AppTab.DASHBOARD) }
     var isLiveSessionFullscreen by remember { mutableStateOf(false) }
+    var isGardenFullscreen by remember { mutableStateOf(false) }
+    var isSettingsFullscreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
     val currentUser by authManager.currentUser.collectAsStateWithLifecycle()
@@ -270,6 +269,30 @@ fun MainAppContent(viewModel: MainViewModel) {
                             )
                         }
                     )
+                } else if (isSettingsFullscreen) {
+                    SettingsScreen(
+                        sessionState = sessionState,
+                        activeSchedulesState = activeSchedulesState,
+                        onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
+                        onOpenSessionView = {
+                            isSettingsFullscreen = false
+                            isLiveSessionFullscreen = true
+                        },
+                        onNavigateBack = { isSettingsFullscreen = false }
+                    )
+                } else if (isGardenFullscreen) {
+                    GardenScreen(
+                        sessionState = sessionState,
+                        allPlants = allGardenPlants,
+                        bloomedCount = bloomedPlantsCount,
+                        witheredCount = witheredPlantsCount,
+                        totalMinutes = totalMinutes ?: 0,
+                        onStartPlantingClick = {
+                            isGardenFullscreen = false
+                            viewModel.openStartSessionDialog()
+                        },
+                        onBack = { isGardenFullscreen = false }
+                    )
                 } else {
                     when (currentTab) {
                         AppTab.DASHBOARD -> {
@@ -295,23 +318,11 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
                                 onToggleList = { viewModel.toggleBlockList(it) },
                                 onNavigateToLists = { currentTab = AppTab.BLOCK_LISTS },
-                                onNavigateToApps = { currentTab = AppTab.APPS },
+                                onNavigateToApps = { currentTab = AppTab.BLOCK_LISTS },
                                 onNavigateToSchedules = { currentTab = AppTab.SCHEDULES },
-                                onNavigateToSettings = { currentTab = AppTab.SETTINGS },
-                                onOpenMinimalLauncher = { isMinimalLauncherFullscreen = true }
-                            )
-                        }
-                        AppTab.APPS -> {
-                            AppsScreen(
-                                sessionState = sessionState,
-                                activeSchedulesState = activeSchedulesState,
-                                blockLists = blockLists,
-                                allTargets = allTargets,
-                                onToggleTarget = { viewModel.toggleTarget(it) },
-                                onAddBulkTargets = { listId, type, items, category ->
-                                    viewModel.addBulkTargets(listId, type, items, category)
-                                },
-                                onDeleteTarget = { viewModel.deleteTarget(it) }
+                                onNavigateToSettings = { isSettingsFullscreen = true },
+                                onOpenMinimalLauncher = { isMinimalLauncherFullscreen = true },
+                                onOpenGarden = { isGardenFullscreen = true }
                             )
                         }
                         AppTab.BLOCK_LISTS -> {
@@ -346,15 +357,12 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 totalMinutes = totalMinutes ?: 0,
                                 completedSessionsCount = completedSessionsCount,
                                 totalBlockedAttempts = totalBlockedAttempts ?: 0,
-                                recentStats = recentStats
-                            )
-                        }
-                        AppTab.SETTINGS -> {
-                            SettingsScreen(
+                                recentStats = recentStats,
                                 sessionState = sessionState,
-                                activeSchedulesState = activeSchedulesState,
-                                onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
-                                onOpenSessionView = { isLiveSessionFullscreen = true }
+                                allGardenPlants = allGardenPlants,
+                                bloomedPlantsCount = bloomedPlantsCount,
+                                witheredPlantsCount = witheredPlantsCount,
+                                onStartPlantingClick = { viewModel.openStartSessionDialog() }
                             )
                         }
                     }

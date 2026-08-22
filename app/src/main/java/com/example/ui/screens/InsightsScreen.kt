@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +33,8 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -43,6 +46,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -65,6 +69,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.DailyStat
+import com.example.data.model.GardenPlant
+import com.example.service.ActiveSessionState
 import com.example.ui.components.UsageStatusPersonCard
 import com.example.ui.theme.AmberFocus
 import com.example.ui.theme.CrimsonStrict
@@ -81,7 +87,8 @@ import java.util.Locale
 
 enum class InsightMode {
     FOCUS_TRENDS,
-    BLOCK_PROTECTION_STATS
+    BLOCK_PROTECTION_STATS,
+    FOCUS_FOREST
 }
 
 enum class TimeRangeFilter(val label: String) {
@@ -94,10 +101,28 @@ fun InsightsScreen(
     totalMinutes: Int,
     completedSessionsCount: Int,
     totalBlockedAttempts: Int,
-    recentStats: List<DailyStat>
+    recentStats: List<DailyStat>,
+    sessionState: ActiveSessionState = ActiveSessionState(),
+    allGardenPlants: List<GardenPlant> = emptyList(),
+    bloomedPlantsCount: Int = 0,
+    witheredPlantsCount: Int = 0,
+    onStartPlantingClick: () -> Unit = {}
 ) {
     var currentMode by remember { mutableStateOf(InsightMode.FOCUS_TRENDS) }
     var selectedRange by remember { mutableStateOf(TimeRangeFilter.DAY_7) }
+
+    if (currentMode == InsightMode.FOCUS_FOREST) {
+        GardenScreen(
+            sessionState = sessionState,
+            allPlants = allGardenPlants,
+            bloomedCount = bloomedPlantsCount,
+            witheredCount = witheredPlantsCount,
+            totalMinutes = totalMinutes,
+            onStartPlantingClick = onStartPlantingClick,
+            onBack = { currentMode = InsightMode.FOCUS_TRENDS }
+        )
+        return
+    }
 
     val pureFocusMins = totalMinutes.coerceAtLeast(0)
     val pureFocusHours = String.format(Locale.US, "%.1f", pureFocusMins / 60f)
@@ -196,12 +221,36 @@ fun InsightsScreen(
                                     tint = if (currentMode == InsightMode.BLOCK_PROTECTION_STATS) CyanAccent else Color(0xFF94A3B8),
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Block Protection",
-                                    fontSize = 13.sp,
+                                    text = "Shield",
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (currentMode == InsightMode.BLOCK_PROTECTION_STATS) CyanAccent else Color(0xFF94A3B8)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            color = if (currentMode == InsightMode.FOCUS_FOREST) EmeraldSuccess.copy(alpha = 0.2f) else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp),
+                            border = if (currentMode == InsightMode.FOCUS_FOREST) BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.4f)) else null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { currentMode = InsightMode.FOCUS_FOREST }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "🌿", fontSize = 14.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Forest",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (currentMode == InsightMode.FOCUS_FOREST) EmeraldSuccess else Color(0xFF94A3B8)
                                 )
                             }
                         }
@@ -309,6 +358,64 @@ fun InsightsScreen(
                                     fontSize = 12.sp,
                                     color = Color(0xFFCBD5E1)
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Weekly Productivity ROI & Share Card
+            item {
+                val context = LocalContext.current
+                val estimatedMinutesSaved = (totalBlockedAttempts * 8) + pureFocusMins
+                val estimatedHoursSaved = String.format(Locale.US, "%.1f", estimatedMinutesSaved / 60f)
+
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E36)),
+                    border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "⚡ Productivity ROI Summary",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Reclaimed ~$estimatedHoursSaved hours from distracting apps",
+                                    fontSize = 12.sp,
+                                    color = CyanAccent
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val report = "📊 FocusGuard Weekly Productivity Report 📊\n\n" +
+                                            "⏱️ Deep Focus Logged: $pureFocusHours hrs ($pureFocusMins min)\n" +
+                                            "🛡️ Distraction Interceptions: $totalBlockedAttempts attempts\n" +
+                                            "⏳ Estimated Time Reclaimed: ~$estimatedHoursSaved hours\n" +
+                                            "🔥 Active Consistency Streak: $streakDays days\n\n" +
+                                            "Focused, disciplined, and distraction-free with FocusGuard."
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, report)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Weekly Focus Report"))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                                shape = RoundedCornerShape(100.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Export ↗", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }

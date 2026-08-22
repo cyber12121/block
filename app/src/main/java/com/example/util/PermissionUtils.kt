@@ -209,6 +209,14 @@ object PermissionUtils {
                 intentAction = Settings.ACTION_APP_NOTIFICATION_SETTINGS
             ),
             PermissionStatus(
+                id = "dnd",
+                title = "Do Not Disturb (DND) Access",
+                description = "Automatically silences notification pings and interruptions during deep focus sprints",
+                isGranted = DndManager.hasDndPermission(context),
+                actionLabel = if (DndManager.hasDndPermission(context)) "Allowed" else "Allow DND",
+                intentAction = Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
+            ),
+            PermissionStatus(
                 id = "autostart",
                 title = "Auto-Start & Background Protection",
                 description = "Ensures MIUI, ColorOS and OEM battery savers do not terminate the blocker",
