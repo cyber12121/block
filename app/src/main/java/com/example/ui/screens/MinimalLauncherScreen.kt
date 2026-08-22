@@ -312,9 +312,12 @@ fun MinimalLauncherScreen(
         }.take(6)
     }
 
-    val blockedPackages = remember(allTargets, isAnyBlockingActive) {
+    val blockedPackages = remember(allTargets, isAnyBlockingActive, customEssentialPkgs) {
         if (!isAnyBlockingActive) emptySet()
-        else allTargets.filter { it.targetType == TargetType.APP && it.isEnabled }.map { it.identifier.lowercase() }.toSet()
+        else allTargets.filter { it.targetType == TargetType.APP && it.isEnabled }
+            .map { it.identifier.lowercase() }
+            .filter { !sessionManager.isEssentialApp(it) }
+            .toSet()
     }
 
     // Back handling
@@ -1118,21 +1121,14 @@ fun MinimalLauncherScreen(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             essentialAppsShortcuts.forEach { app ->
-                                val isBlocked = blockedPackages.contains(app.packageName.lowercase())
-
                                 Surface(
-                                    color = if (isBlocked) Color(0xFF120E18).copy(alpha = 0.5f) else Color(0xFF0D1424),
+                                    color = Color(0xFF0D1424),
                                     shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isBlocked) CrimsonStrict.copy(alpha = 0.2f) else Color(0xFF1A2640).copy(alpha = 0.6f)
-                                    ),
+                                    border = BorderStroke(1.dp, Color(0xFF1A2640).copy(alpha = 0.6f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            if (isBlocked) {
-                                                showAppBlockedDialog = app.label
-                                            } else if (app.packageName == context.packageName || app.label.equals("FocusGuard", ignoreCase = true)) {
+                                            if (app.packageName == context.packageName || app.label.equals("FocusGuard", ignoreCase = true)) {
                                                 handleExitRequest()
                                             } else {
                                                 launchApp(context, app.packageName)
@@ -1150,14 +1146,11 @@ fun MinimalLauncherScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            // Minimalist Dot / Avatar Indicator
+                                            // Minimalist Dot Indicator
                                             Box(
                                                 modifier = Modifier
                                                     .size(6.dp)
-                                                    .background(
-                                                        if (isBlocked) CrimsonStrict else IndigoPrimary,
-                                                        CircleShape
-                                                    )
+                                                    .background(IndigoPrimary, CircleShape)
                                             )
 
                                             Spacer(modifier = Modifier.width(12.dp))
@@ -1166,36 +1159,9 @@ fun MinimalLauncherScreen(
                                                 text = app.label,
                                                 fontSize = 16.sp,
                                                 fontWeight = FontWeight.Medium,
-                                                color = if (isBlocked) Color(0xFF64748B) else Color.White,
-                                                letterSpacing = 0.2.sp,
-                                                textDecoration = if (isBlocked) TextDecoration.LineThrough else TextDecoration.None
+                                                color = Color.White,
+                                                letterSpacing = 0.2.sp
                                             )
-                                        }
-
-                                        if (isBlocked) {
-                                            Surface(
-                                                color = CrimsonStrict.copy(alpha = 0.15f),
-                                                shape = RoundedCornerShape(4.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Lock,
-                                                        contentDescription = "Blocked",
-                                                        tint = CrimsonStrict,
-                                                        modifier = Modifier.size(10.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(3.dp))
-                                                    Text(
-                                                        "BLOCKED",
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = CrimsonStrict
-                                                    )
-                                                }
-                                            }
                                         }
                                     }
                                 }
