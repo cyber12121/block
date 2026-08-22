@@ -23,6 +23,14 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastInspectedPackage: String = ""
     private var lastInspectedTime: Long = 0L
 
+    // Debounce the bounce-back intent: multiple accessibility sub-events
+    // (STATE_CHANGED, WINDOWS_CHANGED, CONTENT_CHANGED) all fire in rapid
+    // succession when the user presses Home. Without this guard, we launch
+    // the relaunch intent 3-5 times in <100ms, causing multiple rapid
+    // activity transitions that produce the black screen / flicker.
+    private var lastBouncedBackTime: Long = 0L
+    private val BOUNCE_BACK_DEBOUNCE_MS = 1500L
+
     // Throttle the accessibility-tree URL scan inside browsers.
     // TYPE_WINDOW_CONTENT_CHANGED fires on every DOM mutation — running a full
     // tree walk on every event would hammer CPU. We allow an immediate scan on
@@ -134,19 +142,24 @@ class FocusAccessibilityService : AccessibilityService() {
         // 1. Home Launcher Detection & Strict Bounce-Back
         if (isLauncherOrHome) {
             if (shouldLockToMinimalist) {
-                // Instantly re-open Minimalist Launcher when user lands on OEM Home / Minus Screen
-                val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        Intent.FLAG_ACTIVITY_NO_ANIMATION
-                    )
-                    putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                val now = System.currentTimeMillis()
+                // Debounce: only fire once per BOUNCE_BACK_DEBOUNCE_MS to prevent
+                // multiple rapid events from triggering repeated activity relaunches
+                if (now - lastBouncedBackTime > BOUNCE_BACK_DEBOUNCE_MS) {
+                    lastBouncedBackTime = now
+                    val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_NO_ANIMATION
+                        )
+                        putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                    }
+                    try {
+                        startActivity(relaunch)
+                    } catch (_: Exception) {}
                 }
-                try {
-                    startActivity(relaunch)
-                } catch (_: Exception) {}
             }
             return
         }

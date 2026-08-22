@@ -79,9 +79,15 @@ class FocusSessionManager private constructor(private val context: Context) {
         val pkg = packageName.lowercase()
         if (pkg == context.packageName.lowercase()) return true
 
-        // User custom selected essential apps (match exact or sub-package)
+        // User custom selected essential apps (match exact OR any sub-process of that app)
+        // e.g. if "com.brave.browser" is essential, also allow "com.brave.browser.appmenu" etc.
         val customEssentials = getCustomEssentialApps().map { it.lowercase() }
-        if (customEssentials.any { pkg == it || pkg.startsWith("$it.") || it.startsWith("$pkg.") }) return true
+        if (customEssentials.any { essential ->
+                pkg == essential ||
+                pkg.startsWith("$essential.") ||
+                pkg.startsWith("$essential:") ||  // process suffix e.g. :remote
+                essential.startsWith("$pkg.")      // pkg is a root of the essential
+            }) return true
 
         // Core system essentials across OEMs (Google, Xiaomi/MIUI, Samsung, OnePlus/Oppo, Vivo)
         val systemEssentials = setOf(

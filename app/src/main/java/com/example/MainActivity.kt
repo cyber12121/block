@@ -1,6 +1,7 @@
 package com.example
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -73,6 +74,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Kill enter/exit animation on creation so no black frame appears
+        // when this activity is created fresh.
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
         enableEdgeToEdge()
 
         if (intent?.getBooleanExtra(EXTRA_OPEN_MINIMAL_LAUNCHER, false) == true) {
@@ -91,9 +96,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Suppress any system-applied transition animation when this activity
+        // is reordered to front by the accessibility service bounce-back.
+        // This is the last possible gap that shows a black frame between the
+        // OEM home screen disappearing and Compose finishing its first draw.
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // Suppress animation when brought to front via REORDER_TO_FRONT
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
         if (intent.getBooleanExtra(EXTRA_OPEN_MINIMAL_LAUNCHER, false)) {
             val app = application as FocusGuardApp
             app.sessionManager.setMinimalLauncherActive(true)

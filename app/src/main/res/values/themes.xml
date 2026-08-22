@@ -2,10 +2,14 @@
 <resources>
 
     <style name="Theme.FocusGuard" parent="android:Theme.DeviceDefault.NoActionBar">
+        <!-- Match the Compose UI dark background so there is no visible flash
+             when MainActivity is brought to front via REORDER_TO_FRONT.
+             Previously windowIsTranslucent=true caused a black compositor gap
+             and windowDisablePreview=true suppressed the first frame, leaving
+             a blank window until Compose finished rendering. -->
         <item name="android:windowBackground">@color/focus_guard_bg</item>
         <item name="android:statusBarColor">@color/focus_guard_bg</item>
         <item name="android:navigationBarColor">@color/focus_guard_bg</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 </resources>
