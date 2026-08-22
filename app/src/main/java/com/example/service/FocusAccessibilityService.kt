@@ -23,10 +23,6 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastInspectedPackage: String = ""
     private var lastInspectedTime: Long = 0L
 
-    // Throttle database reads: refresh the block cache on app switches,
-    // otherwise at most once every few seconds.
-    private var lastCacheRefreshTime: Long = 0L
-
     // Throttle the accessibility-tree URL scan inside browsers.
     // TYPE_WINDOW_CONTENT_CHANGED fires on every DOM mutation — running a full
     // tree walk on every event would hammer CPU. We allow an immediate scan on
@@ -124,33 +120,12 @@ class FocusAccessibilityService : AccessibilityService() {
 
         val targetPkg = event.packageName?.toString() ?: return
 
+        // 1. Instant Fast-Path: Never inspect or block our own app or overlays
+        if (targetPkg == applicationContext.packageName) return
+
         val sessionManager = FocusSessionManager.getInstance(this)
         // Feed the current foreground package to the watchdog so it can detect escapes.
         sessionManager.reportForeground(targetPkg)
-        val sessionState = sessionManager.sessionState.value
-
-        // Keep the block cache warm WITHOUT hammering the database on every event:
-        // refresh immediately when the foreground window changes (app switch),
-        // otherwise at most once every 3 seconds.
-        val nowForCache = System.currentTimeMillis()
-        val isWindowSwitch = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-        if (isWindowSwitch || (nowForCache - lastCacheRefreshTime) > CACHE_REFRESH_INTERVAL_MS) {
-            lastCacheRefreshTime = nowForCache
-            val app = application as? FocusGuardApp
-            if (app != null) {
-                scope.launch {
-                    sessionManager.refreshBlockedTargetsCache(app.repository)
-                }
-            }
-        }
-
-        // Only enforce the "pull the user back into FocusGuard" behaviour during a real
-        // focus session. Minimal Launcher can be switched on from the dashboard with no
-        // session running so the user can lay it out and pick essential apps; enforcing
-        // here as well meant every tap on home or another app bounced them back into the
-        // app mid-configuration, with no way to escape short of disabling the service.
-        val isFgApp = targetPkg == applicationContext.packageName
-        if (isFgApp) return // Never block our own app or overlays
 
         val isLauncherOrHome = sessionManager.isOemLauncher(targetPkg)
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
@@ -406,12 +381,20 @@ class FocusAccessibilityService : AccessibilityService() {
 
             if (looksLikeUrlField(viewId) || isEdit || className.contains("EditText") || className.contains("AutoCompleteTextView")) {
                 val text = try { node.text?.toString() ?: node.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
-                if (text.isNotBlank()) return text
+                if (text.isNotBlank()) {
+                    if (node != root) {
+                        try { node.recycle() } catch (_: Throwable) {}
+                    }
+                    return text
+                }
             }
             val childCount = try { node.childCount } catch (_: Throwable) { 0 }
             for (i in 0 until childCount) {
                 val child = try { node.getChild(i) } catch (_: Throwable) { null } ?: continue
                 queue.add(child)
+            }
+            if (node != root) {
+                try { node.recycle() } catch (_: Throwable) {}
             }
         }
         return ""
@@ -439,6 +422,7 @@ class FocusAccessibilityService : AccessibilityService() {
         for (i in 0 until childCount) {
             val child = try { node.getChild(i) } catch (_: Throwable) { null } ?: continue
             sb.append(extractAllText(child, maxDepth - 1, visitedCount))
+            try { child.recycle() } catch (_: Throwable) {}
         }
         return sb.toString()
     }
@@ -503,9 +487,5 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         // Accessibility service interrupted
-    }
-
-    companion object {
-        private const val CACHE_REFRESH_INTERVAL_MS = 3000L
     }
 }

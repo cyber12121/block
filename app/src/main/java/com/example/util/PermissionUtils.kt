@@ -101,17 +101,6 @@ object PermissionUtils {
         }
     }
 
-    fun isDefaultHomeLauncher(context: Context): Boolean {
-        // Kept as a stub for any remaining call-sites; always returns false
-        // since FocusGuard no longer promotes itself as the default home app.
-        return false
-    }
-
-    fun openHomeSettings(context: Context) {
-        // Kept as a no-op stub so existing call-sites compile cleanly; the
-        // "Set Default Launcher" UI has been removed — FocusGuard no longer
-        // requires or promotes setting itself as the default home app.
-    }
 
     fun isOverlayGranted(context: Context): Boolean {
         return try {

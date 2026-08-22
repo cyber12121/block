@@ -23,7 +23,7 @@ class MinimalStrictLockWatchdogReceiver : BroadcastReceiver() {
     companion object {
         private const val ACTION = "com.example.MINIMAL_STRICT_LOCK_WATCHDOG"
         private const val REQUEST_CODE = 0x4D53 // "MS"
-        private const val INTERVAL_MS = 5_000L
+        private const val INTERVAL_MS = 60_000L
 
         // Require 2 consecutive "escaped" ticks before locking the screen.
         // A single tick where the OEM launcher is briefly foregrounded (e.g.
@@ -45,20 +45,11 @@ class MinimalStrictLockWatchdogReceiver : BroadcastReceiver() {
             )
             val triggerAt = SystemClock.elapsedRealtime() + INTERVAL_MS
             runCatching {
-                am.setExactAndAllowWhileIdle(
-                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                am.setAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME,
                     triggerAt,
                     pi
                 )
-            }.onFailure {
-                // Fallback: inexact but still wakes the device if exact alarm is denied.
-                runCatching {
-                    am.setAndAllowWhileIdle(
-                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                        triggerAt,
-                        pi
-                    )
-                }
             }
         }
 

@@ -319,15 +319,15 @@ class AuthManager private constructor(private val context: Context) {
                 Log.w("AuthManager", "Google CredentialManager exception: ${e.message} - fallback 1-tap authentication")
             }
 
-            // Seamless 1-tap Google Account authentication fallback
+            // Seamless offline / guest profile fallback when Google CredentialManager is unavailable
             val fallbackUser = AuthUser(
-                uid = "google_pandagre_vinay_gmail_com",
-                displayName = "Vinay Pandagre",
-                email = "pandagre.vinay@gmail.com",
+                uid = "offline_user_${System.currentTimeMillis()}",
+                displayName = "Focus User",
+                email = "user@focusguard.local",
                 photoUrl = null,
-                isGuest = false,
+                isGuest = true,
                 isDeveloper = false,
-                provider = "google.com"
+                provider = "offline"
             )
             saveUser(fallbackUser)
             _isLoading.value = false

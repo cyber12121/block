@@ -30,12 +30,20 @@ object InstalledAppsCache {
 
     fun isReady(): Boolean = isLoaded && cachedList.isNotEmpty()
 
+    fun invalidate() {
+        isLoaded = false
+        cachedList = emptyList()
+    }
+
     fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            return drawable.bitmap
+            val bmp = drawable.bitmap
+            // If already compact, reuse directly
+            if (bmp.width <= 96 && bmp.height <= 96) return bmp
+            return Bitmap.createScaledBitmap(bmp, 72, 72, true)
         }
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+        val width = if (drawable.intrinsicWidth in 1..96) drawable.intrinsicWidth else 72
+        val height = if (drawable.intrinsicHeight in 1..96) drawable.intrinsicHeight else 72
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
@@ -43,8 +51,8 @@ object InstalledAppsCache {
         return bitmap
     }
 
-    suspend fun loadApps(context: Context): List<InstalledAppItem> = withContext(Dispatchers.IO) {
-        if (isLoaded && cachedList.isNotEmpty()) {
+    suspend fun loadApps(context: Context, forceReload: Boolean = false): List<InstalledAppItem> = withContext(Dispatchers.IO) {
+        if (!forceReload && isLoaded && cachedList.isNotEmpty()) {
             return@withContext cachedList
         }
 

@@ -108,8 +108,9 @@ object FocusSoundEngine {
             AudioFormat.ENCODING_PCM_16BIT
         ).coerceAtLeast(2048)
 
-        // Stereo: interleaved L/R samples, so buffer holds bufferSize/2 frames
-        val buffer = ShortArray(bufferSize)
+        // Pre-generate 1 full second of seamless stereo binaural waveform
+        val oneSecondFrames = SAMPLE_RATE
+        val fullBuffer = ShortArray(oneSecondFrames * 2)
         var phaseL = 0.0
         var phaseR = 0.0
         val freqL = 432.0   // left ear
@@ -117,64 +118,66 @@ object FocusSoundEngine {
         val stepL = 2.0 * Math.PI * freqL / SAMPLE_RATE
         val stepR = 2.0 * Math.PI * freqR / SAMPLE_RATE
 
+        var idx = 0
+        for (f in 0 until oneSecondFrames) {
+            fullBuffer[idx++] = (sin(phaseL) * 0.25 * Short.MAX_VALUE).toInt().toShort()
+            fullBuffer[idx++] = (sin(phaseR) * 0.25 * Short.MAX_VALUE).toInt().toShort()
+            phaseL += stepL
+            if (phaseL > 2.0 * Math.PI) phaseL -= 2.0 * Math.PI
+            phaseR += stepR
+            if (phaseR > 2.0 * Math.PI) phaseR -= 2.0 * Math.PI
+        }
+
+        // Loop write pre-generated buffer directly to hardware
         while (isActive && isPlaying) {
-            var i = 0
-            while (i < buffer.size - 1) {
-                // Left channel
-                buffer[i] = (sin(phaseL) * 0.25 * Short.MAX_VALUE).toInt().toShort()
-                phaseL += stepL
-                if (phaseL > 2.0 * Math.PI) phaseL -= 2.0 * Math.PI
-                // Right channel
-                buffer[i + 1] = (sin(phaseR) * 0.25 * Short.MAX_VALUE).toInt().toShort()
-                phaseR += stepR
-                if (phaseR > 2.0 * Math.PI) phaseR -= 2.0 * Math.PI
-                i += 2
-            }
-            audioTrack?.write(buffer, 0, buffer.size)
+            audioTrack?.write(fullBuffer, 0, fullBuffer.size)
         }
     }
 
     private suspend fun CoroutineScope.playMonoPreset(preset: SoundPreset, bufferSize: Int) {
-        val buffer = ShortArray(bufferSize)
+        val preGenFrames = SAMPLE_RATE * 2 // 2 seconds pre-generated buffer
+        val fullBuffer = ShortArray(preGenFrames)
         val random = Random()
         var filterState = 0.0
         var waveModPhase = 0.0
 
-        while (isActive && isPlaying) {
-            for (i in buffer.indices) {
-                val sample: Double = when (preset) {
-                    SoundPreset.RAIN -> {
-                        val white = random.nextDouble() * 2.0 - 1.0
-                        filterState = 0.92 * filterState + 0.08 * white
-                        val drop = if (random.nextDouble() < 0.002) (random.nextDouble() - 0.5) * 1.5 else 0.0
-                        (filterState * 0.7 + drop * 0.3) * 0.5
-                    }
-                    SoundPreset.OCEAN_WAVES -> {
-                        waveModPhase += 2.0 * Math.PI * 0.12 / SAMPLE_RATE
-                        if (waveModPhase > 2.0 * Math.PI) waveModPhase -= 2.0 * Math.PI
-                        val swell = (sin(waveModPhase) + 1.0) * 0.45 + 0.1
-                        val white = random.nextDouble() * 2.0 - 1.0
-                        filterState = 0.86 * filterState + 0.14 * white
-                        filterState * swell * 0.6
-                    }
-                    SoundPreset.FOREST_BREEZE -> {
-                        waveModPhase += 2.0 * Math.PI * 0.05 / SAMPLE_RATE
-                        if (waveModPhase > 2.0 * Math.PI) waveModPhase -= 2.0 * Math.PI
-                        val gust = (sin(waveModPhase) + 1.0) * 0.35 + 0.3
-                        val white = random.nextDouble() * 2.0 - 1.0
-                        filterState = 0.90 * filterState + 0.10 * white
-                        filterState * gust * 0.4
-                    }
-                    SoundPreset.WHITE_NOISE -> {
-                        (random.nextDouble() * 2.0 - 1.0) * 0.25
-                    }
-                    SoundPreset.BINAURAL_ALPHA -> 0.0 // handled separately in stereo
+        for (i in 0 until preGenFrames) {
+            val sample: Double = when (preset) {
+                SoundPreset.RAIN -> {
+                    val white = random.nextDouble() * 2.0 - 1.0
+                    filterState = 0.92 * filterState + 0.08 * white
+                    val drop = if (random.nextDouble() < 0.002) (random.nextDouble() - 0.5) * 1.5 else 0.0
+                    (filterState * 0.7 + drop * 0.3) * 0.5
                 }
-
-                val clamped = sample.coerceIn(-1.0, 1.0)
-                buffer[i] = (clamped * Short.MAX_VALUE).toInt().toShort()
+                SoundPreset.OCEAN_WAVES -> {
+                    waveModPhase += 2.0 * Math.PI * 0.12 / SAMPLE_RATE
+                    if (waveModPhase > 2.0 * Math.PI) waveModPhase -= 2.0 * Math.PI
+                    val swell = (sin(waveModPhase) + 1.0) * 0.45 + 0.1
+                    val white = random.nextDouble() * 2.0 - 1.0
+                    filterState = 0.86 * filterState + 0.14 * white
+                    filterState * swell * 0.6
+                }
+                SoundPreset.FOREST_BREEZE -> {
+                    waveModPhase += 2.0 * Math.PI * 0.05 / SAMPLE_RATE
+                    if (waveModPhase > 2.0 * Math.PI) waveModPhase -= 2.0 * Math.PI
+                    val gust = (sin(waveModPhase) + 1.0) * 0.35 + 0.3
+                    val white = random.nextDouble() * 2.0 - 1.0
+                    filterState = 0.90 * filterState + 0.10 * white
+                    filterState * gust * 0.4
+                }
+                SoundPreset.WHITE_NOISE -> {
+                    (random.nextDouble() * 2.0 - 1.0) * 0.25
+                }
+                SoundPreset.BINAURAL_ALPHA -> 0.0
             }
-            audioTrack?.write(buffer, 0, buffer.size)
+
+            val clamped = sample.coerceIn(-1.0, 1.0)
+            fullBuffer[i] = (clamped * Short.MAX_VALUE).toInt().toShort()
+        }
+
+        // Loop write pre-generated buffer directly to hardware with zero CPU calculation
+        while (isActive && isPlaying) {
+            audioTrack?.write(fullBuffer, 0, fullBuffer.size)
         }
     }
 

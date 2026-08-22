@@ -461,7 +461,13 @@ class FocusSessionManager private constructor(private val context: Context) {
             // of the current window so checkAutomaticSchedules() won't immediately
             // re-start it.
             if (!earlyUnlocked && currentState.isAutoScheduled && scheduledSessionId >= 0) {
-                val snoozeUntil = System.currentTimeMillis() + 30 * 60 * 1000L
+                val schedule = repository.getEnabledSchedules().firstOrNull { it.id == scheduledSessionId }
+                val snoozeUntil = if (schedule != null) {
+                    val window = ScheduleAlarmManager.computeNextWindow(schedule)
+                    window?.second ?: (System.currentTimeMillis() + 60 * 60 * 1000L)
+                } else {
+                    System.currentTimeMillis() + 60 * 60 * 1000L
+                }
                 prefs.edit().putLong("${KEY_SNOOZED_SCHEDULE_ID}_$scheduledSessionId", snoozeUntil).apply()
                 val allSchedules = repository.getEnabledSchedules()
                 ScheduleAlarmManager.rescheduleAll(context, allSchedules)
@@ -484,12 +490,6 @@ class FocusSessionManager private constructor(private val context: Context) {
         val remaining = getRemainingSeconds()
         if (remaining <= 0) {
             // Timer expired: run the full end-of-session teardown exactly once.
-            //
-            // Previously this branch only bloomed the plant and recorded stats inline; it
-            // never marked the FocusSession row completed, never cleared the persisted
-            // prefs and never reset _sessionState.isActive. The session therefore stayed
-            // "active" forever (surviving restarts via restoreSessionFromPrefs) and, since
-            // two callers tick every second, the plant/stats writes were repeated endlessly.
             if (isCompletingSession) return
 
             val repository = (context.applicationContext as? FocusGuardApp)?.repository
@@ -501,8 +501,6 @@ class FocusSessionManager private constructor(private val context: Context) {
             isCompletingSession = true
             _sessionState.value = currentState.copy(remainingSeconds = 0)
 
-            // earlyUnlocked = false -> marks the session completed, blooms the plant,
-            // records the stats, clears prefs and refreshes the blocked-target cache.
             forceUnlockSession(repository, earlyUnlocked = false)
         } else {
             // Check for clock tampering:
@@ -774,16 +772,17 @@ class FocusSessionManager private constructor(private val context: Context) {
         }
 
         // 2. Check blocked keywords (use word boundary regex to avoid partial substring false triggers)
+        val isDomainOrUrl = cleanInput.contains(".") && !cleanInput.contains(" ")
         for (kw in cachedBlockedKeywords) {
             val cleanKw = kw.lowercase().trim()
             if (cleanKw.length >= 2) {
                 val kwRegex = Regex("(^|[^a-z0-9])${Regex.escape(cleanKw)}([^a-z0-9]|$)")
-                // Strip domain TLD if this is a single URL hostname without query spaces, preventing false matches on .in/.us/.me etc.
-                val textToCheck = if (cleanInput.contains(".") && !cleanInput.contains(" ") && !cleanInput.contains("/")) {
-                    cleanInput.substringBeforeLast(".")
+                // If it's a domain/URL (e.g. chat.openai.com), do not trigger on domain segments unless it's a query or path
+                val textToCheck = if (isDomainOrUrl) {
+                    cleanInput.substringAfter("/", "")
                 } else cleanInput
 
-                if (kwRegex.containsMatchIn(textToCheck)) {
+                if (textToCheck.isNotBlank() && kwRegex.containsMatchIn(textToCheck)) {
                     return Pair(true, kw)
                 }
             }

@@ -120,11 +120,17 @@
             </intent-filter>
         </receiver>
 
-        <!-- BlockIT-style watchdog for the Minimalist Strict Lock only -->
+        <!-- Package change listener for instant app list cache invalidation -->
         <receiver
-            android:name=".service.MinimalStrictLockWatchdogReceiver"
-            android:enabled="true"
-            android:exported="false" />
+            android:name=".receiver.PackageChangeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

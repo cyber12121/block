@@ -81,63 +81,92 @@ class FocusForegroundService : Service() {
             // Warm the blocking cache immediately on start
             sessionManager.refreshBlockedTargetsCache(repository)
 
-            // One-time schedule check: catches any window that started while the
-            // device was powered off and whose exact alarm was therefore missed.
+            // One-time schedule check on startup
             sessionManager.checkAutomaticSchedules(repository)
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            var lastScheduleCheckSec = 0L
 
+            // Combine and react to sessionState and activeSchedulesState
+            launch {
+                sessionManager.sessionState.collect { sessionState ->
+                    val activeSchedulesState = sessionManager.activeSchedulesState.value
+                    updateNotification(notificationManager, sessionState, activeSchedulesState)
+                }
+            }
+
+            launch {
+                sessionManager.activeSchedulesState.collect { activeSchedulesState ->
+                    val sessionState = sessionManager.sessionState.value
+                    updateNotification(notificationManager, sessionState, activeSchedulesState)
+                }
+            }
+
+            // Session expiration watchdog timer: fires only when a manual session is active
             while (isActive) {
-                sessionManager.updateTick()
-
-                // Check automatic schedules periodically every 2 seconds for real-time synchronization
-                val nowSec = System.currentTimeMillis() / 1000
-                if (nowSec - lastScheduleCheckSec >= 2) {
-                    lastScheduleCheckSec = nowSec
-                    sessionManager.checkAutomaticSchedules(repository)
-                }
-
                 val sessionState = sessionManager.sessionState.value
-                val activeSchedulesState = sessionManager.activeSchedulesState.value
-                val now = System.currentTimeMillis()
-
                 if (sessionState.isActive) {
-                    val minutes = sessionState.remainingSeconds / 60
-                    val seconds = sessionState.remainingSeconds % 60
-                    val mode = if (sessionState.isUltraStrict) "Strict Lock 🔒" else if (sessionState.isStrictMode) "Normal Lock" else if (sessionState.isPomodoro) "Pomodoro" else "Focus Active"
-                    val content = "${sessionState.title} • $mode • ${String.format("%02d:%02d", minutes, seconds)} remaining"
-
-                    // Only update notification if remaining time changes by minutes, or in last 30 seconds, or every 10s
-                    if (content != lastNotificationText && (now - lastNotificationUpdateTime > 10000 || sessionState.remainingSeconds <= 30)) {
-                        lastNotificationText = content
-                        lastNotificationUpdateTime = now
-                        notificationManager.notify(NOTIFICATION_ID, buildNotification("FocusGuard Enforced", content))
-                    }
-                } else if (activeSchedulesState.isActive) {
-                    val names = activeSchedulesState.activeSchedules.joinToString(", ") { it.name }
-                    val mode = if (activeSchedulesState.isUltraStrict) "Strict Schedule 🔒" else if (activeSchedulesState.isStrictMode) "Schedule Shield" else "Auto Schedule"
-                    val content = "$names • $mode Active"
-                    if (content != lastNotificationText) {
-                        lastNotificationText = content
-                        lastNotificationUpdateTime = now
-                        notificationManager.notify(NOTIFICATION_ID, buildNotification("FocusGuard Schedule Running", content))
-                    }
+                    sessionManager.updateTick()
+                    delay(1000)
                 } else {
-                    val idleText = "Shield standby • 0 distractions"
-                    if (idleText != lastNotificationText) {
-                        lastNotificationText = idleText
-                        lastNotificationUpdateTime = now
-                        notificationManager.notify(NOTIFICATION_ID, buildNotification("FocusGuard Protection Active", idleText))
-                    }
+                    // When idle, sleep in 10-second intervals to allow CPU deep sleep (Doze)
+                    delay(10000)
                 }
-
-                delay(1000)
             }
         }
     }
 
-    private fun buildNotification(title: String, text: String): Notification {
+    private fun updateNotification(
+        notificationManager: NotificationManager,
+        sessionState: ActiveSessionState,
+        activeSchedulesState: ActiveSchedulesState
+    ) {
+        if (sessionState.isActive) {
+            val mode = if (sessionState.isUltraStrict) "Strict Lock 🔒" else if (sessionState.isStrictMode) "Normal Lock" else if (sessionState.isPomodoro) "Pomodoro" else "Focus Active"
+            val title = "${sessionState.title} • $mode"
+            val content = "Protection active • Countdown in progress"
+
+            if (title != lastNotificationText) {
+                lastNotificationText = title
+                val notif = buildNotification(
+                    title = title,
+                    text = content,
+                    chronometerTargetMillis = sessionState.endTimeMillis
+                )
+                notificationManager.notify(NOTIFICATION_ID, notif)
+            }
+        } else if (activeSchedulesState.isActive) {
+            val names = activeSchedulesState.activeSchedules.joinToString(", ") { it.name }
+            val mode = if (activeSchedulesState.isUltraStrict) "Strict Schedule 🔒" else if (activeSchedulesState.isStrictMode) "Schedule Shield" else "Auto Schedule"
+            val title = "FocusGuard Schedule Running"
+            val content = "$names • $mode Active"
+
+            if (content != lastNotificationText) {
+                lastNotificationText = content
+                val notif = buildNotification(
+                    title = title,
+                    text = content,
+                    chronometerTargetMillis = if (activeSchedulesState.endTimeMillis > 0) activeSchedulesState.endTimeMillis else null
+                )
+                notificationManager.notify(NOTIFICATION_ID, notif)
+            }
+        } else {
+            val idleText = "Shield standby • 0 distractions"
+            if (idleText != lastNotificationText) {
+                lastNotificationText = idleText
+                val notif = buildNotification(
+                    title = "FocusGuard Protection Active",
+                    text = idleText
+                )
+                notificationManager.notify(NOTIFICATION_ID, notif)
+            }
+        }
+    }
+
+    private fun buildNotification(
+        title: String,
+        text: String,
+        chronometerTargetMillis: Long? = null
+    ): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
@@ -147,7 +176,7 @@ class FocusForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_notification)
@@ -156,7 +185,14 @@ class FocusForegroundService : Service() {
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
+
+        if (chronometerTargetMillis != null && chronometerTargetMillis > System.currentTimeMillis()) {
+            builder.setUsesChronometer(true)
+            builder.setChronometerCountDown(true)
+            builder.setWhen(chronometerTargetMillis)
+        }
+
+        return builder.build()
     }
 
     private fun createNotificationChannel() {
