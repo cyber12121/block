@@ -86,11 +86,32 @@ class FocusForegroundService : Service() {
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            var sessionCompletionJob: Job? = null
+
             // Combine and react to sessionState and activeSchedulesState
             launch {
                 sessionManager.sessionState.collect { sessionState ->
                     val activeSchedulesState = sessionManager.activeSchedulesState.value
                     updateNotification(notificationManager, sessionState, activeSchedulesState)
+
+                    // Zero-wakeup battery optimization:
+                    // Instead of polling every 1 second, schedule a single completion trigger at endTimeMillis
+                    sessionCompletionJob?.cancel()
+                    if (sessionState.isActive) {
+                        val remainingMs = sessionState.endTimeMillis - System.currentTimeMillis()
+                        if (remainingMs > 0) {
+                            sessionCompletionJob = launch {
+                                delay(remainingMs + 200L) // Wait until exact completion time
+                                if (sessionManager.sessionState.value.isActive) {
+                                    sessionManager.updateTick()
+                                }
+                            }
+                        } else {
+                            sessionManager.updateTick()
+                        }
+                    } else {
+                        sessionCompletionJob = null
+                    }
                 }
             }
 
@@ -98,18 +119,6 @@ class FocusForegroundService : Service() {
                 sessionManager.activeSchedulesState.collect { activeSchedulesState ->
                     val sessionState = sessionManager.sessionState.value
                     updateNotification(notificationManager, sessionState, activeSchedulesState)
-                }
-            }
-
-            // Session expiration watchdog timer: fires only when a manual session is active
-            while (isActive) {
-                val sessionState = sessionManager.sessionState.value
-                if (sessionState.isActive) {
-                    sessionManager.updateTick()
-                    delay(1000)
-                } else {
-                    // When idle, sleep in 10-second intervals to allow CPU deep sleep (Doze)
-                    delay(10000)
                 }
             }
         }

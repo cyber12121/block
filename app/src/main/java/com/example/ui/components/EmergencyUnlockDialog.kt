@@ -42,7 +42,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun EmergencyUnlockDialog(
     isUltraStrictActive: Boolean,
-    isDevMode: Boolean,
     dailyExitsLeft: Int,
     onDismiss: () -> Unit,
     onConfirmUnlock: () -> Unit
@@ -50,7 +49,7 @@ fun EmergencyUnlockDialog(
     var reflectionSeconds by remember { mutableIntStateOf(if (isUltraStrictActive) 0 else 60) }
 
     LaunchedEffect(Unit) {
-        if (!isUltraStrictActive && !isDevMode) {
+        if (!isUltraStrictActive) {
             while (reflectionSeconds > 0) {
                 delay(1000)
                 reflectionSeconds--
@@ -58,7 +57,7 @@ fun EmergencyUnlockDialog(
         }
     }
 
-    val canUnlock = !isUltraStrictActive && (isDevMode || (dailyExitsLeft > 0 && reflectionSeconds <= 0))
+    val canUnlock = !isUltraStrictActive && dailyExitsLeft > 0 && reflectionSeconds <= 0
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -83,13 +82,6 @@ fun EmergencyUnlockDialog(
                 if (isUltraStrictActive) {
                     Text(
                         text = "This session was locked in Ultra Strict Mode. Early exit is completely disabled until the focus timer completes to ensure total distraction resistance.",
-                        color = Color(0xFFCBD5E1),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    )
-                } else if (isDevMode) {
-                    Text(
-                        text = "Developer Mode Active: Unlimited emergency exits are enabled for development and testing. Do you want to unlock now?",
                         color = Color(0xFFCBD5E1),
                         fontSize = 13.sp,
                         lineHeight = 18.sp
@@ -134,7 +126,7 @@ fun EmergencyUnlockDialog(
             }
         },
         confirmButton = {
-            if (!isUltraStrictActive && (isDevMode || dailyExitsLeft > 0)) {
+            if (!isUltraStrictActive && dailyExitsLeft > 0) {
                 Button(
                     onClick = onConfirmUnlock,
                     enabled = canUnlock,
@@ -145,7 +137,7 @@ fun EmergencyUnlockDialog(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        text = if (!isDevMode && reflectionSeconds > 0) "Wait ${reflectionSeconds}s..." else "Confirm Emergency Unlock",
+                        text = if (reflectionSeconds > 0) "Wait ${reflectionSeconds}s..." else "Confirm Emergency Unlock",
                         fontWeight = FontWeight.Bold,
                         color = if (canUnlock) Color.White else Color.LightGray
                     )
@@ -158,7 +150,7 @@ fun EmergencyUnlockDialog(
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    text = if (isUltraStrictActive) "Understood" else "Stay Focused",
+                    text = "Keep Shield Active",
                     color = Color(0xFFCBD5E1)
                 )
             }

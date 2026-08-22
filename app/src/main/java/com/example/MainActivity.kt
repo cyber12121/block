@@ -147,8 +147,7 @@ fun MainAppContent(viewModel: MainViewModel) {
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
     val currentUser by authManager.currentUser.collectAsStateWithLifecycle()
-    val isDeveloperMode by authManager.isDeveloperMode.collectAsStateWithLifecycle()
-    val isAuthorized = isDeveloperMode || currentUser != null
+    val isAuthorized = currentUser != null
 
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
     // Restore the Minimal Launcher state from SharedPrefs so it survives process death
@@ -355,8 +354,7 @@ fun MainAppContent(viewModel: MainViewModel) {
                                 sessionState = sessionState,
                                 activeSchedulesState = activeSchedulesState,
                                 onEmergencyUnlock = { viewModel.forceEmergencyUnlock() },
-                                onOpenSessionView = { isLiveSessionFullscreen = true },
-                                onResetDatabase = { viewModel.resetAppDataToDefaults() }
+                                onOpenSessionView = { isLiveSessionFullscreen = true }
                             )
                         }
                     }

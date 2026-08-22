@@ -220,11 +220,10 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (isFocusActive) {
-                        val isDevModeTop by authManager.isDeveloperMode.collectAsState()
                         val dailyExitsLeftTop by authManager.dailyExitsRemaining.collectAsState()
                         val isUltraStrictActiveTop = sessionState.isUltraStrict && sessionState.isActive
 
-                        // Developer / User Quick Exit Button
+                        // User Quick Exit Button
                         Surface(
                             color = Color(0xFF111A2E),
                             shape = RoundedCornerShape(100.dp),
@@ -245,7 +244,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isUltraStrictActiveTop) "Locked 🔒" else if (isDevModeTop) "Exit (∞)" else "Exit ($dailyExitsLeftTop/10)",
+                                    text = if (isUltraStrictActiveTop) "Locked 🔒" else "Exit ($dailyExitsLeftTop/10)",
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -569,13 +568,11 @@ fun DashboardScreen(
     }
 
     if (showEmergencyUnlockConfirmDialog) {
-        val isDevMode by authManager.isDeveloperMode.collectAsState()
         val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
         val isUltraStrictActive = sessionState.isUltraStrict && sessionState.isActive
 
         com.example.ui.components.EmergencyUnlockDialog(
             isUltraStrictActive = isUltraStrictActive,
-            isDevMode = isDevMode,
             dailyExitsLeft = dailyExitsLeft,
             onDismiss = { showEmergencyUnlockConfirmDialog = false },
             onConfirmUnlock = {

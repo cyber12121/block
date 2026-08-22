@@ -98,10 +98,9 @@ fun SessionScreen(
 ) {
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
-    val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
     val isUltraStrictActive = sessionState.isUltraStrict
-    val canExitStrict = !isUltraStrictActive && (isDeveloperMode || dailyExitsLeft > 0)
+    val canExitStrict = !isUltraStrictActive && dailyExitsLeft > 0
 
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
 

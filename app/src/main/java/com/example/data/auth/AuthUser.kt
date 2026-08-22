@@ -6,7 +6,6 @@ data class AuthUser(
     val email: String,
     val photoUrl: String? = null,
     val isGuest: Boolean = false,
-    val isDeveloper: Boolean = false,
     val provider: String = "google.com",
     val signInTimestamp: Long = System.currentTimeMillis()
 )

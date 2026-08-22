@@ -1,11 +1,9 @@
 package com.example.ui.components
 
 import android.content.Intent
-import android.view.MotionEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,8 +30,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
@@ -41,8 +37,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,17 +47,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -74,26 +65,17 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.BlockList
 import com.example.service.FocusSessionManager
-import com.example.ui.theme.CrimsonStrict
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.DarkCardBorder
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.EmeraldSuccess
-import com.example.ui.theme.IndigoPrimary
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class SessionModeType {
-    STRICT,
-    ULTRA_STRICT,
-    POMODORO
-}
-
-@OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StartSessionDialog(
     availableLists: List<BlockList>,
@@ -114,11 +96,12 @@ fun StartSessionDialog(
     val sessionManager = remember { FocusSessionManager.getInstance(context) }
 
     var title by remember { mutableStateOf("") }
-    var selectedMinutes by remember { mutableIntStateOf(60) } // Default 1 hour
-    var customMinutesText by remember { mutableStateOf("") }
-    var isCustomDuration by remember { mutableStateOf(false) }
-    var modeType by remember { mutableStateOf(SessionModeType.STRICT) }
-    var isAcknowledged by remember { mutableStateOf(false) }
+    var pomodoroWorkMinutes by remember { mutableIntStateOf(25) }
+    var isCustomSprint by remember { mutableStateOf(false) }
+    var customSprintText by remember { mutableStateOf("") }
+    val pomodoroBreakMinutes = 5
+    val pomodoroTotalRounds = 4
+
     var showShieldOptions by remember { mutableStateOf(false) }
 
     // Allowed Apps in Focus Mode (Max 3)
@@ -153,71 +136,20 @@ fun StartSessionDialog(
         }
     }
 
-    // Pomodoro settings
-    var pomodoroWorkMinutes by remember { mutableIntStateOf(25) }
-    val pomodoroBreakMinutes = 5
-    val pomodoroTotalRounds = 4
-
-    val isStrictMode = modeType == SessionModeType.STRICT
-    val isPomodoroMode = modeType == SessionModeType.POMODORO
-
     // Multi-selected block lists
     val selectedListIds = remember {
         mutableStateOf(availableLists.filter { it.isEnabled }.map { it.id }.toSet())
     }
 
-    // 3-second hold button logic for strict mode
-    var isHolding by remember { mutableStateOf(false) }
-    var holdProgress by remember { mutableFloatStateOf(0f) }
-
-    val presetDurations = listOf(15, 25, 45, 60, 120)
-
-    val effectiveMinutes = if (isPomodoroMode) {
+    val effectiveMinutes = if (isCustomSprint) {
+        customSprintText.toIntOrNull()?.coerceIn(5, 120) ?: 25
+    } else {
         pomodoroWorkMinutes
-    } else if (isCustomDuration) {
-        customMinutesText.toIntOrNull()?.coerceIn(1, 1440) ?: 60
-    } else {
-        selectedMinutes
     }
 
-    val calculatedEndTime = if (isPomodoroMode) {
-        val totalMins = (pomodoroWorkMinutes * pomodoroTotalRounds) + (pomodoroBreakMinutes * (pomodoroTotalRounds - 1))
-        System.currentTimeMillis() + (totalMins * 60 * 1000L)
-    } else {
-        System.currentTimeMillis() + (effectiveMinutes * 60 * 1000L)
-    }
+    val totalMins = (effectiveMinutes * pomodoroTotalRounds) + (pomodoroBreakMinutes * (pomodoroTotalRounds - 1))
+    val calculatedEndTime = System.currentTimeMillis() + (totalMins * 60 * 1000L)
     val endTimeString = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(calculatedEndTime))
-
-    LaunchedEffect(isHolding) {
-        if (isHolding) {
-            val totalSteps = 60
-            for (i in 1..totalSteps) {
-                if (!isHolding) {
-                    holdProgress = 0f
-                    break
-                }
-                delay(50)
-                holdProgress = i / totalSteps.toFloat()
-            }
-            if (isHolding && holdProgress >= 1f) {
-                sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
-                val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
-                onStartSession(
-                    if (title.isBlank()) "Strict Blocker Focus (${effectiveMinutes}m)" else title,
-                    effectiveMinutes,
-                    false,
-                    activeNames,
-                    false,
-                    false,
-                    1,
-                    4,
-                    true // isUltraStrict = true
-                )
-            }
-        } else {
-            holdProgress = 0f
-        }
-    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -251,37 +183,29 @@ fun StartSessionDialog(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(
-                                    when (modeType) {
-                                        SessionModeType.ULTRA_STRICT -> Color(0xFF991B1B).copy(alpha = 0.25f)
-                                        SessionModeType.STRICT -> CrimsonStrict.copy(alpha = 0.15f)
-                                        SessionModeType.POMODORO -> Color(0xFFE11D48).copy(alpha = 0.15f)
-                                    },
-                                    CircleShape
-                                ),
+                                .background(Color(0xFFE11D48).copy(alpha = 0.15f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = when (modeType) {
-                                    SessionModeType.ULTRA_STRICT -> Icons.Default.Lock
-                                    SessionModeType.STRICT -> Icons.Default.Lock
-                                    SessionModeType.POMODORO -> Icons.Default.Timer
-                                },
+                                imageVector = Icons.Default.Timer,
                                 contentDescription = null,
-                                tint = when (modeType) {
-                                    SessionModeType.ULTRA_STRICT -> CrimsonStrict
-                                    SessionModeType.STRICT -> CrimsonStrict
-                                    SessionModeType.POMODORO -> Color(0xFFF43F5E)
-                                },
+                                tint = Color(0xFFF43F5E),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text(
-                            text = "Start Focus",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Column {
+                            Text(
+                                text = "Pomodoro Focus",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "4 Cycles • 5m Rest Intervals",
+                                fontSize = 11.sp,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
                     }
                     IconButton(
                         onClick = onDismiss,
@@ -296,38 +220,7 @@ fun StartSessionDialog(
                     }
                 }
 
-                // 2. Mode Selector: 3 Clean Tabs
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    ModeTab(
-                        title = "Normal Blocker",
-                        isSelected = modeType == SessionModeType.STRICT,
-                        selectedColor = IndigoPrimary,
-                        modifier = Modifier.weight(1f),
-                        onClick = { modeType = SessionModeType.STRICT }
-                    )
-                    ModeTab(
-                        title = "Strict Blocker 🔒",
-                        isSelected = modeType == SessionModeType.ULTRA_STRICT,
-                        selectedColor = CrimsonStrict,
-                        modifier = Modifier.weight(1f),
-                        onClick = { modeType = SessionModeType.ULTRA_STRICT }
-                    )
-                    ModeTab(
-                        title = "Pomodoro",
-                        isSelected = modeType == SessionModeType.POMODORO,
-                        selectedColor = Color(0xFFE11D48),
-                        modifier = Modifier.weight(1f),
-                        onClick = { modeType = SessionModeType.POMODORO }
-                    )
-                }
-
-                // 3. Goal Input (Clean & Optional)
+                // 2. Goal Input (Clean & Optional)
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -335,7 +228,7 @@ fun StartSessionDialog(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = if (isStrictMode) CrimsonStrict else if (isPomodoroMode) Color(0xFFE11D48) else IndigoPrimary,
+                        focusedBorderColor = Color(0xFFE11D48),
                         unfocusedBorderColor = DarkCardBorder,
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -345,195 +238,130 @@ fun StartSessionDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // 4. Duration Selector
-                if (isPomodoroMode) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "FOCUS SPRINT",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8),
-                            letterSpacing = 0.8.sp
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf(25 to "Classic", 45 to "Deep", 50 to "Sprint").forEach { (mins, label) ->
-                                val isSelected = pomodoroWorkMinutes == mins
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (isSelected) Color(0xFFE11D48) else Color(0xFF1E293B),
-                                    border = BorderStroke(1.dp, if (isSelected) Color(0xFFFB7185) else DarkCardBorder),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable { pomodoroWorkMinutes = mins }
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(vertical = 10.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "${mins}m",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = if (isSelected) Color.White else Color(0xFF94A3B8)
-                                        )
-                                        Text(
-                                            text = label,
-                                            fontSize = 10.sp,
-                                            color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color(0xFF64748B)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Quiet breakdown summary
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF131D33), RoundedCornerShape(10.dp))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "4 Cycles • 5m Breathers • Ends $endTimeString",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
-                            )
-                            Text(
-                                text = "Auto Flow",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EmeraldSuccess
-                            )
-                        }
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "DURATION",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8),
-                                letterSpacing = 0.8.sp
-                            )
-                            Text(
-                                text = "Ends around $endTimeString",
-                                fontSize = 11.sp,
-                                color = Color(0xFF64748B)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            presetDurations.forEach { mins ->
-                                val isSelected = !isCustomDuration && selectedMinutes == mins
-                                val label = when (mins) {
-                                    60 -> "1h"
-                                    120 -> "2h"
-                                    else -> "${mins}m"
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (isSelected) {
-                                        if (isStrictMode) CrimsonStrict else IndigoPrimary
-                                    } else {
-                                        Color(0xFF1E293B)
-                                    },
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isSelected) Color.White.copy(alpha = 0.3f) else DarkCardBorder
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
-                                            isCustomDuration = false
-                                            selectedMinutes = mins
-                                        }
-                                ) {
-                                    Box(
-                                        modifier = Modifier.padding(vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 13.sp,
-                                            color = if (isSelected) Color.White else Color(0xFF94A3B8)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Custom button
+                // 3. Pomodoro Sprint Duration Selector
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "FOCUS SPRINT DURATION",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF94A3B8),
+                        letterSpacing = 0.8.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(25 to "Classic", 45 to "Deep", 50 to "Sprint").forEach { (mins, label) ->
+                            val isSelected = !isCustomSprint && pomodoroWorkMinutes == mins
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isCustomDuration) {
-                                    if (isStrictMode) CrimsonStrict else IndigoPrimary
-                                } else {
-                                    Color(0xFF1E293B)
-                                },
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isCustomDuration) Color.White.copy(alpha = 0.3f) else DarkCardBorder
-                                ),
+                                color = if (isSelected) Color(0xFFE11D48) else Color(0xFF1E293B),
+                                border = BorderStroke(1.dp, if (isSelected) Color(0xFFFB7185) else DarkCardBorder),
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .clickable { isCustomDuration = true }
+                                    .clickable {
+                                        isCustomSprint = false
+                                        pomodoroWorkMinutes = mins
+                                    }
                             ) {
-                                Box(
+                                Column(
                                     modifier = Modifier.padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = "Custom",
-                                        fontWeight = if (isCustomDuration) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 12.sp,
-                                        color = if (isCustomDuration) Color.White else Color(0xFF94A3B8)
+                                        text = "${mins}m",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                                    )
+                                    Text(
+                                        text = label,
+                                        fontSize = 10.sp,
+                                        color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color(0xFF64748B)
                                     )
                                 }
                             }
                         }
 
-                        if (isCustomDuration) {
-                            OutlinedTextField(
-                                value = customMinutesText,
-                                onValueChange = { customMinutesText = it.filter { ch -> ch.isDigit() } },
-                                label = { Text("Duration in minutes (1 - 1440)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = IndigoPrimary,
-                                    unfocusedBorderColor = DarkCardBorder,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                        // Custom sprint button
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isCustomSprint) Color(0xFFE11D48) else Color(0xFF1E293B),
+                            border = BorderStroke(1.dp, if (isCustomSprint) Color(0xFFFB7185) else DarkCardBorder),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { isCustomSprint = true }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Custom",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (isCustomSprint) Color.White else Color(0xFF94A3B8)
+                                )
+                                Text(
+                                    text = "Mins",
+                                    fontSize = 10.sp,
+                                    color = if (isCustomSprint) Color.White.copy(alpha = 0.8f) else Color(0xFF64748B)
+                                )
+                            }
                         }
+                    }
+
+                    if (isCustomSprint) {
+                        OutlinedTextField(
+                            value = customSprintText,
+                            onValueChange = { customSprintText = it.filter { ch -> ch.isDigit() } },
+                            label = { Text("Sprint minutes (5 - 120)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFE11D48),
+                                unfocusedBorderColor = DarkCardBorder,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Quiet breakdown summary
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF131D33), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "4 Cycles • 5m Breathers • Ends $endTimeString",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = "Auto Flow",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldSuccess
+                        )
                     }
                 }
 
-                // 5. SECTION: ALLOWED APPS ONLY IN FOCUS MODE (MAX 3 APPS)
+                // 4. SECTION: ALLOWED APPS ONLY IN FOCUS MODE (MAX 3 APPS)
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF131D33)),
                     border = BorderStroke(1.dp, if (allowedAppPkgs.isNotEmpty()) EmeraldSuccess.copy(alpha = 0.35f) else DarkCardBorder),
-                    modifier = Modifier.fillMaxWidth().testTag("allowed_apps_section")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("allowed_apps_section")
                 ) {
                     Column(
                         modifier = Modifier.padding(14.dp),
@@ -748,7 +576,9 @@ fun StartSessionDialog(
                                         focusedContainerColor = Color(0xFF0F172A),
                                         unfocusedContainerColor = Color(0xFF0F172A)
                                     ),
-                                    modifier = Modifier.fillMaxWidth().height(46.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(46.dp)
                                 )
 
                                 val filteredApps = installedAppsList.filter { (name, pkg) ->
@@ -851,7 +681,7 @@ fun StartSessionDialog(
                     }
                 }
 
-                // 6. Clean Protection Shield Card (Category Blocklists)
+                // 5. Clean Protection Shield Card (Category Blocklists)
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF131D33)),
@@ -898,7 +728,7 @@ fun StartSessionDialog(
                             }
                         }
 
-                        // Expandable block list picker if user wants to customize categories
+                        // Expandable block list picker
                         AnimatedVisibility(visible = showShieldOptions) {
                             Column(
                                 modifier = Modifier.padding(top = 10.dp),
@@ -940,197 +770,41 @@ fun StartSessionDialog(
                     }
                 }
 
-                // 7. Strict / Ultra Strict Mode Agreement Box
-                if (modeType == SessionModeType.ULTRA_STRICT || modeType == SessionModeType.STRICT) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (modeType == SessionModeType.ULTRA_STRICT) Color(0xFF3F0F17) else CrimsonStrict.copy(alpha = 0.1f)
-                        ),
-                        border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { isAcknowledged = !isAcknowledged }
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = isAcknowledged,
-                                onCheckedChange = { isAcknowledged = it },
-                                colors = CheckboxDefaults.colors(checkedColor = CrimsonStrict)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (modeType == SessionModeType.ULTRA_STRICT)
-                                    "I understand that Strict Blocker CANNOT be exited or broken under ANY circumstance until $endTimeString (even in Developer Mode)."
-                                else
-                                    "I commit to Normal Blocker protection until $endTimeString. Emergency exit uses 1 daily exit.",
-                                fontSize = 11.sp,
-                                color = Color.White,
-                                lineHeight = 15.sp
-                            )
-                        }
-                    }
-                }
-
-                // 8. Action Button
-                if (modeType == SessionModeType.ULTRA_STRICT) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isAcknowledged) CrimsonStrict.copy(alpha = 0.2f) else Color(0xFF1E293B)
-                            )
-                            .border(
-                                1.dp,
-                                if (isAcknowledged) CrimsonStrict else Color.Transparent,
-                                RoundedCornerShape(12.dp)
-                            )
-                            .pointerInteropFilter { event ->
-                                if (!isAcknowledged) return@pointerInteropFilter false
-                                when (event.action) {
-                                    MotionEvent.ACTION_DOWN -> {
-                                        isHolding = true
-                                        true
-                                    }
-                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                        isHolding = false
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            }
-                            .testTag("hold_ultra_strict_mode_button"),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(holdProgress)
-                                .height(50.dp)
-                                .background(CrimsonStrict)
+                // 6. Action Button: Start Pomodoro Focus
+                Button(
+                    onClick = {
+                        sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
+                        val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
+                        val sessionTitle = if (title.isBlank()) "Pomodoro Flow (Round 1/4)" else title
+                        onStartSession(
+                            sessionTitle,
+                            effectiveMinutes,
+                            true, // isStrictMode = true
+                            activeNames,
+                            false,
+                            true, // isPomodoro = true
+                            1,
+                            pomodoroTotalRounds,
+                            false // isUltraStrict = false
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = if (isAcknowledged) Color.White else Color(0xFF94A3B8),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (!isAcknowledged) "Check agreement above" else if (isHolding) "Locking Strict Blocker... (${(holdProgress * 100).toInt()}%)" else "HOLD 3 SECONDS TO LOCK STRICT BLOCKER",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = if (isAcknowledged) Color.White else Color(0xFF94A3B8)
-                            )
-                        }
-                    }
-                } else if (modeType == SessionModeType.STRICT) {
-                    Button(
-                        onClick = {
-                            sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
-                            val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
-                            val defaultTitle = if (effectiveMinutes == 60) "1-Hour Strict Session" else "Strict Session (${effectiveMinutes}m)"
-                            onStartSession(
-                                if (title.isBlank()) defaultTitle else title,
-                                effectiveMinutes,
-                                true, // isStrictMode = true
-                                activeNames,
-                                false,
-                                false,
-                                1,
-                                4,
-                                false // isUltraStrict = false
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("start_strict_focus_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (effectiveMinutes == 60) "Start 1-Hour Strict Session" else "Start Strict Focus (${effectiveMinutes}m)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-                } else if (isPomodoroMode) {
-                    Button(
-                        onClick = {
-                            sessionManager.saveCustomEssentialApps(allowedAppPkgs.take(3))
-                            val activeNames = availableLists.filter { selectedListIds.value.contains(it.id) }.map { it.name }
-                            onStartSession(
-                                if (title.isBlank()) "Pomodoro (Round 1/4)" else title,
-                                pomodoroWorkMinutes,
-                                true, // isStrictMode = true
-                                activeNames,
-                                false,
-                                true,
-                                1,
-                                pomodoroTotalRounds,
-                                false // isUltraStrict = false
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("start_pomodoro_focus_button")
-                    ) {
-                        Text(text = "🍅", fontSize = 15.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Start Pomodoro Flow (${pomodoroWorkMinutes}m)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color.White
-                        )
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("start_pomodoro_focus_button")
+                ) {
+                    Text(text = "🍅", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Start Pomodoro Flow (${effectiveMinutes}m)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ModeTab(
-    title: String,
-    isSelected: Boolean,
-    selectedColor: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) selectedColor else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = title,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color.White else Color(0xFF94A3B8)
-        )
     }
 }

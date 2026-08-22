@@ -3,7 +3,10 @@ package com.example.service
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -19,6 +22,10 @@ class FocusAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var lastBlockedTimestamp: Long = 0
     private var lastBlockedTarget: String = ""
+
+    // Battery optimization: screen-off zero activity state
+    @Volatile private var isScreenInteractive: Boolean = true
+    private var screenStateReceiver: BroadcastReceiver? = null
 
     // Battery optimization: throttle inspection on rapid identical events
     private var lastInspectedPackage: String = ""
@@ -44,6 +51,14 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastCleanBrowserRedirectTime: Long = 0L
     private var lastCleanBrowserPkg: String = ""
     private val CLEAN_STATE_GRACE_PERIOD_MS = 2500L
+
+    // In-memory LRU cache for validated clean URLs (avoids re-evaluating regexes/rules repeatedly)
+    private val cleanUrlCache = object : LinkedHashMap<String, Long>(50, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
+            return size > 50
+        }
+    }
+    private val CLEAN_URL_CACHE_VALIDITY_MS = 5000L
 
     // Comprehensive list of all popular, privacy, and alternative Android browsers
     private val knownBrowserPackages = setOf(
@@ -102,6 +117,38 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.samsung.android.packageinstaller"
     )
 
+    override fun onCreate() {
+        super.onCreate()
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        isScreenInteractive = pm?.isInteractive ?: true
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        screenStateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> isScreenInteractive = false
+                    Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> isScreenInteractive = true
+                }
+            }
+        }
+        try {
+            registerReceiver(screenStateReceiver, filter)
+        } catch (_: Exception) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        screenStateReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (_: Exception) {}
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         val app = application as? FocusGuardApp
@@ -127,18 +174,36 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
+        // Zero-activity deep sleep optimization: do nothing when the screen is off/locked
+        if (!isScreenInteractive) return
+
         val targetPkg = event.packageName?.toString() ?: return
 
-        // 1. Instant Fast-Path: Never inspect or block our own app or overlays
+        // Instant Fast-Path: Never inspect or block our own app or overlays
         if (targetPkg == applicationContext.packageName) return
 
         val sessionManager = FocusSessionManager.getInstance(this)
-        // Feed the current foreground package to the watchdog so it can detect escapes.
-        sessionManager.reportForeground(targetPkg)
 
         val isLauncherOrHome = sessionManager.isOemLauncher(targetPkg)
         val isMinimalStrictLock = sessionManager.isMinimalStrictLockActive()
         val shouldLockToMinimalist = isMinimalStrictLock
+        val isAnyBlockingActive = sessionManager.isAnyBlockingActive()
+
+        // Battery optimization fast path: if no session/schedule/minimal lock is running, return immediately
+        if (!isAnyBlockingActive && !shouldLockToMinimalist && !sessionManager.isStrictActive() && !sessionManager.isUltraStrictActive()) {
+            return
+        }
+
+        // Battery optimization: content changed events fire continuously on animations/scrolling.
+        // Drop them instantly unless the event is in a browser or settings.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            val isBrowser = isBrowserApp(targetPkg)
+            val isSettings = systemSettingsPackages.contains(targetPkg)
+            if (!isBrowser && !isSettings) return
+        }
+
+        // Feed the current foreground package to the watchdog so it can detect escapes.
+        sessionManager.reportForeground(targetPkg)
 
         // 1. Home Launcher Detection & Strict Bounce-Back
         if (isLauncherOrHome) {
@@ -322,8 +387,15 @@ class FocusAccessibilityService : AccessibilityService() {
 
                     if (urlText.isNotBlank()) {
                         lastBrowserUrlScanTime = now
+                        val cachedTime = cleanUrlCache[urlText]
+                        if (cachedTime != null && (now - cachedTime) < CLEAN_URL_CACHE_VALIDITY_MS) {
+                            // URL was recently validated as clean; skip re-evaluating regexes
+                            return
+                        }
+
                         val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
                         if (isBlocked) {
+                            cleanUrlCache.remove(urlText)
                             triggerBlockShield(
                                 targetName = matchedRule,
                                 reason = "Website '$matchedRule' is restricted in your active focus shield.",
@@ -331,6 +403,8 @@ class FocusAccessibilityService : AccessibilityService() {
                                 browserPkg = targetPkg
                             )
                             return
+                        } else {
+                            cleanUrlCache[urlText] = now
                         }
                     }
                 }
@@ -412,7 +486,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (found.isNotBlank()) return found
         }
 
-        return scanForUrlField(root, maxNodes = 60)
+        return scanForUrlField(root, maxNodes = 25)
     }
 
     private fun scanForUrlField(root: AccessibilityNodeInfo, maxNodes: Int): String {

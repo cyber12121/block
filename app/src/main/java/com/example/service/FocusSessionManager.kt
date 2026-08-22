@@ -1059,7 +1059,6 @@ class FocusSessionManager private constructor(private val context: Context) {
             // Level 1: Soft Strict - Flexible exits with 15s reflection timer
             return 999
         }
-        if (isDeveloperModeActive()) return MAX_MINIMAL_STRICT_EXITS
         return (MAX_MINIMAL_STRICT_EXITS - getMinimalStrictExitsUsed()).coerceAtLeast(0)
     }
 
@@ -1072,12 +1071,6 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun useMinimalStrictExit(): Boolean {
-        if (isDeveloperModeActive()) {
-            stopMinimalStrictLock()
-            setMinimalLauncherActive(false)
-            _minimalStrictLockState.value = isMinimalStrictLockActive()
-            return true
-        }
         val level = getMinimalStrictLevel()
         if (level == 3) {
             return false // Ultra strict cannot be exited early
@@ -1122,10 +1115,6 @@ class FocusSessionManager private constructor(private val context: Context) {
         val authManager = com.example.data.auth.AuthManager.getInstance(context)
         authManager.refreshDailyExits()
         return authManager.dailyExitsRemaining.value
-    }
-
-    fun isDeveloperModeActive(): Boolean {
-        return com.example.data.auth.AuthManager.getInstance(context).isDeveloperMode.value
     }
 
     fun useEmergencyExit(): Boolean {

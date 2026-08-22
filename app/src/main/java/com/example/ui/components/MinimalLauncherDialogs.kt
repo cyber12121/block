@@ -29,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Shield
@@ -81,11 +80,10 @@ import java.util.Locale
 @Composable
 fun EmergencyExitDialog(
     remainingExits: Int,
-    isDeveloper: Boolean = false,
     onDismiss: () -> Unit,
     onConfirmExit: () -> Unit
 ) {
-    val hasExitsLeft = isDeveloper || remainingExits > 0
+    val hasExitsLeft = remainingExits > 0
 
     Box(
         modifier = Modifier
@@ -126,21 +124,21 @@ fun EmergencyExitDialog(
 
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isDeveloper) Color(0xFF06281E) else Color(0xFF1D2A4A)
+                        containerColor = Color(0xFF1D2A4A)
                     ),
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (isDeveloper) EmeraldSuccess.copy(alpha = 0.5f) else Color(0xFF2D3F68)
+                        Color(0xFF2D3F68)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = if (isDeveloper) "DEVELOPER MODE STATUS" else "GOOGLE ACCOUNT EXITS",
+                            text = "GOOGLE ACCOUNT EXITS",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isDeveloper) EmeraldSuccess else IndigoPrimary,
+                            color = IndigoPrimary,
                             letterSpacing = 1.sp
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -657,7 +655,6 @@ fun MinimalStrictLockStatusDialog(
     remainingMillis: Long,
     exitsRemaining: Int,
     strictLevel: Int = 2,
-    isDeveloper: Boolean,
     onDismiss: () -> Unit,
     onDisarm: () -> Unit
 ) {
@@ -709,11 +706,11 @@ fun MinimalStrictLockStatusDialog(
                 }
 
                 Surface(
-                    color = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f),
+                    color = if (strictLevel == 3 || exitsRemaining <= 0) CrimsonStrict.copy(alpha = 0.15f) else EmeraldSuccess.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict.copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
+                        if (strictLevel == 3 || exitsRemaining <= 0) CrimsonStrict.copy(alpha = 0.4f) else EmeraldSuccess.copy(alpha = 0.4f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -722,9 +719,9 @@ fun MinimalStrictLockStatusDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) Icons.Default.Lock else Icons.Default.CheckCircle,
+                            imageVector = if (strictLevel == 3 || exitsRemaining <= 0) Icons.Default.Lock else Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = if (strictLevel == 3 || (exitsRemaining <= 0 && !isDeveloper)) CrimsonStrict else EmeraldSuccess,
+                            tint = if (strictLevel == 3 || exitsRemaining <= 0) CrimsonStrict else EmeraldSuccess,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -754,27 +751,11 @@ fun MinimalStrictLockStatusDialog(
             }
         },
         confirmButton = {
-            if (isDeveloper) {
-                Button(
-                    onClick = onDisarm,
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
-                ) {
-                    Text("Disarm Lock (Dev)", fontWeight = FontWeight.Bold)
-                }
-            } else {
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary)
-                ) {
-                    Text("Close", fontWeight = FontWeight.Bold)
-                }
-            }
-        },
-        dismissButton = {
-            if (isDeveloper) {
-                OutlinedButton(onClick = onDismiss) {
-                    Text("Close", color = Color(0xFFCBD5E1))
-                }
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary)
+            ) {
+                Text("Close", fontWeight = FontWeight.Bold)
             }
         },
         containerColor = Color(0xFF111A2E)
@@ -799,21 +780,29 @@ fun MinimalStrictUseExitDialog(
         }
     }
 
+    val canExit = countdownSeconds <= 0 && exitsRemaining > 0
+
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.Default.Timer,
+                imageVector = Icons.Default.LockOpen,
                 contentDescription = null,
-                tint = Color(0xFFF59E0B),
-                modifier = Modifier.size(32.dp)
+                tint = CrimsonStrict,
+                modifier = Modifier.size(28.dp)
             )
         },
         title = {
-            Text(if (strictLevel == 1) "15-Second Reflection Timer ⏳" else "1-Minute Exit Reflection Timer ⏳", fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Emergency Exit Mindful Pause", fontWeight = FontWeight.Bold, color = Color.White)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "A mindful reflection countdown gives you time to stay with your goal before unlocking.",
+                    color = Color(0xFFCBD5E1),
+                    fontSize = 13.sp
+                )
+
                 Surface(
                     color = Color(0xFF1A2640),
                     shape = RoundedCornerShape(12.dp),
@@ -823,80 +812,43 @@ fun MinimalStrictUseExitDialog(
                         modifier = Modifier.padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = if (countdownSeconds > 0) "MANDATORY WAIT TIMER" else "REFLECTED & READY",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (countdownSeconds > 0) Color(0xFFF59E0B) else EmeraldSuccess,
-                            letterSpacing = 1.sp
-                        )
+                        Text("MANDATORY REFLECTION TIMER", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8), letterSpacing = 1.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (countdownSeconds > 0) "${countdownSeconds}s" else "EXIT UNLOCKED",
+                            text = if (countdownSeconds > 0) "${countdownSeconds}s" else "Ready to unlock",
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Black,
-                            color = if (countdownSeconds > 0) Color(0xFFF59E0B) else EmeraldSuccess
+                            color = if (countdownSeconds > 0) CrimsonStrict else EmeraldSuccess
                         )
                     }
                 }
 
                 Text(
-                    text = "Minimalist Strict Lock is active ($remainingFormatted remaining).",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
-                )
-
-                Surface(
-                    color = IndigoPrimary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, IndigoPrimary.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (strictLevel == 1) "Level 1: Flexible Exit with Mindful Delay"
-                            else "Daily Exit Quota: $exitsRemaining / 1 Exit Remaining Today",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                Text(
-                    text = if (strictLevel == 1) "A 15-second reflection timer prevents reflexive app hopping while still allowing flexible exits."
-                    else "A 1-minute reflection timer enforces mindful decisions before leaving Minimalist space. Exiting now will consume your 1 daily exit.",
-                    color = Color(0xFFCBD5E1),
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
+                    text = if (strictLevel == 1) "Level 1: 15s reflection timer." else "Level 2 consumes 1 of your daily quota (resets midnight).",
+                    fontSize = 11.sp,
+                    color = Color(0xFF94A3B8)
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = onConfirmExit,
-                enabled = countdownSeconds <= 0,
+                enabled = canExit,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = CrimsonStrict,
                     disabledContainerColor = CrimsonStrict.copy(alpha = 0.35f)
                 )
             ) {
                 Text(
-                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else if (strictLevel == 1) "Confirm Exit" else "Confirm Exit (Use 1 Daily Exit)",
+                    text = if (countdownSeconds > 0) "Wait ${countdownSeconds}s..." else "Confirm Exit",
                     fontWeight = FontWeight.Bold,
-                    color = if (countdownSeconds > 0) Color.LightGray else Color.White
+                    color = if (canExit) Color.White else Color.LightGray
                 )
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Stay in Minimalist", color = Color(0xFFCBD5E1))
+                Text("Cancel", color = Color(0xFFCBD5E1))
             }
         },
         containerColor = Color(0xFF111A2E)
@@ -906,7 +858,7 @@ fun MinimalStrictUseExitDialog(
 @Composable
 fun MinimalStrictLockedDialog(
     remainingFormatted: String,
-    strictLevel: Int = 2,
+    strictLevel: Int,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -916,27 +868,32 @@ fun MinimalStrictLockedDialog(
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
                 tint = CrimsonStrict,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             )
         },
         title = {
-            Text("Minimalist Strict Lock Active 🔒", fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                text = if (strictLevel == 3) "Ultra Strict Lock Active 🔒" else "Emergency Exits Depleted",
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Minimalist Launcher is strictly locked for another $remainingFormatted.",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = if (strictLevel == 3) {
-                        "Level 3 Ultra Strict is active. No early exits are permitted under any circumstances until the lock countdown reaches zero."
-                    } else {
-                        "You have ALREADY USED your 1 daily emergency exit for today. Minimalist Launcher is locked until the timer ends."
-                    },
+                    text = if (strictLevel == 3)
+                        "This session was started in Level 3 Ultra Strict. Emergency exits are completely disabled until $remainingFormatted completes."
+                    else
+                        "You have already used your 1 emergency exit for today. Minimalist Launcher is locked until $remainingFormatted completes.",
                     color = Color(0xFFCBD5E1),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Stay strong and focus on what matters most!",
+                    color = EmeraldSuccess,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
                 )
@@ -948,50 +905,6 @@ fun MinimalStrictLockedDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict)
             ) {
                 Text("Got It (Stay Focused)", fontWeight = FontWeight.Bold)
-            }
-        },
-        containerColor = Color(0xFF111A2E)
-    )
-}
-
-@Composable
-fun DevExitConfirmDialog(
-    remainingFormatted: String,
-    onDismiss: () -> Unit,
-    onConfirmExit: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Default.DeveloperMode,
-                contentDescription = null,
-                tint = IndigoPrimary,
-                modifier = Modifier.size(28.dp)
-            )
-        },
-        title = {
-            Text("Exit Minimal Launcher", fontWeight = FontWeight.Bold, color = Color.White)
-        },
-        text = {
-            Text(
-                text = "Minimalist Strict Lock is active ($remainingFormatted remaining).\n\nDo you want to exit the launcher now?",
-                color = Color(0xFFCBD5E1),
-                fontSize = 13.sp,
-                lineHeight = 18.sp
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirmExit,
-                colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary)
-            ) {
-                Text("Exit Launcher", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel", color = Color(0xFFCBD5E1))
             }
         },
         containerColor = Color(0xFF111A2E)

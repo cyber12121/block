@@ -72,7 +72,6 @@ fun UsageStatusPersonCard(
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
     val currentUser by authManager.currentUser.collectAsState()
-    val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
 
     val isBatteryExempt = remember(totalMinutesToday) {
         PermissionUtils.isBatteryOptimizationExempt(context)

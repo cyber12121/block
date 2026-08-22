@@ -143,10 +143,8 @@ fun GoogleLogoIcon(modifier: Modifier = Modifier.size(18.dp)) {
 
 /**
  * Mandatory Login Gate Screen:
- * Displays when user is not logged in and not in Developer Mode.
- * Simplified strictly to:
- * 1. Sign In / Sign Up with Google (No 1-tap card, no password, no extra fields)
- * 2. Developer Mode bypass toggle on/off (Unlimited emergency exits)
+ * Displays when user is not logged in.
+ * Standard Sign In / Sign Up with Google.
  */
 @Composable
 fun MandatoryLoginGateScreen(
@@ -157,26 +155,6 @@ fun MandatoryLoginGateScreen(
     val activity = context as? Activity
     val isLoading by authManager.isLoading.collectAsState()
     val errorMessage by authManager.errorMessage.collectAsState()
-    val isDev by authManager.isDeveloperMode.collectAsState()
-
-    var showDevPasscodeDialog by remember { mutableStateOf(false) }
-    var showPinChangeDialog by remember { mutableStateOf(false) }
-    var headerTapCount by remember { mutableIntStateOf(0) }
-
-    if (showDevPasscodeDialog) {
-        DeveloperPasscodeDialog(
-            authManager = authManager,
-            onDismiss = { showDevPasscodeDialog = false },
-            onSuccess = { headerTapCount = 0 }
-        )
-    }
-
-    if (showPinChangeDialog) {
-        DeveloperPinChangeDialog(
-            authManager = authManager,
-            onDismiss = { showPinChangeDialog = false }
-        )
-    }
 
     Box(
         modifier = modifier
@@ -193,7 +171,7 @@ fun MandatoryLoginGateScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // App Shield Hero Icon (Secret 5-Tap Trigger)
+            // App Shield Hero Icon
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -201,14 +179,7 @@ fun MandatoryLoginGateScreen(
                         Brush.linearGradient(listOf(IndigoPrimary, CyanAccent)),
                         CircleShape
                     )
-                    .border(2.dp, IndigoPrimary.copy(alpha = 0.6f), CircleShape)
-                    .clickable {
-                        headerTapCount++
-                        if (headerTapCount >= 5) {
-                            showDevPasscodeDialog = true
-                            headerTapCount = 0
-                        }
-                    },
+                    .border(2.dp, IndigoPrimary.copy(alpha = 0.6f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -225,14 +196,7 @@ fun MandatoryLoginGateScreen(
                 text = "FocusGuard",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
-                modifier = Modifier.clickable {
-                    headerTapCount++
-                    if (headerTapCount >= 5) {
-                        showDevPasscodeDialog = true
-                        headerTapCount = 0
-                    }
-                }
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -685,8 +649,8 @@ fun GoogleAuthCard(
 
 /**
  * Account Sign-in Dialog:
- * When user is signed in: shows user profile, Google details, and Sign Out (NO developer mode).
- * When user is not signed in: shows Google Sign In button and protected Developer Access Gate.
+ * When user is signed in: shows user profile, Google details, and Sign Out.
+ * When user is not signed in: shows Google Sign In button.
  */
 @Composable
 fun GoogleSignInDialog(
@@ -696,19 +660,8 @@ fun GoogleSignInDialog(
     val context = LocalContext.current
     val activity = context as? Activity
     val user by authManager.currentUser.collectAsState()
-    val isDev by authManager.isDeveloperMode.collectAsState()
     val isLoading by authManager.isLoading.collectAsState()
     val errorMessage by authManager.errorMessage.collectAsState()
-
-    var showDevPasscodeDialog by remember { mutableStateOf(false) }
-
-    if (showDevPasscodeDialog) {
-        DeveloperPasscodeDialog(
-            authManager = authManager,
-            onDismiss = { showDevPasscodeDialog = false },
-            onSuccess = { onDismiss() }
-        )
-    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -738,8 +691,8 @@ fun GoogleSignInDialog(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(100.dp),
-                        color = if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, if (user != null || isDev) EmeraldSuccess.copy(alpha = 0.3f) else IndigoPrimary.copy(alpha = 0.3f))
+                        color = if (user != null) EmeraldSuccess.copy(alpha = 0.15f) else IndigoPrimary.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, if (user != null) EmeraldSuccess.copy(alpha = 0.3f) else IndigoPrimary.copy(alpha = 0.3f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -755,10 +708,10 @@ fun GoogleSignInDialog(
                                 )
                             }
                             Text(
-                                text = if (user != null) "SIGNED IN (GOOGLE)" else if (isDev) "DEV MODE ON (UNLIMITED)" else "10 EXITS / DAY QUOTA",
+                                text = if (user != null) "SIGNED IN (GOOGLE)" else "10 EXITS / DAY QUOTA",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (user != null || isDev) EmeraldSuccess else CyanAccent
+                                color = if (user != null) EmeraldSuccess else CyanAccent
                             )
                         }
                     }
@@ -777,7 +730,7 @@ fun GoogleSignInDialog(
                 }
 
                 Text(
-                    text = if (user != null) "Google Account" else if (isDev) "Developer Mode Settings" else "Sign In with Google",
+                    text = if (user != null) "Google Account" else "Sign In with Google",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -873,44 +826,6 @@ fun GoogleSignInDialog(
                         }
                     }
                 } else {
-                    // When user is NOT signed in
-                    if (isDev) {
-                        Card(
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF042017)),
-                            border = BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.6f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text(
-                                    text = "Developer Mode ACTIVE",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "Lock & hide developer options anytime to test as standard user.",
-                                    fontSize = 11.sp,
-                                    color = Color(0xFFA7F3D0)
-                                )
-                                Button(
-                                    onClick = {
-                                        authManager.lockAndHideDeveloperMode()
-                                        onDismiss()
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7F1D1D)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Lock & Hide Developer Mode", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-
                     if (errorMessage != null) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
@@ -959,242 +874,8 @@ fun GoogleSignInDialog(
                             )
                         }
                     }
-
-                    if (!isDev) {
-                        // Protected Developer Access Gate Button
-                        OutlinedButton(
-                            onClick = { showDevPasscodeDialog = true },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFF334155)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(42.dp)
-                                .testTag("dialog_developer_gate_btn")
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = null,
-                                    tint = Color(0xFF94A3B8),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "Developer Access Gate 🔒 (PIN Required)",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF94A3B8)
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
     }
-}
-
-/**
- * Developer Verification Passcode Dialog (PIN Protected)
- */
-@Composable
-fun DeveloperPasscodeDialog(
-    authManager: AuthManager,
-    onDismiss: () -> Unit,
-    onSuccess: () -> Unit = {}
-) {
-    var pinInput by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showChangePin by remember { mutableStateOf(false) }
-
-    if (showChangePin) {
-        DeveloperPinChangeDialog(
-            authManager = authManager,
-            onDismiss = { showChangePin = false }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Default.Terminal,
-                contentDescription = null,
-                tint = EmeraldSuccess,
-                modifier = Modifier.size(32.dp)
-            )
-        },
-        title = {
-            Text("Developer Access Gate 🔒", fontWeight = FontWeight.Bold, color = Color.White)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Developer Mode is PIN-protected so standard users cannot bypass strict focus sessions.",
-                    color = Color(0xFFCBD5E1),
-                    fontSize = 12.sp
-                )
-
-                OutlinedTextField(
-                    value = pinInput,
-                    onValueChange = {
-                        if (it.length <= 8) {
-                            pinInput = it
-                            errorMessage = null
-                        }
-                    },
-                    label = { Text("Enter Developer PIN (Default: 2026)") },
-                    singleLine = true,
-                    isError = errorMessage != null,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmeraldSuccess,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedLabelColor = EmeraldSuccess,
-                        unfocusedLabelColor = Color(0xFF94A3B8),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
-                )
-
-                if (errorMessage != null) {
-                    Text(errorMessage!!, color = Color(0xFFF87171), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Change Developer PIN",
-                        color = CyanAccent,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { showChangePin = true }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (authManager.verifyDeveloperPin(pinInput)) {
-                        authManager.enableDeveloperMode()
-                        onSuccess()
-                        onDismiss()
-                    } else {
-                        errorMessage = "Incorrect PIN. Default PIN is 2026."
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess, contentColor = Color(0xFF022C22))
-            ) {
-                Text("Verify & Enable Dev Mode", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel", color = Color(0xFFCBD5E1))
-            }
-        },
-        containerColor = Color(0xFF0F172A)
-    )
-}
-
-/**
- * Developer PIN Change Dialog
- */
-@Composable
-fun DeveloperPinChangeDialog(
-    authManager: AuthManager,
-    onDismiss: () -> Unit
-) {
-    var currentPinInput by remember { mutableStateOf("") }
-    var newPinInput by remember { mutableStateOf("") }
-    var confirmPinInput by remember { mutableStateOf("") }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-    var successMsg by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Change Developer PIN", fontWeight = FontWeight.Bold, color = Color.White) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = currentPinInput,
-                    onValueChange = { currentPinInput = it },
-                    label = { Text("Current PIN (Default: 2026)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
-                )
-                OutlinedTextField(
-                    value = newPinInput,
-                    onValueChange = { newPinInput = it },
-                    label = { Text("New PIN (e.g. 1234)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
-                )
-                OutlinedTextField(
-                    value = confirmPinInput,
-                    onValueChange = { confirmPinInput = it },
-                    label = { Text("Confirm New PIN") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    )
-                )
-
-                if (errorMsg != null) {
-                    Text(errorMsg!!, color = Color(0xFFF87171), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-                if (successMsg != null) {
-                    Text(successMsg!!, color = EmeraldSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (!authManager.verifyDeveloperPin(currentPinInput)) {
-                        errorMsg = "Current PIN is incorrect."
-                    } else if (newPinInput.isBlank() || newPinInput.length < 4) {
-                        errorMsg = "New PIN must be at least 4 digits."
-                    } else if (newPinInput != confirmPinInput) {
-                        errorMsg = "New PIN and Confirm PIN do not match."
-                    } else {
-                        authManager.setDeveloperPin(newPinInput)
-                        errorMsg = null
-                        successMsg = "Developer PIN successfully updated!"
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess, contentColor = Color(0xFF022C22))
-            ) {
-                Text("Save PIN", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Close", color = Color(0xFFCBD5E1))
-            }
-        },
-        containerColor = Color(0xFF0F172A)
-    )
 }

@@ -33,9 +33,6 @@ class AuthManager private constructor(private val context: Context) {
     private val _currentUser = MutableStateFlow<AuthUser?>(null)
     val currentUser: StateFlow<AuthUser?> = _currentUser.asStateFlow()
 
-    private val _isDeveloperMode = MutableStateFlow(false)
-    val isDeveloperMode: StateFlow<Boolean> = _isDeveloperMode.asStateFlow()
-
     private val _dailyExitsUsed = MutableStateFlow(0)
     val dailyExitsUsed: StateFlow<Int> = _dailyExitsUsed.asStateFlow()
 
@@ -58,9 +55,6 @@ class AuthManager private constructor(private val context: Context) {
     }
 
     private fun loadSavedState() {
-        val devMode = prefs.getBoolean(KEY_IS_DEVELOPER, false)
-        _isDeveloperMode.value = devMode
-
         val uid = prefs.getString(KEY_UID, null)
         val email = prefs.getString(KEY_EMAIL, null)
         val name = prefs.getString(KEY_NAME, null)
@@ -75,7 +69,6 @@ class AuthManager private constructor(private val context: Context) {
                 email = email,
                 photoUrl = photo,
                 isGuest = false,
-                isDeveloper = false,
                 provider = provider,
                 signInTimestamp = timestamp
             )
@@ -102,109 +95,30 @@ class AuthManager private constructor(private val context: Context) {
         }
 
         _dailyExitsUsed.value = used
-        _dailyExitsRemaining.value = if (_isDeveloperMode.value) {
-            UNLIMITED_EXITS_COUNT
-        } else {
-            (STANDARD_DAILY_EXIT_LIMIT - used).coerceAtLeast(0)
-        }
+        _dailyExitsRemaining.value = (STANDARD_DAILY_EXIT_LIMIT - used).coerceAtLeast(0)
     }
 
     /**
      * Check if user is currently authorized to use the app.
-     * App requires either a signed-in account (Google) OR Developer Mode.
+     * App requires a signed-in account (Google).
      */
     fun isAuthorized(): Boolean {
-        return _isDeveloperMode.value || _currentUser.value != null
+        return _currentUser.value != null
     }
 
     /**
-     * Get configured Developer PIN (Default: 2026)
-     */
-    fun getDeveloperPin(): String {
-        return prefs.getString(KEY_DEVELOPER_PIN, DEFAULT_DEVELOPER_PIN) ?: DEFAULT_DEVELOPER_PIN
-    }
-
-    /**
-     * Set a new Developer PIN
-     */
-    fun setDeveloperPin(newPin: String) {
-        prefs.edit().putString(KEY_DEVELOPER_PIN, newPin).apply()
-    }
-
-    /**
-     * Verify input Developer PIN
-     */
-    fun verifyDeveloperPin(inputPin: String): Boolean {
-        return inputPin.trim() == getDeveloperPin()
-    }
-
-    /**
-     * Enable Developer Mode:
-     * - Bypasses Login requirement
-     * - Grants unlimited emergency exits and session exits
-     */
-    fun enableDeveloperMode() {
-        prefs.edit()
-            .putBoolean(KEY_IS_DEVELOPER, true)
-            .apply()
-
-        _isDeveloperMode.value = true
-        refreshDailyExits()
-        _errorMessage.value = null
-    }
-
-    /**
-     * Disable Developer Mode (returns to standard login-required mode).
-     * Locks and hides developer options from standard users.
-     */
-    fun disableDeveloperMode() {
-        prefs.edit()
-            .putBoolean(KEY_IS_DEVELOPER, false)
-            .apply()
-
-        _isDeveloperMode.value = false
-        refreshDailyExits()
-    }
-
-    /**
-     * Lock and Hide Developer Mode (Prepares app for standard user / child / friend).
-     */
-    fun lockAndHideDeveloperMode() {
-        disableDeveloperMode()
-    }
-
-    /**
-     * Toggle Developer Mode ON or OFF by clicking.
-     */
-    fun toggleDeveloperMode(): Boolean {
-        val newMode = !_isDeveloperMode.value
-        if (newMode) {
-            enableDeveloperMode()
-        } else {
-            disableDeveloperMode()
-        }
-        return newMode
-    }
-
-    /**
-     * Returns true if user has remaining exits available today or is Developer.
+     * Returns true if user has remaining exits available today.
      */
     fun canExitSession(): Boolean {
-        if (_isDeveloperMode.value) return true
         refreshDailyExits()
         return _dailyExitsRemaining.value > 0
     }
 
     /**
-     * Consume 1 exit for the current day.
-     * Developer: Always returns true without consuming daily quota.
-     * Standard user: Consumes 1 of 10 daily exits. If quota exhausted, returns false.
+     * Consume 1 exit for the current day (1 of 10 daily exits).
+     * If quota exhausted, returns false.
      */
     fun consumeDailyExit(): Boolean {
-        if (_isDeveloperMode.value) {
-            return true
-        }
-
         refreshDailyExits()
         val currentUsed = _dailyExitsUsed.value
         if (currentUsed >= STANDARD_DAILY_EXIT_LIMIT) {
@@ -275,7 +189,6 @@ class AuthManager private constructor(private val context: Context) {
                                 email = fbUser.email ?: email,
                                 photoUrl = fbUser.photoUrl?.toString() ?: photoUrl,
                                 isGuest = false,
-                                isDeveloper = false,
                                 provider = "google.com"
                             )
                         } else {
@@ -285,7 +198,6 @@ class AuthManager private constructor(private val context: Context) {
                                 email = email,
                                 photoUrl = photoUrl,
                                 isGuest = false,
-                                isDeveloper = false,
                                 provider = "google.com"
                             )
                         }
@@ -297,7 +209,6 @@ class AuthManager private constructor(private val context: Context) {
                             email = email,
                             photoUrl = photoUrl,
                             isGuest = false,
-                            isDeveloper = false,
                             provider = "google.com"
                         )
                     }
@@ -326,7 +237,6 @@ class AuthManager private constructor(private val context: Context) {
                 email = "user@focusguard.local",
                 photoUrl = null,
                 isGuest = true,
-                isDeveloper = false,
                 provider = "offline"
             )
             saveUser(fallbackUser)
@@ -347,7 +257,6 @@ class AuthManager private constructor(private val context: Context) {
             email = email,
             photoUrl = photoUrl,
             isGuest = false,
-            isDeveloper = false,
             provider = "google.com"
         )
         saveUser(user)
@@ -359,12 +268,10 @@ class AuthManager private constructor(private val context: Context) {
             .putString(KEY_EMAIL, user.email)
             .putString(KEY_NAME, user.displayName)
             .putString(KEY_PHOTO, user.photoUrl)
-            .putBoolean(KEY_IS_DEVELOPER, false)
             .putString(KEY_PROVIDER, user.provider)
             .putLong(KEY_TIMESTAMP, user.signInTimestamp)
             .apply()
 
-        _isDeveloperMode.value = false
         _currentUser.value = user
         refreshDailyExits()
         _errorMessage.value = null
@@ -381,11 +288,9 @@ class AuthManager private constructor(private val context: Context) {
                 .remove(KEY_EMAIL)
                 .remove(KEY_NAME)
                 .remove(KEY_PHOTO)
-                .putBoolean(KEY_IS_DEVELOPER, false)
                 .apply()
 
             _currentUser.value = null
-            _isDeveloperMode.value = false
             refreshDailyExits()
             _errorMessage.value = null
 
@@ -398,20 +303,16 @@ class AuthManager private constructor(private val context: Context) {
     companion object {
         const val STANDARD_DAILY_EXIT_LIMIT = 10
         const val GOOGLE_DAILY_EXIT_LIMIT = 10
-        const val UNLIMITED_EXITS_COUNT = 9999
 
         private const val PREFS_NAME = "focusguard_auth_prefs"
         private const val KEY_UID = "auth_uid"
         private const val KEY_EMAIL = "auth_email"
         private const val KEY_NAME = "auth_name"
         private const val KEY_PHOTO = "auth_photo"
-        private const val KEY_IS_DEVELOPER = "auth_is_developer"
         private const val KEY_PROVIDER = "auth_provider"
         private const val KEY_TIMESTAMP = "auth_timestamp"
         private const val KEY_EXIT_DATE_KEY = "auth_exit_date_key"
         private const val KEY_DAILY_EXITS_COUNT = "auth_daily_exits_count"
-        private const val KEY_DEVELOPER_PIN = "auth_developer_pin"
-        const val DEFAULT_DEVELOPER_PIN = "2026"
 
         @Volatile
         private var INSTANCE: AuthManager? = null

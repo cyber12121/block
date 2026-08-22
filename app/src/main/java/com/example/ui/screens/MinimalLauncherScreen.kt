@@ -117,7 +117,6 @@ import com.example.data.model.BlockedTarget
 import com.example.data.model.TargetType
 import com.example.service.ActiveSessionState
 import com.example.service.FocusSessionManager
-import com.example.ui.components.DevExitConfirmDialog
 import com.example.ui.components.EditEssentialAppsDialog
 import com.example.ui.components.EmergencyExitDialog
 import com.example.ui.components.MinimalStrictLockSetupDialog
@@ -199,7 +198,6 @@ fun MinimalLauncherScreen(
     var showStrictLockStatusDialog by remember { mutableStateOf(false) }
     var showMinimalStrictLockedDialog by remember { mutableStateOf(false) }
     var showMinimalStrictUseExitDialog by remember { mutableStateOf(false) }
-    var showDevExitConfirmDialog by remember { mutableStateOf(false) }
     var strictLockRemainingMillis by remember { mutableLongStateOf(sessionManager.getMinimalStrictLockRemainingMillis()) }
 
     fun formatRemainingTime(millis: Long): String {
@@ -216,15 +214,12 @@ fun MinimalLauncherScreen(
 
     val handleExitRequest = {
         val isStrictActive = sessionManager.isMinimalStrictLockActive()
-        val isDev = sessionManager.isDeveloperModeActive()
         val exitsRemaining = sessionManager.getMinimalStrictExitsRemaining()
 
         if (!isStrictActive) {
             sessionManager.stopMinimalStrictLock()
             sessionManager.setMinimalLauncherActive(false)
             onExitLauncher()
-        } else if (isDev) {
-            showDevExitConfirmDialog = true
         } else if (exitsRemaining > 0) {
             showMinimalStrictUseExitDialog = true
         } else {
@@ -243,8 +238,14 @@ fun MinimalLauncherScreen(
             val now = Date()
             currentTime = timeFormat.format(now)
             currentDate = dateFormat.format(now)
-            strictLockRemainingMillis = sessionManager.getMinimalStrictLockRemainingMillis()
-            delay(1000)
+            val isStrictActive = sessionManager.isMinimalStrictLockActive()
+            if (isStrictActive) {
+                strictLockRemainingMillis = sessionManager.getMinimalStrictLockRemainingMillis()
+                delay(1000)
+            } else {
+                val delayToNextMinute = 60_000L - (now.time % 60_000L)
+                delay(delayToNextMinute.coerceAtLeast(1000L))
+            }
         }
     }
 
@@ -349,17 +350,13 @@ fun MinimalLauncherScreen(
         showMinimalStrictUseExitDialog = false
     }
 
-    BackHandler(enabled = showDevExitConfirmDialog) {
-        showDevExitConfirmDialog = false
-    }
-
     BackHandler(enabled = isAppDrawerOpen) {
         keyboardController?.hide()
         focusManager.clearFocus()
         isAppDrawerOpen = false
     }
 
-    BackHandler(enabled = !isAppDrawerOpen && !showConfigureEssentialAppsDialog && !showScratchpadDialog && !showPreferencesDialog && !showStrictLockSetupDialog && !showStrictLockStatusDialog && !showMinimalStrictLockedDialog && !showMinimalStrictUseExitDialog && !showDevExitConfirmDialog) {
+    BackHandler(enabled = !isAppDrawerOpen && !showConfigureEssentialAppsDialog && !showScratchpadDialog && !showPreferencesDialog && !showStrictLockSetupDialog && !showStrictLockStatusDialog && !showMinimalStrictLockedDialog && !showMinimalStrictUseExitDialog) {
         handleExitRequest()
     }
 
@@ -1510,7 +1507,6 @@ fun MinimalLauncherScreen(
                 remainingMillis = strictLockRemainingMillis,
                 exitsRemaining = sessionManager.getMinimalStrictExitsRemaining(),
                 strictLevel = sessionManager.getMinimalStrictLevel(),
-                isDeveloper = sessionManager.isDeveloperModeActive(),
                 onDismiss = { showStrictLockStatusDialog = false },
                 onDisarm = {
                     sessionManager.stopMinimalStrictLock()
@@ -1543,20 +1539,6 @@ fun MinimalLauncherScreen(
                 remainingFormatted = formatRemainingTime(strictLockRemainingMillis),
                 strictLevel = sessionManager.getMinimalStrictLevel(),
                 onDismiss = { showMinimalStrictLockedDialog = false }
-            )
-        }
-
-        // Developer Exit Confirmation Dialog
-        if (showDevExitConfirmDialog) {
-            DevExitConfirmDialog(
-                remainingFormatted = formatRemainingTime(strictLockRemainingMillis),
-                onDismiss = { showDevExitConfirmDialog = false },
-                onConfirmExit = {
-                    sessionManager.stopMinimalStrictLock()
-                    sessionManager.setMinimalLauncherActive(false)
-                    showDevExitConfirmDialog = false
-                    onExitLauncher()
-                }
             )
         }
     }

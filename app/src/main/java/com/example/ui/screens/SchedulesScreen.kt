@@ -100,7 +100,6 @@ fun SchedulesScreen(
 ) {
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
-    val isDevMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
     val isUltraStrictActive = (sessionState.isUltraStrict && sessionState.isActive) || (activeSchedulesState.isUltraStrict && activeSchedulesState.isActive)
 
@@ -187,7 +186,7 @@ fun SchedulesScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isUltraStrictActive) "Locked 🔒" else if (isDevMode) "Exit (∞)" else "Exit ($dailyExitsLeft/10)",
+                                    text = if (isUltraStrictActive) "Locked 🔒" else "Exit ($dailyExitsLeft/10)",
                                     fontSize = 11.sp,
                                     color = Color(0xFFE2E8F0),
                                     fontWeight = FontWeight.Bold
@@ -315,8 +314,6 @@ fun SchedulesScreen(
                                 Text(
                                     text = if (isUltraStrictActive)
                                         "Locked in Strict Blocker Mode 🔒"
-                                    else if (isDevMode)
-                                        "Stop Active Schedule / Timer (∞)"
                                     else
                                         "Stop Active Schedule / Timer ($dailyExitsLeft/10)",
                                     color = Color.White,
@@ -428,7 +425,6 @@ fun SchedulesScreen(
     if (showUnlockConfirmDialog) {
         com.example.ui.components.EmergencyUnlockDialog(
             isUltraStrictActive = isUltraStrictActive,
-            isDevMode = isDevMode,
             dailyExitsLeft = dailyExitsLeft,
             onDismiss = { showUnlockConfirmDialog = false },
             onConfirmUnlock = {

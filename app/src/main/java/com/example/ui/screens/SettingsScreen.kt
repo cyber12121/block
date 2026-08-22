@@ -96,16 +96,13 @@ fun SettingsScreen(
     sessionState: ActiveSessionState,
     activeSchedulesState: ActiveSchedulesState = ActiveSchedulesState(),
     onEmergencyUnlock: () -> Unit,
-    onOpenSessionView: () -> Unit = {},
-    onResetDatabase: () -> Unit = {}
+    onOpenSessionView: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val authManager = remember { AuthManager.getInstance(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var showUnlockConfirmDialog by remember { mutableStateOf(false) }
     var showGoogleLoginDialog by remember { mutableStateOf(false) }
-    var showResetConfirmDialog by remember { mutableStateOf(false) }
-    var showResetSuccessDialog by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
 
     DisposableEffect(lifecycleOwner) {
@@ -586,102 +583,8 @@ fun SettingsScreen(
                 }
             }
         }
-
-        // 7. Developer & Maintenance Section: Reset App & Database to Default
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Data Management",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                    border = BorderStroke(1.dp, DarkCardBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(IndigoPrimary.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.RestartAlt,
-                                        contentDescription = null,
-                                        tint = CyanAccent,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Column {
-                                    Text(
-                                        text = "Reset App & Database to Default",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Keeps OS permissions active, resets block lists, targets, schedules & stats",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF94A3B8)
-                                    )
-                                }
-                            }
-                        }
-
-                        Button(
-                            onClick = { showResetConfirmDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF334155).copy(alpha = 0.6f)
-                            ),
-                            border = BorderStroke(1.dp, Color(0xFF475569)),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(42.dp)
-                                .testTag("reset_app_database_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = null,
-                                tint = Color(0xFFF1F5F9),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Reset Database to Default",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF1F5F9)
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 
-    val isDeveloperMode by authManager.isDeveloperMode.collectAsState()
     val dailyExitsLeft by authManager.dailyExitsRemaining.collectAsState()
     val isUltraStrictActive = (sessionState.isUltraStrict && sessionState.isActive) ||
             (activeSchedulesState.isUltraStrict && activeSchedulesState.isActive)
@@ -689,105 +592,11 @@ fun SettingsScreen(
     if (showUnlockConfirmDialog) {
         com.example.ui.components.EmergencyUnlockDialog(
             isUltraStrictActive = isUltraStrictActive,
-            isDevMode = isDeveloperMode,
             dailyExitsLeft = dailyExitsLeft,
             onDismiss = { showUnlockConfirmDialog = false },
             onConfirmUnlock = {
                 showUnlockConfirmDialog = false
                 onEmergencyUnlock()
-            }
-        )
-    }
-
-    if (showResetConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetConfirmDialog = false },
-            containerColor = DarkSurfaceVariant,
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color(0xFFF59E0B)
-                    )
-                    Text(
-                        text = "Reset Database?",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "This will restore original default block lists, target rules, default schedules, and clear previous session records and statistics.",
-                        color = Color(0xFFCBD5E1),
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = "✓ Accessibility & Device Admin permissions will remain active.",
-                        color = EmeraldSuccess,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showResetConfirmDialog = false
-                        onResetDatabase()
-                        showResetSuccessDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonStrict),
-                    shape = RoundedCornerShape(100.dp)
-                ) {
-                    Text("Confirm Reset", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showResetConfirmDialog = false }
-                ) {
-                    Text("Cancel", color = Color(0xFF94A3B8))
-                }
-            }
-        )
-    }
-
-    if (showResetSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetSuccessDialog = false },
-            containerColor = DarkSurfaceVariant,
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Text(
-                    text = "App Reset Successful",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            },
-            text = {
-                Text(
-                    text = "Database and cached sessions have been reset to fresh defaults. All Android permissions remain fully active.",
-                    color = Color(0xFFCBD5E1),
-                    fontSize = 13.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showResetSuccessDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                    shape = RoundedCornerShape(100.dp)
-                ) {
-                    Text("Done", color = Color.White, fontWeight = FontWeight.Bold)
-                }
             }
         )
     }
