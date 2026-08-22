@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.example.FocusGuardApp
@@ -142,23 +143,30 @@ class FocusAccessibilityService : AccessibilityService() {
         // 1. Home Launcher Detection & Strict Bounce-Back
         if (isLauncherOrHome) {
             if (shouldLockToMinimalist) {
-                val now = System.currentTimeMillis()
-                // Debounce: only fire once per BOUNCE_BACK_DEBOUNCE_MS to prevent
-                // multiple rapid events from triggering repeated activity relaunches
-                if (now - lastBouncedBackTime > BOUNCE_BACK_DEBOUNCE_MS) {
-                    lastBouncedBackTime = now
-                    val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                            Intent.FLAG_ACTIVITY_NO_ANIMATION
-                        )
-                        putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                // Only bounce if this is a genuine window state switch to the launcher,
+                // and NOT a background transition event while launching an essential app
+                val isWindowStateChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                val isRecentlyLaunched = sessionManager.isRecentlyLaunchedEssential()
+
+                if (isWindowStateChanged && !isRecentlyLaunched) {
+                    val now = System.currentTimeMillis()
+                    // Debounce: only fire once per BOUNCE_BACK_DEBOUNCE_MS to prevent
+                    // multiple rapid events from triggering repeated activity relaunches
+                    if (now - lastBouncedBackTime > BOUNCE_BACK_DEBOUNCE_MS) {
+                        lastBouncedBackTime = now
+                        val relaunch = Intent(this@FocusAccessibilityService, com.example.MainActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            )
+                            putExtra(com.example.MainActivity.EXTRA_OPEN_MINIMAL_LAUNCHER, true)
+                        }
+                        try {
+                            startActivity(relaunch)
+                        } catch (_: Exception) {}
                     }
-                    try {
-                        startActivity(relaunch)
-                    } catch (_: Exception) {}
                 }
             }
             return
@@ -166,12 +174,18 @@ class FocusAccessibilityService : AccessibilityService() {
 
         // 2. Core OS System Components, Keyboards & System Dialogs (Always allowed, never blocked)
         if (sessionManager.isSystemComponentOrKeyboard(targetPkg)) {
-            // Ultra Strict tamper interception for Quick Settings cog / Airplane mode
+            // Ultra Strict tamper interception for Quick Settings cog / Airplane mode / Settings
             if (targetPkg == "com.android.systemui" && sessionManager.isUltraStrictActive()) {
                 val rootNode = rootInActiveWindow ?: windows.firstOrNull { it.isActive }?.root
                 if (rootNode != null) {
                     val fullText = extractAllText(rootNode, maxDepth = 4, visitedCount = intArrayOf(0)).lowercase()
-                    if (fullText.contains("settings") || fullText.contains("airplane") || fullText.contains("turn off focus")) {
+                    if (fullText.contains("settings") ||
+                        fullText.contains("airplane") ||
+                        fullText.contains("aeroplane") ||
+                        fullText.contains("turn off focus") ||
+                        fullText.contains("accessibility") ||
+                        fullText.contains("device admin")
+                    ) {
                         performGlobalAction(GLOBAL_ACTION_BACK)
                     }
                 }
@@ -179,13 +193,44 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // 3. Essential Apps (User-selected custom essentials + Phone, SMS, Camera, Clock, Calculator)
+        // 3. Multi-Window / Split-Screen / Floating Window Inspection
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            val activeWindows = try { windows } catch (_: Throwable) { null }
+            if (!activeWindows.isNullOrEmpty()) {
+                for (w in activeWindows) {
+                    val root = try { w.root } catch (_: Throwable) { null } ?: continue
+                    val winPkg = try { root.packageName?.toString() ?: "" } catch (_: Throwable) { "" }
+                    if (winPkg.isBlank() || winPkg == applicationContext.packageName) continue
+                    if (sessionManager.isSystemComponentOrKeyboard(winPkg) || sessionManager.isOemLauncher(winPkg)) continue
+
+                    if (shouldLockToMinimalist && !sessionManager.isEssentialApp(winPkg)) {
+                        triggerBlockShield(
+                            targetName = getReadableAppName(winPkg),
+                            reason = "App '$winPkg' is restricted during Minimalist Strict Lock.",
+                            isWebsite = false
+                        )
+                        return
+                    } else if (sessionManager.isAnyBlockingActive() && sessionManager.isAppBlocked(winPkg)) {
+                        triggerBlockShield(
+                            targetName = getReadableAppName(winPkg),
+                            reason = "App '$winPkg' is restricted in your active focus shield.",
+                            isWebsite = false
+                        )
+                        return
+                    }
+                }
+            }
+        }
+
+        // 4. Essential Apps (User-selected custom essentials + Phone, SMS, Camera, Clock, Calculator)
         val isEssential = sessionManager.isEssentialApp(targetPkg)
+        // Diagnostic log — remove after confirming essential apps work correctly
+        Log.d("FocusGuard", "PKG=$targetPkg | essential=$isEssential | strictLock=$shouldLockToMinimalist | customs=${sessionManager.getCustomEssentialApps()}")
         if (isEssential) {
             return // Freely allowed without restriction
         }
 
-        // 4. Minimalist Strict Lock Guardrail (Any non-essential app opened during lock)
+        // 5. Minimalist Strict Lock Guardrail (Any non-essential app opened during lock)
         if (shouldLockToMinimalist) {
             if (systemSettingsPackages.contains(targetPkg)) {
                 triggerBlockShield(
@@ -263,35 +308,20 @@ class FocusAccessibilityService : AccessibilityService() {
                 return
             }
 
-            // Fire URL scan on window state, content changes, text changes or focus
+            // Fire URL scan on page navigation, window state switches, or page content changes
+            // NOTE: Do NOT trigger on TYPE_VIEW_TEXT_CHANGED to avoid blocking on in-progress typing / inline autocomplete
             val isRelevantBrowserEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
                     event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
-                    event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
-                    event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
                     event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
 
             if (isRelevantBrowserEvent) {
                 val shouldScan = (now - lastBrowserUrlScanTime) > BROWSER_SCAN_THROTTLE_MS
 
                 if (shouldScan) {
-                    lastBrowserUrlScanTime = now
-                    var urlText = ""
-
-                    // 1. Direct event source check (fastest when typing in address bar)
-                    val eventSource = try { event.source } catch (_: Throwable) { null }
-                    if (eventSource != null) {
-                        val viewId = try { eventSource.viewIdResourceName ?: "" } catch (_: Throwable) { "" }
-                        if (looksLikeUrlField(viewId) || eventSource.isEditable) {
-                            urlText = try { eventSource.text?.toString() ?: eventSource.contentDescription?.toString() ?: "" } catch (_: Throwable) { "" }
-                        }
-                    }
-
-                    // 2. Comprehensive URL bar search
-                    if (urlText.isBlank()) {
-                        urlText = findUrlBarText(targetPkg)
-                    }
+                    val urlText = findUrlBarText(targetPkg)
 
                     if (urlText.isNotBlank()) {
+                        lastBrowserUrlScanTime = now
                         val (isBlocked, matchedRule) = sessionManager.isUrlOrKeywordBlocked(urlText)
                         if (isBlocked) {
                             triggerBlockShield(
@@ -335,14 +365,18 @@ class FocusAccessibilityService : AccessibilityService() {
     // Well-known address-bar view id suffixes across popular browsers
     private val urlBarIdSuffixes = listOf(
         "url_bar",                          // Chrome, Brave, Edge, Kiwi, Vivaldi (Chromium)
+        "location_bar_edit_text",           // Samsung Internet
+        "location_bar",                     // Chromium variants
         "mozac_browser_toolbar_url_view",   // Firefox (Fenix)
         "url_bar_title",                    // Firefox (legacy)
-        "location_bar_edit_text",           // Samsung Internet
         "url_field",                        // Opera
         "url_edit",                         // Opera variants
         "omnibarTextInput",                 // DuckDuckGo
+        "omnibar",                          // DuckDuckGo variants
         "search_box_text",                  // misc
         "addressbarEdit",                   // UC / misc
+        "address_bar",                      // MIUI / misc
+        "url_input",                        // generic
         "url"                               // generic fallback id
     )
 

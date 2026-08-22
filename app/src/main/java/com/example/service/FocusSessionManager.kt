@@ -69,10 +69,21 @@ class FocusSessionManager private constructor(private val context: Context) {
     // it to detect whether the user escaped the Minimalist Strict Lock.
     @Volatile private var lastSeenForegroundPackage: String? = null
     @Volatile private var lastSeenForegroundTime: Long = 0L
+    @Volatile private var lastEssentialLaunchTime: Long = 0L
 
     fun reportForeground(packageName: String) {
         lastSeenForegroundPackage = packageName
         lastSeenForegroundTime = System.currentTimeMillis()
+    }
+
+    fun reportEssentialAppLaunched(packageName: String) {
+        lastEssentialLaunchTime = System.currentTimeMillis()
+        lastSeenForegroundPackage = packageName
+        lastSeenForegroundTime = System.currentTimeMillis()
+    }
+
+    fun isRecentlyLaunchedEssential(): Boolean {
+        return (System.currentTimeMillis() - lastEssentialLaunchTime) < 2500L
     }
 
     fun isEssentialApp(packageName: String): Boolean {
@@ -752,7 +763,11 @@ class FocusSessionManager private constructor(private val context: Context) {
             .removePrefix("http://")
             .removePrefix("www.")
 
-        // 1. Check blocked website domains against the URL / search query text
+        // Extract host part before path or query parameters
+        val hostPart = if (cleanInput.contains("/")) cleanInput.substringBefore("/") else cleanInput.substringBefore("?")
+        val hostClean = hostPart.removePrefix("www.").trim()
+
+        // 1. Check blocked website domains
         for (domain in cachedBlockedDomains) {
             if (domain.isNotBlank()) {
                 val cleanDomain = domain.lowercase().trim()
@@ -760,35 +775,35 @@ class FocusSessionManager private constructor(private val context: Context) {
                     .removePrefix("http://")
                     .removePrefix("www.")
 
-                // Full domain appears in the URL (e.g. "youtube.com/watch?v=...")
-                if (lower.contains(cleanDomain) || cleanInput.contains(cleanDomain)) {
+                // Exact host match or subdomain match (e.g. host "m.youtube.com" matches domain "youtube.com")
+                if (hostClean == cleanDomain || hostClean.endsWith(".$cleanDomain")) {
                     return Pair(true, domain)
                 }
 
-                // Site name typed as a search query (e.g. "youtube cat videos").
-                // Match as a whole word so "mytube.org" doesn't trigger "tube".
-                val rootName = cleanDomain.substringBeforeLast(".")
-                if (rootName.length >= 4) {
-                    val wordRegex = Regex("(^|[^a-z0-9])${Regex.escape(rootName)}([^a-z0-9]|$)")
-                    if (wordRegex.containsMatchIn(cleanInput)) {
-                        return Pair(true, domain)
+                // If URL contains the full domain path (e.g. "google.com/url?q=https://youtube.com")
+                if (cleanInput.contains("://$cleanDomain") || cleanInput.contains(".$cleanDomain/") || cleanInput.contains(".$cleanDomain?") || cleanInput.contains(".$cleanDomain#")) {
+                    return Pair(true, domain)
+                }
+
+                // If this is a search engine search query (e.g. "google.com/search?q=youtube"), check query
+                if (cleanInput.contains("search?q=") || cleanInput.contains("&q=") || cleanInput.contains("?query=") || cleanInput.contains("?p=") || cleanInput.contains("&query=")) {
+                    val rootName = cleanDomain.substringBeforeLast(".")
+                    if (rootName.length >= 4) {
+                        val wordRegex = Regex("(^|[^a-z0-9])${Regex.escape(rootName)}([^a-z0-9]|$)")
+                        if (wordRegex.containsMatchIn(cleanInput)) {
+                            return Pair(true, domain)
+                        }
                     }
                 }
             }
         }
 
         // 2. Check blocked keywords (use word boundary regex to avoid partial substring false triggers)
-        val isDomainOrUrl = cleanInput.contains(".") && !cleanInput.contains(" ")
         for (kw in cachedBlockedKeywords) {
             val cleanKw = kw.lowercase().trim()
             if (cleanKw.length >= 2) {
                 val kwRegex = Regex("(^|[^a-z0-9])${Regex.escape(cleanKw)}([^a-z0-9]|$)")
-                // If it's a domain/URL (e.g. chat.openai.com), do not trigger on domain segments unless it's a query or path
-                val textToCheck = if (isDomainOrUrl) {
-                    cleanInput.substringAfter("/", "")
-                } else cleanInput
-
-                if (textToCheck.isNotBlank() && kwRegex.containsMatchIn(textToCheck)) {
+                if (kwRegex.containsMatchIn(cleanInput)) {
                     return Pair(true, kw)
                 }
             }
@@ -967,7 +982,7 @@ class FocusSessionManager private constructor(private val context: Context) {
             "org.codeaurora.snapcam",
             "com.samsung.android.app.camera"
         )
-        val cleaned = all.filter { it.lowercase() !in legacy }.take(5)
+        val cleaned = all.filter { it.lowercase() !in legacy }.take(6)
         if (cleaned.size != all.size) {
             prefs.edit().putString(KEY_CUSTOM_ESSENTIAL_APPS, cleaned.joinToString(",")).apply()
         }
@@ -975,7 +990,7 @@ class FocusSessionManager private constructor(private val context: Context) {
     }
 
     fun saveCustomEssentialApps(packages: List<String>) {
-        val clean = packages.take(5).joinToString(",")
+        val clean = packages.take(6).joinToString(",")
         prefs.edit().putString(KEY_CUSTOM_ESSENTIAL_APPS, clean).apply()
     }
 

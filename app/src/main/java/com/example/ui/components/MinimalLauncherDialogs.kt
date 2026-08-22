@@ -579,10 +579,8 @@ fun MinimalStrictLockSetupDialog(
                 )
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     durationOptions.forEach { opt ->
                         val isSelected = selectedOption.minutes == opt.minutes
@@ -593,15 +591,22 @@ fun MinimalStrictLockSetupDialog(
                                 1.dp,
                                 if (isSelected) CrimsonStrict else Color(0xFF2A3A5E)
                             ),
-                            modifier = Modifier.clickable { selectedOption = opt }
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedOption = opt }
                         ) {
-                            Text(
-                                text = opt.label,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                            )
+                            Box(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = opt.label,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }

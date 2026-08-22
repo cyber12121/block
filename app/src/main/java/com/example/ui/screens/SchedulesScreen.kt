@@ -141,7 +141,7 @@ fun SchedulesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 140.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
@@ -265,11 +265,13 @@ fun SchedulesScreen(
                                             shape = RoundedCornerShape(4.dp)
                                         ) {
                                             Text(
-                                                text = if (isUltra) "STRICT BLOCKER 🔒" else if (isStrict) "NORMAL BLOCKER" else "ACTIVE",
+                                                text = if (isUltra) "ULTRA STRICT 🔒" else if (isStrict) "STRICT BLOCKER 🔒" else "ACTIVE",
                                                 color = CrimsonStrict,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Black,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                softWrap = false,
+                                                maxLines = 1,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
                                     }
@@ -528,6 +530,8 @@ fun ScheduleCard(
                                         color = EmeraldSuccess,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
+                                        softWrap = false,
+                                        maxLines = 1,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
@@ -538,10 +542,12 @@ fun ScheduleCard(
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        text = "STRICT BLOCKER 🔒",
+                                        text = "ULTRA STRICT 🔒",
                                         color = Color.White,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
+                                        softWrap = false,
+                                        maxLines = 1,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
@@ -551,10 +557,12 @@ fun ScheduleCard(
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        text = "STRICT",
+                                        text = "STRICT 🔒",
                                         color = CrimsonStrict,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
+                                        softWrap = false,
+                                        maxLines = 1,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
@@ -572,38 +580,68 @@ fun ScheduleCard(
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(36.dp).testTag("edit_schedule_${schedule.id}")
+                if (isLocked) {
+                    Surface(
+                        color = CrimsonStrict.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, CrimsonStrict.copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onEdit() }
                     ) {
-                        Icon(
-                            imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Edit,
-                            contentDescription = if (isLocked) "Locked" else "Edit Schedule",
-                            tint = if (isLocked) CrimsonStrict else CyanAccent,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Locked",
+                                tint = CrimsonStrict,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Locked",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CrimsonStrict
+                            )
+                        }
                     }
-                    Switch(
-                        checked = schedule.isEnabled,
-                        onCheckedChange = { onToggle() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = if (isActiveNow) CyanAccent else IndigoPrimary,
-                            uncheckedTrackColor = Color(0xFF1D2A4A)
-                        ),
-                        modifier = Modifier.testTag("toggle_schedule_${schedule.id}")
-                    )
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.Delete,
-                            contentDescription = if (isLocked) "Locked" else "Delete",
-                            tint = if (isLocked) CrimsonStrict else Color(0xFF64748B),
-                            modifier = Modifier.size(18.dp)
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(36.dp).testTag("edit_schedule_${schedule.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Schedule",
+                                tint = CyanAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Switch(
+                            checked = schedule.isEnabled,
+                            onCheckedChange = { onToggle() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (isActiveNow) CyanAccent else IndigoPrimary,
+                                uncheckedTrackColor = Color(0xFF1D2A4A)
+                            ),
+                            modifier = Modifier.testTag("toggle_schedule_${schedule.id}")
                         )
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -644,10 +682,12 @@ fun ScheduleCard(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "STRICT BLOCKER 🔒",
+                                text = "ULTRA STRICT 🔒",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White,
+                                softWrap = false,
+                                maxLines = 1,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -657,10 +697,12 @@ fun ScheduleCard(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "NORMAL BLOCKER",
+                                text = "STRICT BLOCKER 🔒",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                                 color = CrimsonStrict,
+                                softWrap = false,
+                                maxLines = 1,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }

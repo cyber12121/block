@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -159,6 +162,8 @@ fun CreateScheduleDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
+                .safeDrawingPadding()
+                .padding(vertical = 12.dp)
                 .clip(RoundedCornerShape(28.dp)),
             color = Color(0xFF0B1222),
             border = BorderStroke(1.dp, Color(0xFF1E2D4A)),
@@ -462,6 +467,16 @@ fun CreateScheduleDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                // Enforcement Level Section
+                Text(
+                    text = "SCHEDULE ENFORCEMENT & STRICTNESS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // Strict Mode Switch
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -470,7 +485,7 @@ fun CreateScheduleDialog(
                     ),
                     border = BorderStroke(
                         1.dp,
-                        if (isStrictMode) CrimsonStrict.copy(alpha = 0.4f) else Color(0xFF263554)
+                        if (isStrictMode) CrimsonStrict.copy(alpha = 0.5f) else Color(0xFF263554)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -494,13 +509,13 @@ fun CreateScheduleDialog(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Normal Blocker Enforcement",
+                                    text = "Strict Blocker 🔒",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "Enforces session restrictions and prevents disabling during the active schedule",
+                                    text = "Guarded focus: Locks settings & target lists during active schedule",
                                     color = Color(0xFF94A3B8),
                                     fontSize = 10.sp,
                                     lineHeight = 14.sp
@@ -527,7 +542,7 @@ fun CreateScheduleDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Ultra Strict Blocker Card (Clean, multi-row layout to prevent text cramming)
+                // Ultra Strict Blocker Card
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
@@ -556,7 +571,7 @@ fun CreateScheduleDialog(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "Strict Blocker 🔒",
+                                    text = "Ultra Strict Blocker 🔒",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White
@@ -593,7 +608,7 @@ fun CreateScheduleDialog(
                         }
 
                         Text(
-                            text = "Automated Schedule only: Cannot be exited during the locked window under ANY circumstance. Unlocks ONLY when the schedule window expires.",
+                            text = "Iron lockdown: Cannot be exited or bypassed under ANY circumstance. Unlocks ONLY when the schedule window expires.",
                             color = Color(0xFFCBD5E1),
                             fontSize = 11.sp,
                             lineHeight = 15.sp

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -151,6 +152,8 @@ fun AddTargetDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .safeDrawingPadding()
+                .padding(vertical = 12.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF111A2E)),
             color = Color(0xFF111A2E),

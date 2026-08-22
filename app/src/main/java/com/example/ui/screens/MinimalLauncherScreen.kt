@@ -1565,6 +1565,7 @@ fun MinimalLauncherScreen(
 
 private fun launchApp(context: Context, packageName: String) {
     try {
+        FocusSessionManager.getInstance(context).reportEssentialAppLaunched(packageName)
         val pm = context.packageManager
         var intent = pm.getLaunchIntentForPackage(packageName)
         if (intent == null) {
